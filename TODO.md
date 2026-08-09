@@ -96,4 +96,4 @@ Complete the remaining work to bring the project through all 7 phases (Week 1-14
 - [x] Feature roadmap for future
 
 ## Code Cleanup
-- [ ] Fix formatting inconsistencies across key files
+- [x] Normalized formatting and route registration in `server/src/app.js`
