@@ -39,6 +39,10 @@ This full-stack application solves the real business problems of a small fashion
 - **Khalti** — initiate + verify
 - **Stripe** — checkout session
 
+### PWA & SEO
+- **Progressive Web App** — web manifest, service worker with offline caching, installable on mobile/desktop
+- **SEO** — meta/Open Graph/Twitter tags, canonical URL, JSON-LD structured data, `sitemap.xml`, `robots.txt`
+
 ### Delivery
 - Kathmandu Valley + nationwide
 - Free shipping on orders **above Rs. 1,000**, otherwise **Rs. 100**

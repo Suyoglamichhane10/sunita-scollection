@@ -16,7 +16,7 @@ Complete the remaining work to bring the project through all 7 phases (Week 1-14
 - [x] Create base layouts (CustomerLayout, AdminLayout)
 - [x] Set up Socket.IO connection
 - [x] Configure database models (User, Product, Category, Order)
-- [ ] **Create initial Git commit** (currently no commits)
+- [x] **Create initial Git commit** (commit `196553f` on `master`)
 
 ## Phase 2 — Customer Features (Week 3-4)
 - [x] Homepage with hero, categories, featured products
@@ -75,14 +75,14 @@ Complete the remaining work to bring the project through all 7 phases (Week 1-14
 - [x] Security hardening (helmet, rate limiting, CORS)
 - [x] Testing (unit, integration, E2E)
 - [x] Mobile responsiveness
-- [ ] **PWA setup** (manifest, service worker, push notifications)
+- [x] **PWA setup** (manifest, service worker, offline caching, installable)
 - [x] Deployment configuration (Vercel/Netlify, Render/AWS, MongoDB Atlas, Cloudinary)
 - [x] Docker setup
 - [x] SSL/HTTPS configuration
 - [x] Monitoring (Sentry, Logging)
 - [x] CI/CD pipeline (GitHub Actions)
 - [x] Documentation
-- [ ] **SEO optimization** (meta tags, OG, sitemap, robots)
+- [x] **SEO optimization** (meta tags, OG, sitemap, robots, structured data)
 - [x] Google Analytics setup
 
 ## Phase 7 — Launch & Post-Launch (Week 13-14)
