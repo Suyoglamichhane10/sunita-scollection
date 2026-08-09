@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /cart
+Disallow: /checkout
+Disallow: /dashboard
+Disallow: /profile
+Disallow: /messages
+Disallow: /wishlist
+Disallow: /rewards
+Disallow: /social
+
+Sitemap: https://sunitascollection.com/sitemap.xml
