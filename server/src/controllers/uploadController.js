@@ -1,5 +1,6 @@
 const path = require('path');
 const cloudinary = require('../config/cloudinary');
+const User = require('../Models/User');
 
 // Determine whether Cloudinary is properly configured
 const isCloudinaryConfigured = () =>
@@ -79,6 +80,65 @@ exports.deleteImage = async (req, res, next) => {
 
     const result = await cloudinary.uploader.destroy(publicId);
     res.status(200).json({ success: true, result });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Upload a profile avatar for the logged-in user
+// @route   POST /api/upload/avatar
+// @access  Private
+// Expects multipart/form-data with field 'avatar' (single image)
+exports.uploadAvatar = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No avatar uploaded' });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Delete old avatar from Cloudinary if it exists and is not default
+    if (user.avatarPublicId && user.avatarPublicId !== 'default-avatar') {
+      try {
+        await cloudinary.uploader.destroy(user.avatarPublicId);
+      } catch (err) {
+        console.warn('Failed to delete old avatar:', err.message);
+      }
+    }
+
+    let avatarUrl;
+    let publicId;
+
+    if (!isCloudinaryConfigured()) {
+      avatarUrl = `/uploads/${path.basename(req.file.path)}`;
+      publicId = null;
+    } else {
+      try {
+        const result = await cloudinary.uploader.upload(req.file.path, {
+          folder: 'sunitas-collection/avatars',
+          use_filename: true,
+          resource_type: 'auto',
+          transformation: [{ width: 400, height: 400, crop: 'limit', gravity: 'face' }],
+        });
+        avatarUrl = result.secure_url;
+        publicId = result.public_id;
+      } catch (cloudinaryError) {
+        console.warn('⚠️ Avatar Cloudinary upload failed, falling back to local storage:', cloudinaryError.message);
+        avatarUrl = `/uploads/${path.basename(req.file.path)}`;
+        publicId = null;
+      }
+    }
+
+    user.avatar = avatarUrl;
+    user.avatarPublicId = publicId || '';
+    await user.save();
+
+    user.password = undefined;
+
+    res.status(200).json({ success: true, avatar: avatarUrl, user });
   } catch (error) {
     next(error);
   }

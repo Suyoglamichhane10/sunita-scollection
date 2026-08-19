@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../Services/api';
+import { useCart } from '../../Context/CartContext';
 import { useAuth } from '../../Context/Authcontext';
-import { FaCheck, FaTruck } from 'react-icons/fa';
+import { FaCheck, FaTruck, FaTimes, FaMapMarkerAlt, FaFileInvoice, FaRedo } from 'react-icons/fa';
 
 const ORDER_FLOW = ['pending', 'confirmed', 'processing', 'packed', 'shipped', 'delivered'];
 const ORDER_COLORS = {
@@ -56,10 +57,70 @@ const StatusTimeline = ({ status }) => {
 };
 
 const Orders = () => {
+  const { addToCart } = useCart();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [cancellingOrderId, setCancellingOrderId] = useState(null);
   const { isAuthenticated, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+
+  const handleCancelOrder = async (orderId) => {
+    if (!window.confirm('Are you sure you want to cancel this order? This action cannot be undone.')) {
+      return;
+    }
+
+    setCancellingOrderId(orderId);
+    try {
+      const { data } = await api.put(`/orders/${orderId}/cancel`);
+      if (data.success) {
+        setOrders(orders.map(order => 
+          order._id === orderId ? data.order : order
+        ));
+        alert('Order cancelled successfully. Stock has been restored.');
+      }
+    } catch (error) {
+      console.error('Error cancelling order:', error);
+      alert(error.response?.data?.message || 'Failed to cancel order. Please try again.');
+    } finally {
+      setCancellingOrderId(null);
+    }
+  };
+
+  const handleDownloadInvoice = async (orderId) => {
+    try {
+      const response = await api.get(`/orders/${orderId}/invoice`, { responseType: 'text' });
+      const blob = new Blob([response.data], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const win = window.open(url, '_blank');
+      if (!win) {
+        alert('Please allow popups to download the invoice');
+      }
+    } catch (error) {
+      alert(error.response?.data?.message || 'Failed to load invoice');
+    }
+  };
+
+  const handleReorder = async (order) => {
+    try {
+      for (const item of order.items || []) {
+        await addToCart(
+          {
+            _id: item.product,
+            name: item.name,
+            price: item.price,
+            image: item.image,
+            stock: 999,
+            variants: item.variantSku ? [{ sku: item.variantSku }] : [],
+          },
+          item.quantity,
+          item.variantSku ? { sku: item.variantSku } : null
+        );
+      }
+      navigate('/cart');
+    } catch (error) {
+      console.error('Reorder failed:', error);
+    }
+  };
 
   useEffect(() => {
     if (authLoading) return;
@@ -164,6 +225,39 @@ const Orders = () => {
                     <p className="font-semibold text-gray-900">Phone</p>
                     <p className="mt-1">{order.shippingAddress?.phone}</p>
                   </div>
+                </div>
+
+                <div className="mt-4 flex flex-wrap gap-3">
+                  {(order.orderStatus === 'pending' || order.orderStatus === 'confirmed') && (
+                    <div>
+                      <button
+                        onClick={() => handleCancelOrder(order._id)}
+                        disabled={cancellingOrderId === order._id}
+                        className="flex items-center gap-2 rounded-full border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <FaTimes />
+                        {cancellingOrderId === order._id ? 'Cancelling...' : 'Cancel Order'}
+                      </button>
+                    </div>
+                  )}
+                  <button
+                    onClick={() => navigate(`/track-order/${order._id}`)}
+                    className="flex items-center gap-2 rounded-full bg-pink-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-pink-700"
+                  >
+                    <FaMapMarkerAlt /> Track Order
+                  </button>
+                  <button
+                    onClick={() => handleDownloadInvoice(order._id)}
+                    className="flex items-center gap-2 rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+                  >
+                    <FaFileInvoice /> Invoice
+                  </button>
+                  <button
+                    onClick={() => handleReorder(order)}
+                    className="flex items-center gap-2 rounded-full border border-blue-300 bg-white px-4 py-2 text-sm font-semibold text-blue-600 transition hover:bg-blue-50"
+                  >
+                    <FaRedo /> Reorder
+                  </button>
                 </div>
               </div>
             ))

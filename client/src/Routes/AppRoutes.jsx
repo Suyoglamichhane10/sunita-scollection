@@ -17,11 +17,14 @@ const Checkout = lazy(() => import('../pages/customer/Checkout'));
 const Orders = lazy(() => import('../pages/customer/Orders'));
 const Messages = lazy(() => import('../pages/customer/Messages'));
 const Profile = lazy(() => import('../pages/customer/Profile'));
-const Wishlist = lazy(() => import('../pages/customer/Wishlist'));
 const OrderSuccess = lazy(() => import('../pages/customer/OrderSuccess'));
+const PaymentFailure = lazy(() => import('../pages/customer/PaymentFailure'));
 const Dashboard = lazy(() => import('../pages/customer/Dashboard'));
-const Rewards = lazy(() => import('../pages/customer/Rewards'));
-const Social = lazy(() => import('../pages/customer/Social'));
+const AboutUs = lazy(() => import('../pages/customer/AboutUs'));
+const Contact = lazy(() => import('../pages/customer/Contact'));
+const OrderTracking = lazy(() => import('../pages/customer/OrderTracking'));
+const DeliveryApp = lazy(() => import('../pages/delivery/DeliveryApp'));
+const Wishlist = lazy(() => import('../pages/customer/Wishlist'));
 
 // Admin Pages
 const AdminDashboard = lazy(() => import('../pages/admin/AdminDashboard'));
@@ -32,11 +35,10 @@ const AdminUsers = lazy(() => import('../pages/admin/AdminUsers'));
 const AdminCategories = lazy(() => import('../pages/admin/AdminCategories'));
 const AdminInventory = lazy(() => import('../pages/admin/AdminInventory'));
 const AdminReports = lazy(() => import('../pages/admin/AdminReports'));
-const AdminReviews = lazy(() => import('../pages/admin/AdminReviews'));
-const AdminChatbot = lazy(() => import('../pages/admin/AdminChatbot'));
 const AdminConversations = lazy(() => import('../pages/admin/AdminConversations'));
-const AdminGamification = lazy(() => import('../pages/admin/AdminGamification'));
 const AdminMarketing = lazy(() => import('../pages/admin/AdminMarketing'));
+const AdminProfile = lazy(() => import('../pages/admin/AdminProfile'));
+const AdminDelivery = lazy(() => import('../pages/admin/AdminDelivery'));
 
 // Layouts
 import CustomerLayout from '../Layouts/Customerlayout';
@@ -54,9 +56,11 @@ const AppRoutes = () => {
 
       {/* Public Customer Routes */}
       <Route element={<CustomerLayout />}>
-<Route path="/" element={<Home />} />
+        <Route path="/" element={<Home />} />
         <Route path="/shop" element={<Shop />} />
         <Route path="/product/:id" element={<ProductDetail />} />
+        <Route path="/about" element={<AboutUs />} />
+        <Route path="/contact" element={<Contact />} />
       </Route>
 
       {/* Protected Customer Routes — require authentication */}
@@ -102,14 +106,6 @@ const AppRoutes = () => {
           }
         />
         <Route
-          path="/wishlist"
-          element={
-            <ProtectedRoute>
-              <Wishlist />
-            </ProtectedRoute>
-          }
-        />
-        <Route
           path="/messages"
           element={
             <ProtectedRoute>
@@ -126,18 +122,34 @@ const AppRoutes = () => {
           }
         />
         <Route
-          path="/rewards"
+          path="/payment-failure/:orderId"
           element={
             <ProtectedRoute>
-              <Rewards />
+              <PaymentFailure />
             </ProtectedRoute>
           }
         />
         <Route
-          path="/social"
+          path="/track-order/:orderId"
           element={
             <ProtectedRoute>
-              <Social />
+              <OrderTracking />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/delivery"
+          element={
+            <ProtectedRoute>
+              <DeliveryApp />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/wishlist"
+          element={
+            <ProtectedRoute>
+              <Wishlist />
             </ProtectedRoute>
           }
         />
@@ -157,14 +169,15 @@ const AppRoutes = () => {
         <Route path="categories" element={<AdminCategories />} />
         <Route path="inventory" element={<AdminInventory />} />
         <Route path="orders" element={<AdminOrders />} />
+        <Route path="delivery" element={<AdminDelivery />} />
         <Route path="messages" element={<AdminMessages />} />
         <Route path="users" element={<AdminUsers />} />
         <Route path="reports" element={<AdminReports />} />
-        <Route path="reviews" element={<AdminReviews />} />
-        <Route path="chatbot" element={<AdminChatbot />} />
-<Route path="conversations" element={<AdminConversations />} />
-        <Route path="gamification" element={<AdminGamification />} />
+        <Route path="messages" element={<AdminMessages />} />
+        <Route path="users" element={<AdminUsers />} />
+        <Route path="conversations" element={<AdminConversations />} />
         <Route path="marketing" element={<AdminMarketing />} />
+        <Route path="profile" element={<AdminProfile />} />
       </Route>
 
       {/* 404 - Not Found */}

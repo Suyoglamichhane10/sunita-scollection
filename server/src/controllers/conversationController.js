@@ -251,6 +251,29 @@ exports.searchMessages = async (req, res, next) => {
   }
 };
 
+// Admin: delete a conversation and all its messages
+exports.deleteConversation = async (req, res, next) => {
+  try {
+    const conversation = await Conversation.findById(req.params.id);
+    if (!conversation) {
+      return res.status(404).json({ success: false, message: 'Conversation not found' });
+    }
+
+    // Delete all messages belonging to this conversation
+    await Message.deleteMany({ conversation: conversation._id });
+
+    await conversation.deleteOne();
+
+    // Notify admins so connected clients can refresh
+    const io = req.app.get('io');
+    if (io) io.to('admins').emit('conversation:deleted', { conversationId: conversation._id });
+
+    res.status(200).json({ success: true, message: 'Conversation deleted' });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Admin: unified inbox stats
 exports.getInboxStats = async (req, res, next) => {
   try {

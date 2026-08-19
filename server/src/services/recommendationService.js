@@ -137,10 +137,8 @@ exports.recommendSize = (product, user) => {
   const sizes = user?.styleProfile?.sizes || {};
   const productTags = product.tags || [];
   let size = null;
-  if (productTags.some((t) => t.toLowerCase().includes('footwear') || t.toLowerCase().includes('sandals'))) {
+  if (productTags.some((t) => t.toLowerCase().includes('footwear') || t.toLowerCase().includes('shoes') || t.toLowerCase().includes('sneakers') || t.toLowerCase().includes('heels'))) {
     size = sizes.footwear;
-  } else if (productTags.some((t) => t.toLowerCase().includes('saree'))) {
-    size = sizes.sareeLength;
   } else {
     size = sizes.top || sizes.bottom;
   }

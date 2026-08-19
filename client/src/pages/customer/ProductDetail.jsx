@@ -173,11 +173,7 @@ useEffect(() => {
       try {
         const { data } = await api.get(`/products/${id}`);
         setProduct(data.product);
-        setSelectedVariant(data.product.variants?.[0] || null);
-        // Track product view for recommendations & recently-viewed (authenticated only)
-        if (isAuthenticated) {
-          api.post('/recommendations/view', { productId: id }).catch(() => {});
-        }
+setSelectedVariant(data.product.variants?.[0] || null);
       } catch (error) {
         console.error(error);
       } finally {
@@ -237,7 +233,7 @@ useEffect(() => {
             <div className="flex items-center justify-between gap-3 text-sm text-gray-500">
               <span>{product.category?.name || "Women's fashion"}</span>
               <span className={stock > 0 ? 'font-semibold text-green-600' : 'font-semibold text-red-600'}>
-                {stock > 0 ? 'In stock' : 'Out of stock'}
+                {stock > 0 ? `In stock (${stock} pieces available)` : 'Out of stock'}
               </span>
             </div>
 {product.brand && <p className="mt-3 text-sm font-semibold uppercase tracking-wide text-gray-500">{product.brand}</p>}
@@ -282,8 +278,7 @@ useEffect(() => {
                 />
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
-                <button
+<button
                   disabled={stock < 1}
                   onClick={() => {
                     if (!isAuthenticated) {
@@ -296,22 +291,6 @@ useEffect(() => {
                 >
                   Add to Cart
                 </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!isAuthenticated) {
-                      navigate('/login');
-                      return;
-                    }
-                    api.post(`/users/profile/wishlist/${product._id}`)
-                      .then(() => toast.success('Added to wishlist'))
-                      .catch(() => toast.error('Unable to add to wishlist'));
-                  }}
-                  className="w-full rounded-full border border-pink-600 bg-white px-6 py-3 text-sm font-semibold text-pink-600 transition hover:bg-pink-50"
-                >
-                  Add to Wishlist
-                </button>
-              </div>
 
               <div className="rounded-3xl border border-gray-200 bg-gray-50 p-4">
                 <p className="text-sm font-semibold text-gray-700">Delivery</p>

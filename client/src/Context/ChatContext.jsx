@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect, useRef, useCallback } from 'react';
-import { createSocket } from '../Services/socket';
+import { createSocket, releaseSocket, disconnectSocket } from '../Services/socket';
 import { useAuth } from './Authcontext';
 
 const ChatContext = createContext();
@@ -14,28 +14,37 @@ export const ChatProvider = ({ children }) => {
   const [typingUsers, setTypingUsers] = useState({});
   const [activeConversation, setActiveConversation] = useState(null);
   const [onlinePresence, setOnlinePresence] = useState({});
+  const [deliveryStatus, setDeliveryStatus] = useState(null);
+  const [deliveryLocation, setDeliveryLocation] = useState(null);
 
-  // Connect socket when authenticated
+// Connect socket when authenticated
   useEffect(() => {
-    if (!isAuthenticated || !user?._id) return undefined;
+    if (!isAuthenticated || !user?._id) {
+      // On logout, tear down the shared socket so the next user gets a clean
+      // connection (and no stale listeners/state).
+      disconnectSocket();
+      socketRef.current = null;
+      return undefined;
+    }
     const socket = createSocket();
     socketRef.current = socket;
 
     socket.emit('join-room', user._id);
     socket.emit('presence:online', { userId: user._id });
+    if (user.role === 'admin') {
+      socket.emit('join-admin-inbox');
+    }
 
-    socket.on('notification:new', (notification) => {
+    const onNotification = (notification) => {
       setNotifications((current) => [notification, ...current]);
       setUnreadCount((c) => c + 1);
-    });
-
-    socket.on('message:new', ({ conversationId, message }) => {
+    };
+    const onMessage = ({ conversationId: _conversationId, message }) => {
       if (message.sender?._id !== user._id && message.sender !== user._id) {
         setUnreadCount((c) => c + 1);
       }
-    });
-
-    socket.on('typing', ({ conversationId, userId: typingUserId, name, isTyping }) => {
+    };
+    const onTyping = ({ conversationId, userId: typingUserId, name, isTyping }) => {
       if (typingUserId === user._id) return;
       setTypingUsers((current) => {
         const next = { ...current };
@@ -46,25 +55,45 @@ export const ChatProvider = ({ children }) => {
         }
         return next;
       });
-    });
-
-    socket.on('presence:update', ({ userId, online }) => {
+    };
+    const onPresence = ({ userId, online }) => {
       setOnlinePresence((current) => ({ ...current, [userId]: online }));
-    });
+    };
+    const onDeliveryStatus = (data) => {
+      setDeliveryStatus(data);
+    };
+    const onDeliveryLocation = (data) => {
+      setDeliveryLocation(data);
+    };
+
+    socket.on('notification:new', onNotification);
+    socket.on('message:new', onMessage);
+    socket.on('typing', onTyping);
+    socket.on('presence:update', onPresence);
+    socket.on('delivery:status', onDeliveryStatus);
+    socket.on('delivery:location', onDeliveryLocation);
+    socket.on('delivery:assigned', onDeliveryStatus);
 
     return () => {
       socket.emit('presence:offline', { userId: user._id });
-      socket.disconnect();
-      socketRef.current = null;
-      // Clear all user-specific chat state on logout so the next user never
-      // sees the previous user's notifications/messages.
+      socket.off('notification:new', onNotification);
+      socket.off('message:new', onMessage);
+      socket.off('typing', onTyping);
+      socket.off('presence:update', onPresence);
+      socket.off('delivery:status', onDeliveryStatus);
+      socket.off('delivery:location', onDeliveryLocation);
+      socket.off('delivery:assigned', onDeliveryStatus);
+      releaseSocket();
+      socketRef.current = socket.connected ? socket : null;
       setNotifications([]);
       setUnreadCount(0);
       setTypingUsers({});
       setActiveConversation(null);
       setOnlinePresence({});
+      setDeliveryStatus(null);
+      setDeliveryLocation(null);
     };
-  }, [isAuthenticated, user?._id]);
+  }, [isAuthenticated, user?._id, user?.role]);
 
   const joinConversation = useCallback((conversationId) => {
     if (socketRef.current && conversationId) {
@@ -115,6 +144,10 @@ export const ChatProvider = ({ children }) => {
     emitReadReceipt,
     clearNotifications,
     setUnreadCount,
+    deliveryStatus,
+    deliveryLocation,
+    setDeliveryStatus,
+    setDeliveryLocation,
   };
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;

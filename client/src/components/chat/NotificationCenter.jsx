@@ -4,17 +4,17 @@ import { useChat } from '../../Context/ChatContext';
 import api from '../../Services/api';
 
 const NotificationCenter = () => {
-  const { notifications, unreadCount, clearNotifications, socketRef } = useChat();
+  const { notifications, unreadCount, clearNotifications } = useChat();
   const [open, setOpen] = useState(false);
   const [history, setHistory] = useState([]);
   const panelRef = useRef(null);
 
   useEffect(() => {
-const fetchHistory = async () => {
+    const fetchHistory = async () => {
       try {
         const { data } = await api.get('/dashboard/notifications');
         setHistory(data.notifications || []);
-      } catch (error) {
+      } catch {
         // ignore
       }
     };
@@ -35,9 +35,9 @@ const fetchHistory = async () => {
 
   const markAllRead = async () => {
     try {
-await api.put('/dashboard/notifications/read');
+      await api.put('/dashboard/notifications/read');
       clearNotifications();
-    } catch (error) {
+    } catch {
       // ignore
     }
   };
@@ -55,7 +55,7 @@ await api.put('/dashboard/notifications/read');
       >
         <FaBell />
         {unreadCount > 0 && (
-          <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-pink-600 px-1.5 text-[11px] font-bold text-white">
+          <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-[20px] animate-bounce items-center justify-center rounded-full bg-red-600 px-1.5 text-[11px] font-bold text-white">
             {unreadCount}
           </span>
         )}

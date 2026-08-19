@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import api from '../../Services/api';
-import { FaEye, FaTimes } from 'react-icons/fa';
+import { FaEye, FaTimes, FaTrash } from 'react-icons/fa';
 
 const ORDER_STATUSES = ['pending', 'confirmed', 'processing', 'packed', 'shipped', 'delivered', 'cancelled'];
 
@@ -35,6 +35,21 @@ const AdminOrders = () => {
       toast.success('Order updated');
     } catch (error) {
       toast.error(error.response?.data?.message || 'Unable to update order');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleDelete = async (order) => {
+    if (!window.confirm(`Delete order ${order.orderNumber}? This cannot be undone.`)) return;
+    setUpdating(true);
+    try {
+      await api.delete(`/orders/${order._id}`);
+      setOrders((prev) => prev.filter((o) => o._id !== order._id));
+      if (selectedOrder?._id === order._id) setSelectedOrder(null);
+      toast.success('Order deleted');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Unable to delete order');
     } finally {
       setUpdating(false);
     }
@@ -139,13 +154,23 @@ const AdminOrders = () => {
                         <span className={`rounded-full px-3 py-1 text-xs font-semibold ${paymentColor(order.paymentStatus)}`}>{order.paymentStatus}</span>
                       </td>
                       <td className="px-3 py-3">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedOrder(order)}
-                          className="flex items-center gap-1 rounded-full bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700"
-                        >
-                          <FaEye /> Details
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedOrder(order)}
+                            className="flex items-center gap-1 rounded-full bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700"
+                          >
+                            <FaEye /> Details
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(order)}
+                            disabled={updating}
+                            className="flex items-center gap-1 rounded-full bg-red-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-40"
+                          >
+                            <FaTrash /> Delete
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))

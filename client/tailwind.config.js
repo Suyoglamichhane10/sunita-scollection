@@ -4,25 +4,25 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Sunita's Collection — Elegance brand palette
+// Sunita'z Collection — Feminine "Pink & Red" brand palette
         primary: {
-          DEFAULT: '#6B2D5C',      // Deep Purple (elegance)
-          light: '#8A3D77',
-          dark: '#4E1F43',
-          50: '#FAF3F8',
-          100: '#F3E3EF',
-          200: '#E3C2DA',
-          300: '#CF9BC0',
-          400: '#B874A6',
-500: '#8A3D77',
-          600: '#6B2D5C',
-          700: '#542344',
-          800: '#3D1A33',
-          900: '#2A1223',
-          950: '#1F0D1A',
+          DEFAULT: '#E11D48',      // Pink-red (signature)
+          light: '#F43F5E',
+          dark: '#BE123C',
+          50: '#FFF1F2',
+          100: '#FFE4E6',
+          200: '#FECDD3',
+          300: '#FDA4AF',
+          400: '#FB7185',
+          500: '#F43F5E',
+          600: '#E11D48',
+          700: '#BE123C',
+          800: '#9F1239',
+          900: '#881337',
+          950: '#4C0519',
         },
         gold: {
-          DEFAULT: '#C9A855',      // Luxury gold
+          DEFAULT: '#C9A855',      // Champagne gold
           light: '#D9BE7A',
           dark: '#A8893B',
           50: '#FBF8EF',
@@ -30,39 +30,39 @@ export default {
           200: '#EAD9AA',
           300: '#DFC57D',
           400: '#D4B266',
-500: '#C9A855',
+          500: '#C9A855',
           600: '#A8893B',
           700: '#866B2E',
           800: '#654E22',
           900: '#453417',
           950: '#2E2310',
         },
-blush: {
-          DEFAULT: '#F4E1E1',      // Soft Pink (femininity)
-          light: '#FAEFEF',
-          dark: '#E8C9C9',
-          50: '#FDF4F4',
-          100: '#FAE9E9',
-          200: '#F4D4D4',
-          300: '#ECBABA',
-          400: '#E29A9A',
-          500: '#D47878',
-          600: '#C05353',
-          700: '#A03F3F',
-          800: '#7E3030',
-          900: '#5C2424',
-          950: '#3A1616',
+        blush: {
+          DEFAULT: '#FBE7EE',      // Soft pink background
+          light: '#FDF2F7',
+          dark: '#F5CFDC',
+          50: '#FEF6F9',
+          100: '#FCEDF3',
+          200: '#F9DCE8',
+          300: '#F3C3D7',
+          400: '#EB9FBD',
+          500: '#DF769F',
+          600: '#C94F7D',
+          700: '#AB3C66',
+          800: '#832D50',
+          900: '#5C203B',
+          950: '#3B1327',
         },
         cream: {
-          DEFAULT: '#FFF8F0',      // Warm cream background
+          DEFAULT: '#FFF8F0',      // Warm cream
           light: '#FFFDF8',
           dark: '#F5E9DA',
         },
-ink: {
-          DEFAULT: '#2D1B2B',      // Readable dark text
-          light: '#5A4458',
-          dark: '#1A0F19',
-          950: '#120A10',
+        ink: {
+          DEFAULT: '#33202C',      // Readable warm dark text
+          light: '#6E5567',
+          dark: '#1D1119',
+          950: '#140B11',
         },
       },
       fontFamily: {
@@ -71,23 +71,29 @@ ink: {
         script: ['"Playfair Display"', 'Georgia', 'serif'],
       },
       boxShadow: {
-        elegant: '0 10px 40px -12px rgba(42,18,35,0.2)',
-        luxury: '0 20px 60px -15px rgba(107,45,92,0.35)',
-        card: '0 4px 20px rgba(42,18,35,0.08)',
+        elegant: '0 10px 40px -12px rgba(61,17,40,0.18)',
+        luxury: '0 20px 60px -15px rgba(212,84,143,0.35)',
+        card: '0 4px 20px rgba(61,17,40,0.07)',
       },
       borderRadius: {
         '4xl': '2rem',
       },
       animation: {
         shimmer: 'shimmer 2s linear infinite',
+        float: 'float 6s ease-in-out infinite',
       },
       keyframes: {
         shimmer: {
           '0%': { backgroundPosition: '-200% 0' },
           '100%': { backgroundPosition: '200% 0' },
         },
+        float: {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-12px)' },
+        },
       },
     },
   },
   plugins: [],
 };
+

@@ -57,14 +57,22 @@ const handleSubmit = async (e) => {
         return;
       }
 
-      // eSewa payment initiation
+      // eSewa payment initiation — build and submit the eSewa form
       if (paymentMethod === 'esewa' && orderId) {
+        // Development mode: bypass eSewa and go directly to success page
+        if (import.meta.env.MODE === 'development' && import.meta.env.VITE_BYPASS_ESEWA === 'true') {
+          toast.success('Order placed successfully! (Development mode - eSewa bypassed)');
+          clearCart();
+          navigate(`/order-success/${orderId}`);
+          return;
+        }
+        
         const esewaRes = await api.post('/payments/esewa/initiate', { orderId });
         const { paymentUrl, params } = esewaRes.data.data;
-        // Build eSewa form and submit
         const form = document.createElement('form');
         form.method = 'POST';
         form.action = paymentUrl;
+        form.id = 'esewa-form';
         Object.entries(params).forEach(([key, value]) => {
           const input = document.createElement('input');
           input.type = 'hidden';
@@ -73,18 +81,25 @@ const handleSubmit = async (e) => {
           form.appendChild(input);
         });
         document.body.appendChild(form);
-        form.submit();
-        // Keep cart for now; cleared on success page
+        form.submit(); // redirects customer to the eSewa gateway
+        // Cart is kept until payment is verified on the success page.
         return;
       }
 
-      // Khalti payment initiation
+      // Khalti payment initiation — redirect to Khalti gateway
       if (paymentMethod === 'khalti' && orderId) {
-        const khaltiRes = await api.post('/payments/khalti/initiate', { orderId });
-        window.location.href = khaltiRes.data.data.paymentUrl;
-        return;
+        try {
+          const khaltiRes = await api.post('/payments/khalti/initiate', { orderId });
+          window.location.href = khaltiRes.data.data.paymentUrl;
+          return;
+        } catch (error) {
+          toast.error(error.response?.data?.message || 'Khalti payment is not configured. Please use COD or eSewa.');
+          setLoading(false);
+          return;
+        }
       }
 
+      // COD (and any non-gateway method)
       toast.success('Order placed successfully!');
       clearCart();
       navigate(`/order-success/${orderId}`);

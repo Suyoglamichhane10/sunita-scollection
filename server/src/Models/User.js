@@ -68,6 +68,10 @@ address: {
       type: String,
       default: 'default-avatar.png',
     },
+    avatarPublicId: {
+      type: String,
+      default: '',
+    },
     isEmailVerified: {
       type: Boolean,
       default: false,
@@ -110,7 +114,6 @@ orderHistory: [
       sizes: {
         top: String,
         bottom: String,
-        sareeLength: String,
         footwear: String,
       },
       preferences: {
@@ -183,6 +186,19 @@ orderHistory: [
         },
       },
     ],
+    isDeliveryPerson: { type: Boolean, default: false },
+    vehicle: {
+      type: String,
+      enum: ['bike', 'car', 'van', 'truck', 'foot'],
+      default: null,
+    },
+    vehicleNumber: { type: String, default: '' },
+    currentLocation: {
+      lat: { type: Number, default: null },
+      lng: { type: Number, default: null },
+      updatedAt: { type: Date, default: null },
+    },
+    isAvailable: { type: Boolean, default: true },
   },
   {
     timestamps: true,

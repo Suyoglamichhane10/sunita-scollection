@@ -1,11 +1,11 @@
 {
-  "name": "Sunita's Collection — Elegance for Every Woman",
-  "short_name": "Sunita's",
-  "description": "Online store for women's fashion and accessories — Sarees, Bags, Sandals, Earrings, and Necklaces.",
+  "name": "Sunita'z Collection — Trendy Fashion for the Modern Girl",
+  "short_name": "Sunita'z",
+  "description": "Online store for trendy fashion — Tops, Dresses, Bottoms, Footwear, and Accessories.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f9fafb",
-  "theme_color": "#2563eb",
+  "background_color": "#FFF7F7",
+  "theme_color": "#E11D48",
   "orientation": "portrait-primary",
   "lang": "en",
   "icons": [

@@ -8,28 +8,41 @@
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  color: #2D1B2B;
-  background-color: #FFF8F0;
+  color: #33111F;
+  background-color: #FFF7F7;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-body {
-  margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
-  background-color: #FFF8F0;
-  color: #2D1B2B;
+html {
+  height: 100%;
 }
 
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  height: 100%;
+  background-color: #FFF7F7;
+  color: #33111F;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 #root {
   min-height: 100vh;
+  height: 100%;
 }
 
 /* Elegant serif headings */
@@ -60,13 +73,24 @@ h1, h2, h3, .font-serif {
   }
 }
 
-/* Elegant scrollbar */
+/* Leaflet map fixes */
+.leaflet-container {
+  background: #f3f4f6 !important;
+  font-family: inherit !important;
+}
+.leaflet-popup-content-wrapper {
+  border-radius: 12px !important;
+}
+.custom-marker {
+  background: transparent !important;
+  border: none !important;
+}
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #F5E9DA;
+  background: #F5CFDC;
 }
 ::-webkit-scrollbar-thumb {
   background: #C9A855;
@@ -84,23 +108,31 @@ h1, h2, h3, .font-serif {
   -webkit-text-fill-color: transparent;
 }
 
-/* Elegant primary gradient button */
+/* Hot-pink gradient text utility */
+.text-rose-gradient {
+  background: linear-gradient(135deg, #BE123C 0%, #F43F5E 50%, #E11D48 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Elegant pink-red primary gradient button */
 .btn-elegant {
-  background: linear-gradient(135deg, #7A3366 0%, #6B2D5C 45%, #8A3D77 100%);
-  color: #FFF8F0;
+  background: linear-gradient(135deg, #F43F5E 0%, #E11D48 45%, #FB7185 100%);
+  color: #FFFFFF;
   transition: all 0.3s ease;
-  box-shadow: 0 8px 24px -8px rgba(107,45,92,0.45);
+  box-shadow: 0 8px 24px -8px rgba(225,29,72,0.45);
 }
 .btn-elegant:hover {
-  background: linear-gradient(135deg, #542344 0%, #6B2D5C 100%);
-  box-shadow: 0 14px 34px -8px rgba(107,45,92,0.55);
+  background: linear-gradient(135deg, #BE123C 0%, #E11D48 100%);
+  box-shadow: 0 14px 34px -8px rgba(225,29,72,0.55);
   transform: translateY(-2px);
 }
 
 /* Gold accent button */
 .btn-gold {
   background: linear-gradient(135deg, #D9BE7A 0%, #C9A855 45%, #E9D7A0 100%);
-  color: #2D1B2B;
+  color: #3E1126;
   transition: all 0.3s ease;
   box-shadow: 0 8px 24px -8px rgba(200,168,85,0.5);
 }
@@ -116,17 +148,26 @@ h1, h2, h3, .font-serif {
 }
 .card-luxury:hover {
   transform: translateY(-6px);
-  box-shadow: 0 20px 50px -15px rgba(107,45,92,0.3);
+  box-shadow: 0 20px 50px -15px rgba(225,29,72,0.3);
 }
 
-/* Elegant hero gradient overlay (for deep purple hero sections) */
+/* Elegant pink-red hero gradient overlay */
 .hero-gradient {
-  background: linear-gradient(135deg, #3D1A33 0%, #6B2D5C 45%, #8A3D77 100%);
+  background: linear-gradient(135deg, #881337 0%, #BE123C 45%, #E11D48 100%);
 }
 
-/* Deep footer gradient with solid end color so text is always readable */
+/* Soft pink-red mesh gradient for auth backgrounds */
+.mesh-rose {
+  background:
+    radial-gradient(at 20% 15%, rgba(254,205,211,0.6) 0px, transparent 50%),
+    radial-gradient(at 85% 20%, rgba(233,215,160,0.4) 0px, transparent 50%),
+    radial-gradient(at 50% 90%, rgba(251,113,133,0.45) 0px, transparent 55%),
+    linear-gradient(135deg, #FFF7F7 0%, #FFF1F2 50%, #FFE4E6 100%);
+}
+
+/* Deep pink footer gradient with solid end color so text is always readable */
 .footer-gradient {
-  background: linear-gradient(180deg, #2A1223 0%, #1F0D1A 60%, #120A10 100%);
+  background: linear-gradient(180deg, #881337 0%, #4C0519 60%, #1D1119 100%);
 }
 
 /* Soft radial glow used in brand panels */
@@ -147,12 +188,124 @@ h1, h2, h3, .font-serif {
   right: -4rem;
   width: 16rem;
   height: 16rem;
-  background: rgba(201,168,85,0.35);
+  background: rgba(233,215,160,0.35);
 }
 .glow-panel::after {
   bottom: -4rem;
   left: -4rem;
   width: 16rem;
   height: 16rem;
-  background: rgba(138,61,119,0.4);
+  background: rgba(251,113,133,0.4);
+}
+
+/* Hero slideshow - text middle, image right covering full space */
+.hero-section {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+@media (min-width: 768px) {
+  .hero-section {
+    flex-direction: row;
+  }
+}
+
+.hero-text-panel {
+  position: relative;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+  background: linear-gradient(180deg, #881337 0%, #4C0519 60%, #1D1119 100%);
+  border-right: 1px solid rgba(201, 168, 85, 0.2);
+}
+
+@media (min-width: 768px) {
+  .hero-text-panel {
+    width: 50%;
+    padding: 3rem;
+    text-align: center;
+    align-items: center;
+  }
+}
+
+.hero-image-panel {
+  position: relative;
+  width: 100%;
+  flex: 1 1 0;
+  min-height: 0;
+  background-color: #0f172a;
+  overflow: hidden;
+}
+
+@media (min-width: 768px) {
+  .hero-image-panel {
+    width: 50%;
+  }
+}
+
+.hero-slide-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: translateZ(0);
+  will-change: opacity;
+}
+
+@keyframes pulseSlow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 12px rgba(37, 211, 102, 0);
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulseSlow 2.5s infinite;
+}
+
+@keyframes loopText {
+  0%, 100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  25% {
+    opacity: 0.6;
+    transform: translateX(3px);
+  }
+  50% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  75% {
+    opacity: 0.6;
+    transform: translateX(-3px);
+  }
+}
+
+.animate-loop-text {
+  animation: loopText 2.5s ease-in-out infinite;
+  display: inline-block;
+}
+
+/* About Us triangular trending banner */
+.about-triangular-banner {
+  clip-path: polygon(0 0, 100% 0, 96% 100%, 4% 100%);
+}
+
+/* GlamourAboutHero full viewport */
+.glamour-about-hero {
+  min-height: 100vh;
 }

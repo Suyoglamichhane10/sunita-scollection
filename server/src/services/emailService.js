@@ -22,7 +22,7 @@ const sendEmail = async (options) => {
   }
 
   const mailOptions = {
-    from: process.env.EMAIL_FROM || `Sunita's Collection <${process.env.EMAIL_USER}>`,
+    from: process.env.EMAIL_FROM || `Sunita'z Collection <${process.env.EMAIL_USER}>`,
     to: options.to,
     subject: options.subject,
     text: options.text,
@@ -55,7 +55,7 @@ const sendOrderConfirmation = async (user, order) => {
   const html = `
     <div style="font-family:Inter,sans-serif;max-width:600px;margin:auto;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;">
       <div style="background:linear-gradient(90deg,#2563eb,#ec4899);padding:24px;color:white;text-align:center;">
-        <h1 style="margin:0;">Sunita's Collection</h1>
+        <h1 style="margin:0;">Sunita'z Collection</h1>
         <p style="margin:4px 0 0;opacity:0.9;">Elegance for Every Woman</p>
       </div>
       <div style="padding:24px;color:#111827;">
@@ -87,7 +87,7 @@ const sendOrderConfirmation = async (user, order) => {
 
   return sendEmail({
     to: user.email,
-    subject: `Order Confirmed: ${order.orderNumber} - Sunita's Collection`,
+    subject: `Order Confirmed: ${order.orderNumber} - Sunita'z Collection`,
     text: `Your order ${order.orderNumber} has been received. Total: Rs. ${order.totalAmount}`,
     html,
   });
@@ -98,7 +98,7 @@ const sendPasswordReset = async (user, resetUrl) => {
   const html = `
     <div style="font-family:Inter,sans-serif;max-width:600px;margin:auto;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;">
       <div style="background:linear-gradient(90deg,#2563eb,#ec4899);padding:24px;color:white;text-align:center;">
-        <h1 style="margin:0;">Sunita's Collection</h1>
+        <h1 style="margin:0;">Sunita'z Collection</h1>
       </div>
       <div style="padding:24px;color:#111827;">
         <h2>Password Reset</h2>

@@ -4,7 +4,7 @@ import { useAuth } from '../../Context/Authcontext';
 import { useChat } from '../../Context/ChatContext';
 import toast from 'react-hot-toast';
 import ChatWindow from '../../components/chat/ChatWindow';
-import { FaComments, FaExclamationTriangle } from 'react-icons/fa';
+import { FaComments, FaExclamationTriangle, FaTrash } from 'react-icons/fa';
 
 const AdminConversations = () => {
   const { isAuthenticated, isAdmin, loading: authLoading } = useAuth();
@@ -70,6 +70,19 @@ const AdminConversations = () => {
     }
   };
 
+  const handleDelete = async (conversation) => {
+    if (!window.confirm(`Delete conversation${conversation.order?.orderNumber ? ` for order ${conversation.order.orderNumber}` : ''}? All its messages will also be removed.`)) return;
+    try {
+      await api.delete(`/conversations/${conversation._id}`);
+      setConversations((cur) => cur.filter((c) => c._id !== conversation._id));
+      if (activeId === conversation._id) setActiveId(null);
+      toast.success('Conversation deleted');
+      fetchStats();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Unable to delete conversation');
+    }
+  };
+
   if (loading) {
     return <div className="min-h-screen bg-gray-100 p-10 text-center text-gray-600">Loading inbox...</div>;
   }
@@ -123,6 +136,13 @@ const AdminConversations = () => {
                     </button>
                     <button type="button" onClick={() => updateConversation(c._id, { priority: c.priority === 'urgent' ? 'normal' : 'urgent' })} className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-200">
                       {c.priority === 'urgent' ? 'Normal priority' : 'Mark urgent'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(c)}
+                      className="flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700 hover:bg-red-200"
+                    >
+                      <FaTrash className="text-[10px]" /> Delete
                     </button>
                   </div>
                 </div>

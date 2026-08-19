@@ -115,7 +115,7 @@ const ChatWindow = ({ conversationId, onBack }) => {
           )}
           <div>
             <p className="font-semibold text-gray-900">Support Chat</p>
-            <p className="text-xs text-gray-500">Sunita&apos;s Collection team</p>
+            <p className="text-xs text-gray-500">Our team</p>
           </div>
         </div>
         <div className="flex items-center gap-2">

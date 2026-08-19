@@ -32,6 +32,18 @@ app.use(cors({
   credentials: true,
 }));
 app.use(cookieParser());
+
+// Stripe webhook must receive the RAW body so the signature can be verified.
+// Mount this raw-body route BEFORE the global express.json() middleware.
+const stripeWebhookRouter = express.Router();
+const stripeWebhookController = require('./controllers/paymentController').stripeWebhook;
+stripeWebhookRouter.post(
+  '/stripe/webhook',
+  express.raw({ type: 'application/json' }),
+  stripeWebhookController
+);
+app.use('/api/payments', stripeWebhookRouter);
+
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
@@ -57,6 +69,7 @@ const dashboardRoutes = require('./Routes/dashboardRoutes');
 const socialRoutes = require('./Routes/socialRoutes');
 const marketingRoutes = require('./Routes/marketingRoutes');
 const webhookRoutes = require('./Routes/webhookRoutes');
+const deliveryRoutes = require('./Routes/deliveryRoutes');
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -77,6 +90,8 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/social', socialRoutes);
 app.use('/api/marketing', marketingRoutes);
 app.use('/api/messages/webhook', webhookRoutes);
+app.use('/api/delivery', deliveryRoutes);
+app.use('/api/wishlist', require('./Routes/wishlistRoutes'));
 
 // Serve uploaded files in development
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));

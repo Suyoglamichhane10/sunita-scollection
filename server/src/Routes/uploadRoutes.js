@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const { uploadImages, deleteImage } = require('../controllers/uploadController');
+const { uploadImages, uploadAvatar, deleteImage } = require('../controllers/uploadController');
 const { protect, authorize } = require('../Middleware/auth');
 
 // Configure multer storage (temp local storage before Cloudinary upload)
@@ -34,5 +34,8 @@ const upload = multer({
 // Admin routes
 router.post('/image', protect, authorize('admin'), upload.array('images', 10), uploadImages);
 router.delete('/image/:publicId', protect, authorize('admin'), deleteImage);
+
+// Any authenticated user can upload their own profile avatar
+router.post('/avatar', protect, upload.single('avatar'), uploadAvatar);
 
 module.exports = router;

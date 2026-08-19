@@ -106,12 +106,13 @@ const login = async (credentials) => {
     setUser,
     loading,
     token,
-register,
+    register,
     login,
     logout,
     refreshUser,
     isAuthenticated: !!user,
     isAdmin: user?.role === 'admin',
+    isDeliveryPerson: user?.isDeliveryPerson,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

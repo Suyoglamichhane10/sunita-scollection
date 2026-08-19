@@ -1,19 +1,27 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../Services/api';
 import { useAuth } from '../../Context/Authcontext';
+import { uploadAvatar, deleteAvatar } from '../../Services/api';
 import toast from 'react-hot-toast';
-import { FaEye, FaEyeSlash, FaPlus, FaTshirt } from 'react-icons/fa';
+import { FaEye, FaEyeSlash, FaPlus, FaTshirt, FaCamera, FaTrash, FaUserCircle, FaCheckCircle, FaEnvelope, FaPhone, FaSave, FaUndo } from 'react-icons/fa';
+import Avatar from '../../components/common/Avatar';
 
 const Profile = () => {
-  const { user, setUser, isAuthenticated, loading: authLoading } = useAuth();
+  const { user, setUser, refreshUser, isAuthenticated, loading: authLoading } = useAuth();
+  const fileInputRef = useRef(null);
   const [activeTab, setActiveTab] = useState('profile');
-  const [profile, setProfile] = useState({ name: '', email: '', phone: '', address: { street: '', city: '', state: '', country: '' } });
+  const [profile, setProfile] = useState({ name: '', email: '', phone: '', avatar: '', address: { street: '', city: '', state: '', country: '' } });
   const [addresses, setAddresses] = useState([]);
   const [password, setPassword] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [showPwd, setShowPwd] = useState({ current: false, next: false, confirm: false });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState(null);
+  const [avatarFile, setAvatarFile] = useState(null);
+  const [avatarDirty, setAvatarDirty] = useState(false);
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [newAddress, setNewAddress] = useState({ fullName: '', phone: '', street: '', city: '', state: '', zipCode: '', country: 'Nepal', isDefault: false });
   const navigate = useNavigate();
@@ -32,9 +40,11 @@ const Profile = () => {
           name: data.user.name || '',
           email: data.user.email || '',
           phone: data.user.phone || '',
+          avatar: data.user.avatar || '',
           address: data.user.address || { street: '', city: '', state: '', country: 'Nepal' },
         });
         setAddresses(data.user.addresses || []);
+        setAvatarError(false);
       } catch (error) {
         toast.error('Unable to load profile');
       } finally {
@@ -53,7 +63,7 @@ const Profile = () => {
     }
   };
 
-  const handleProfileSubmit = async (e) => {
+const handleProfileSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
     try {
@@ -64,6 +74,68 @@ const Profile = () => {
       toast.error(error.response?.data?.message || 'Unable to update profile');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleAvatarFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
+      toast.error('Please choose a valid image (JPG, PNG, WEBP or GIF)');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be smaller than 5MB');
+      return;
+    }
+    setAvatarFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setAvatarPreview(reader.result);
+      setAvatarDirty(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleAvatarSave = async () => {
+    if (!avatarFile || !avatarDirty) return;
+    setAvatarUploading(true);
+    setAvatarError(false);
+    try {
+      const response = await uploadAvatar(avatarFile);
+      setProfile((prev) => ({ ...prev, avatar: response.avatar }));
+      if (refreshUser) await refreshUser();
+      toast.success('Profile photo updated!');
+      setAvatarPreview(null);
+      setAvatarFile(null);
+      setAvatarDirty(false);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Unable to upload photo');
+    } finally {
+      setAvatarUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleAvatarCancel = () => {
+    setAvatarPreview(null);
+    setAvatarFile(null);
+    setAvatarDirty(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleAvatarRemove = async () => {
+    if (!window.confirm('Remove your profile photo?')) return;
+    try {
+      const response = await deleteAvatar();
+      setProfile((prev) => ({ ...prev, avatar: '' }));
+      setAvatarError(false);
+      setAvatarPreview(null);
+      setAvatarDirty(false);
+      if (setUser) setUser(response.user);
+      toast.success('Profile photo removed');
+    } catch (error) {
+      toast.error('Unable to remove photo');
     }
   };
 
@@ -182,14 +254,114 @@ const [styleProfile, setStyleProfile] = useState({ shoeSize: '', dressSize: '', 
     );
   }
 
+  const initialLetter = (profile.name || user?.name || 'U')
+    .charAt(0)
+    .toUpperCase();
+
   return (
     <div className="min-h-screen bg-gray-50 py-16">
       <div className="container-custom px-4 lg:px-8">
-        <div className="rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
-          <h1 className="text-3xl font-bold text-gray-900">My Profile</h1>
-          <p className="mt-2 text-gray-600">Manage your account details, addresses, and security.</p>
+        <div className="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm">
+          {/* Profile header / cover */}
+          <div className="relative bg-gradient-to-r from-pink-600 via-rose-500 to-pink-500 px-6 pb-16 pt-8 text-white">
+            <h1 className="text-3xl font-bold">My Profile</h1>
+            <p className="mt-1 text-white/80">Manage your account details, addresses, and security.</p>
+          </div>
 
-          <div className="mt-6 flex gap-2 overflow-x-auto border-b border-gray-200 pb-3">
+          {/* Avatar card overlapping the header */}
+          <div className="relative -mt-12 px-6">
+            <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-end">
+              <div className="relative">
+                <Avatar
+                  src={avatarPreview || profile.avatar}
+                  name={profile.name || user?.name}
+                  size="xl"
+                  showBorder={true}
+                  borderColor="border-white"
+                />
+                {/* Camera upload button */}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={avatarUploading}
+                  className="absolute bottom-1 right-1 flex h-9 w-9 items-center justify-center rounded-full border-4 border-white bg-pink-600 text-white shadow-lg transition hover:bg-pink-700 disabled:opacity-60"
+                  title="Upload profile photo"
+                >
+                  {avatarUploading ? (
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  ) : (
+                    <FaCamera size={14} />
+                  )}
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="hidden"
+                  onChange={handleAvatarFileChange}
+                />
+              </div>
+
+              <div className="text-center sm:pb-2 sm:text-left">
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {profile.name || user?.name || 'Welcome!'}
+                </h2>
+                <div className="mt-1 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-gray-600 sm:justify-start">
+                  {profile.email && (
+                    <span className="flex items-center gap-1.5">
+                      <FaEnvelope className="text-pink-500" /> {profile.email}
+                    </span>
+                  )}
+                  {profile.phone && (
+                    <span className="flex items-center gap-1.5">
+                      <FaPhone className="text-pink-500" /> {profile.phone}
+                    </span>
+                  )}
+                  <span className="flex items-center gap-1.5 text-emerald-600">
+                    <FaCheckCircle /> Active member
+                  </span>
+                </div>
+              </div>
+
+              {avatarDirty && (
+                <div className="ml-auto flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleAvatarSave}
+                    disabled={avatarUploading}
+                    className="flex items-center gap-1.5 rounded-full bg-pink-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-pink-700 disabled:opacity-60"
+                  >
+                    {avatarUploading ? (
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    ) : (
+                      <FaSave size={12} />
+                    )}
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleAvatarCancel}
+                    disabled={avatarUploading}
+                    className="flex items-center gap-1.5 rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-100 disabled:opacity-60"
+                  >
+                    <FaUndo size={12} /> Cancel
+                  </button>
+                </div>
+              )}
+              {!avatarDirty && profile.avatar && (
+                <button
+                  type="button"
+                  onClick={handleAvatarRemove}
+                  className="ml-auto flex items-center gap-1.5 rounded-full border border-gray-200 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50"
+                >
+                  <FaTrash size={12} /> Remove
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Tabs */}
+          <div className="mt-8 flex gap-2 overflow-x-auto border-b border-gray-200 px-6 pb-3">
             {tabs.map((tab) => (
               <button
                 key={tab.id}

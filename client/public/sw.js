@@ -1,4 +1,4 @@
-/* Sunita's Collection — Service Worker (PWA) */
+/* Sunita'z Collection — Service Worker (PWA) */
 
 const CACHE_NAME = 'sunitas-collection-v1';
 const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest'];

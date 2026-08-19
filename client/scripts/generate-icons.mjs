@@ -1,4 +1,4 @@
-// Generate PWA icons for Sunita's Collection
+// Generate PWA icons for Sunita'z Collection
 // Run: node scripts/generate-icons.mjs
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { deflateSync } from 'node:zlib';

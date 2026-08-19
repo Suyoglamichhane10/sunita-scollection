@@ -1,6 +1,25 @@
 const User = require('../Models/User');
 const Product = require('../Models/Product');
+const Order = require('../Models/Order');
+const Review = require('../Models/Review');
+const Conversation = require('../Models/Conversation');
+const Message = require('../Models/Message');
+const Gamification = require('../Models/Gamification');
 const bcrypt = require('bcrypt');
+const path = require('path');
+const cloudinary = require('../config/cloudinary');
+
+// Helper: delete Cloudinary image by publicId (ignore local/null ids)
+const deleteCloudinaryImage = async (publicId) => {
+  if (!publicId || publicId === 'default-avatar' || publicId.startsWith('http')) {
+    return;
+  }
+  try {
+    await cloudinary.uploader.destroy(publicId);
+  } catch (err) {
+    console.warn('Failed to delete Cloudinary image:', err.message);
+  }
+};
 
 exports.getUsers = async (req, res, next) => {
   try {
@@ -99,6 +118,75 @@ exports.getUserById = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
     res.status(200).json({ success: true, user });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Delete a user (admin) - cascades to their related data
+// @route   DELETE /api/users/:id
+// @access  Private/Admin
+exports.deleteUser = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Prevent an admin from deleting themselves
+    if (user._id.toString() === req.user.id.toString()) {
+      return res.status(400).json({ success: false, message: 'You cannot delete your own account' });
+    }
+
+    // Cascade delete related data for this user
+    const userId = user._id;
+
+    // Conversations where user is a participant or the customer
+    const conversations = await Conversation.find({
+      $or: [{ participants: userId }, { customer: userId }],
+    });
+    const conversationIds = conversations.map((c) => c._id);
+
+    if (conversationIds.length) {
+      await Message.deleteMany({ conversation: { $in: conversationIds } });
+    }
+    // Standalone messages submitted by the user (contact-us style)
+    await Message.deleteMany({ user: userId });
+    await Message.deleteMany({ sender: userId });
+
+    await Conversation.deleteMany({
+      $or: [{ participants: userId }, { customer: userId }],
+    });
+
+    // Orders placed by the user
+    await Order.deleteMany({ user: userId });
+
+    // Reviews written by the user
+    const reviews = await Review.find({ user: userId }).select('product');
+    await Review.deleteMany({ user: userId });
+    // Recompute product ratings after review removal
+    for (const r of reviews) {
+      if (r.product) {
+        const ProductModel = require('../Models/Product');
+        const stats = await Review.aggregate([
+          { $match: { product: r.product, isApproved: true } },
+          { $group: { _id: '$product', avgRating: { $avg: '$rating' }, count: { $sum: 1 } } },
+        ]);
+        await ProductModel.findByIdAndUpdate(r.product, {
+          'rating.average': stats.length ? stats[0].avgRating : 0,
+          'rating.count': stats.length ? stats[0].count : 0,
+        });
+      }
+    }
+
+    // Loyalty profile
+    if (user.loyalty) {
+      await Gamification.findByIdAndDelete(user.loyalty);
+    }
+
+    await user.deleteOne();
+
+    res.status(200).json({ success: true, message: 'User deleted successfully' });
   } catch (error) {
     next(error);
   }
@@ -290,6 +378,208 @@ address.deleteOne();
   }
 };
 
+// @desc    Delete own avatar
+// @route   DELETE /api/users/avatar
+// @access  Private
+exports.deleteAvatar = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    await deleteCloudinaryImage(user.avatarPublicId);
+
+    user.avatar = 'default-avatar.png';
+    user.avatarPublicId = '';
+    await user.save();
+
+    user.password = undefined;
+    res.status(200).json({ success: true, user });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Upload own avatar
+// @route   POST /api/users/avatar
+// @access  Private
+exports.uploadAvatar = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No avatar uploaded' });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    await deleteCloudinaryImage(user.avatarPublicId);
+
+    const isConfigured = Boolean(
+      process.env.CLOUDINARY_CLOUD_NAME &&
+      process.env.CLOUDINARY_API_KEY &&
+      process.env.CLOUDINARY_API_SECRET
+    );
+
+    let avatarUrl;
+    let publicId;
+
+    if (!isConfigured) {
+      avatarUrl = `/uploads/${path.basename(req.file.path)}`;
+      publicId = null;
+    } else {
+      try {
+        const result = await cloudinary.uploader.upload(req.file.path, {
+          folder: 'sunitas-collection/avatars',
+          use_filename: true,
+          resource_type: 'auto',
+          transformation: [{ width: 400, height: 400, crop: 'limit', gravity: 'face' }],
+        });
+        avatarUrl = result.secure_url;
+        publicId = result.public_id;
+      } catch (cloudinaryError) {
+        console.warn('⚠️ Avatar Cloudinary upload failed, falling back to local storage:', cloudinaryError.message);
+        avatarUrl = `/uploads/${path.basename(req.file.path)}`;
+        publicId = null;
+      }
+    }
+
+    user.avatar = avatarUrl;
+    user.avatarPublicId = publicId || '';
+    await user.save();
+
+    user.password = undefined;
+    res.status(200).json({ success: true, avatar: avatarUrl, user });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Admin upload avatar for a user
+// @route   POST /api/users/:id/avatar
+// @access  Private/Admin
+exports.uploadUserAvatar = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No avatar uploaded' });
+    }
+
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    await deleteCloudinaryImage(user.avatarPublicId);
+
+    const isConfigured = Boolean(
+      process.env.CLOUDINARY_CLOUD_NAME &&
+      process.env.CLOUDINARY_API_KEY &&
+      process.env.CLOUDINARY_API_SECRET
+    );
+
+    let avatarUrl;
+    let publicId;
+
+    if (!isConfigured) {
+      avatarUrl = `/uploads/${path.basename(req.file.path)}`;
+      publicId = null;
+    } else {
+      try {
+        const result = await cloudinary.uploader.upload(req.file.path, {
+          folder: 'sunitas-collection/avatars',
+          use_filename: true,
+          resource_type: 'auto',
+          transformation: [{ width: 400, height: 400, crop: 'limit', gravity: 'face' }],
+        });
+        avatarUrl = result.secure_url;
+        publicId = result.public_id;
+      } catch (cloudinaryError) {
+        console.warn('⚠️ Avatar Cloudinary upload failed, falling back to local storage:', cloudinaryError.message);
+        avatarUrl = `/uploads/${path.basename(req.file.path)}`;
+        publicId = null;
+      }
+    }
+
+    user.avatar = avatarUrl;
+    user.avatarPublicId = publicId || '';
+    await user.save();
+
+    user.password = undefined;
+    res.status(200).json({ success: true, avatar: avatarUrl, user });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Admin delete avatar for a user
+// @route   DELETE /api/users/:id/avatar
+// @access  Private/Admin
+exports.deleteUserAvatar = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    await deleteCloudinaryImage(user.avatarPublicId);
+
+    user.avatar = 'default-avatar.png';
+    user.avatarPublicId = '';
+    await user.save();
+
+    user.password = undefined;
+    res.status(200).json({ success: true, user });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get user avatar URL
+// @route   GET /api/users/:id/avatar
+// @access  Public
+exports.getUserAvatar = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id).select('avatar avatarPublicId name');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    res.status(200).json({ success: true, avatar: user.avatar, name: user.name });
+  } catch (error) {
+    next(error);
+  }
+};
+// (variantSku may refer to either the variant's SKU or its _id).
+const cartItemHas = (cartItem, productId, variantSku) => {
+  const itemVariant = cartItem.variantSku || null;
+  const targetVariant = variantSku || null;
+  if (cartItem.product.toString() !== productId) return false;
+  if (itemVariant === targetVariant) return true;
+  // If both are "empty", they match (base product).
+  if (!itemVariant && !targetVariant) return true;
+  return false;
+};
+
+// Helper: consolidate the user's cart array by merging duplicate
+// product + variant rows (summing quantities). This runs before any
+// mutation/read so stale or legacy duplicate rows never inflate the cart.
+const consolidateCart = (cart) => {
+  const map = new Map();
+  for (const item of cart) {
+    const productId = item.product.toString();
+    const variantSku = item.variantSku || null;
+    const key = variantSku ? `${productId}:${variantSku}` : productId;
+    const existing = map.get(key);
+    if (existing) {
+      existing.quantity += item.quantity;
+    } else {
+      map.set(key, { ...item.toObject ? item.toObject() : item });
+    }
+  }
+  return Array.from(map.values());
+};
+
 // @desc    Get my cart
 // @route   GET /api/users/profile/cart
 // @access  Private
@@ -299,7 +589,11 @@ exports.getCart = async (req, res, next) => {
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
-    res.status(200).json({ success: true, cart: user.cart || [] });
+    // Consolidate before returning so the frontend never sees duplicate rows.
+    user.cart = consolidateCart(user.cart || []);
+    await user.save();
+    const populated = await User.findById(req.user.id).populate('cart.product');
+    res.status(200).json({ success: true, cart: populated.cart });
   } catch (error) {
     next(error);
   }
@@ -313,6 +607,12 @@ exports.addToCart = async (req, res, next) => {
     const { productId, quantity = 1, variantSku = null } = req.body;
     if (!productId) {
       return res.status(400).json({ success: false, message: 'productId is required' });
+    }
+
+    // Validate quantity: must be a positive integer.
+    const qty = Math.floor(Number(quantity));
+    if (!Number.isFinite(qty) || qty < 1) {
+      return res.status(400).json({ success: false, message: 'Quantity must be a positive integer' });
     }
 
     const product = await Product.findById(productId);
@@ -332,21 +632,20 @@ exports.addToCart = async (req, res, next) => {
       stock = variant.stock;
     }
 
-    if (quantity > stock) {
+    if (qty > stock) {
       return res.status(400).json({ success: false, message: `Insufficient stock (max ${stock})` });
     }
 
     const user = await User.findById(req.user.id);
-    const existing = user.cart.find(
-      (item) =>
-        item.product.toString() === productId &&
-        (item.variantSku || null) === (variantSku || null)
-    );
+    // Consolidate first so any pre-existing duplicate rows do not cause the
+    // same product+variant to be split across multiple entries.
+    user.cart = consolidateCart(user.cart || []);
+    const existing = user.cart.find((item) => cartItemHas(item, productId, variantSku));
 
     if (existing) {
-      existing.quantity = Math.min(existing.quantity + quantity, stock);
+      existing.quantity = Math.min(existing.quantity + qty, stock);
     } else {
-      user.cart.push({ product: productId, quantity, variantSku: variantSku || null });
+      user.cart.push({ product: productId, quantity: qty, variantSku: variantSku || null });
     }
 
     await user.save();
@@ -363,18 +662,17 @@ exports.addToCart = async (req, res, next) => {
 exports.updateCartItem = async (req, res, next) => {
   try {
     const { quantity } = req.body;
-    if (!quantity || quantity < 1) {
+    const qty = Math.floor(Number(quantity));
+    if (!Number.isFinite(qty) || qty < 1) {
       return res.status(400).json({ success: false, message: 'Quantity must be at least 1' });
     }
 
     const user = await User.findById(req.user.id);
     // key format: <productId> or <productId>:<variantSku>
-    const [productId, variantSku] = req.params.key.split(':');
-    const item = user.cart.find(
-      (c) =>
-        c.product.toString() === productId &&
-        (c.variantSku || null) === (variantSku || null)
-    );
+    const sep = req.params.key.indexOf(':');
+    const productId = sep === -1 ? req.params.key : req.params.key.slice(0, sep);
+    const variantSku = sep === -1 ? null : req.params.key.slice(sep + 1);
+    const item = user.cart.find((c) => cartItemHas(c, productId, variantSku));
 
     if (!item) {
       return res.status(404).json({ success: false, message: 'Item not in cart' });
@@ -388,7 +686,7 @@ exports.updateCartItem = async (req, res, next) => {
       );
       if (v) stock = v.stock;
     }
-    item.quantity = Math.min(quantity, stock || quantity);
+    item.quantity = Math.min(qty, stock || qty);
 
     await user.save();
     const populated = await User.findById(req.user.id).populate('cart.product');
@@ -403,12 +701,11 @@ exports.updateCartItem = async (req, res, next) => {
 // @access  Private
 exports.removeCartItem = async (req, res, next) => {
   try {
-    const [productId, variantSku] = req.params.key.split(':');
+    const sep = req.params.key.indexOf(':');
+    const productId = sep === -1 ? req.params.key : req.params.key.slice(0, sep);
+    const variantSku = sep === -1 ? null : req.params.key.slice(sep + 1);
     const user = await User.findById(req.user.id);
-    user.cart = user.cart.filter(
-      (c) =>
-        !(c.product.toString() === productId && (c.variantSku || null) === (variantSku || null))
-    );
+    user.cart = user.cart.filter((c) => !cartItemHas(c, productId, variantSku));
     await user.save();
     const populated = await User.findById(req.user.id).populate('cart.product');
     res.status(200).json({ success: true, cart: populated.cart });

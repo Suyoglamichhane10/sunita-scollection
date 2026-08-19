@@ -1,52 +1,70 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { FaShoppingBag, FaUser, FaSearch, FaShoppingCart, FaSignOutAlt, FaHeart, FaGem, FaBars, FaTimes } from 'react-icons/fa';
+import { FaUser, FaSearch, FaShoppingCart, FaSignOutAlt, FaBars, FaTimes, FaHeart } from 'react-icons/fa';
 import { useAuth } from '../../Context/Authcontext';
 import { useCart } from '../../Context/CartContext';
+import wishlistApi from '../../Services/wishlistApi';
 import NotificationCenter from '../chat/NotificationCenter';
+import Avatar from './Avatar';
+import logo from '../../assets/LOGO!.png';
 
 const Navbar = () => {
-  const { isAuthenticated, isAdmin, logout } = useAuth();
+  const { isAuthenticated, isAdmin, logout, user } = useAuth();
   const { totalItems } = useCart();
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [wishlistCount, setWishlistCount] = useState(0);
 
   const publicLinks = [
     { label: 'Home', to: '/' },
     { label: 'Shop', to: '/shop' },
+    { label: 'About Us', to: '/about' },
+    { label: 'Contact', to: '/contact' },
   ];
 
   const customerLinks = [
     { label: 'Dashboard', to: '/dashboard' },
-    { label: 'Rewards', to: '/rewards' },
-    { label: 'Wishlist', to: '/wishlist' },
     { label: 'Orders', to: '/orders' },
-    { label: 'Community', to: '/social' },
+    { label: 'Wishlist', to: '/wishlist' },
     { label: 'Messages', to: '/messages' },
+    { label: 'Profile', to: '/profile' },
   ];
 
-  const links = [...publicLinks];
-  if (isAuthenticated) links.push(...customerLinks);
+const links = [...publicLinks];
+  if (isAuthenticated) {
+    links.push(...(isAdmin
+      ? customerLinks.filter((l) => l.label === 'Profile')
+      : customerLinks));
+  }
   if (isAdmin) links.push({ label: 'Admin Panel', to: '/admin' });
 
   const isActive = (to) => location.pathname === to;
+
+  useEffect(() => {
+    if (!isAuthenticated || isAdmin) return;
+    let active = true;
+    const loadWishlistCount = async () => {
+      try {
+        const { data } = await wishlistApi.getWishlist();
+        if (active) setWishlistCount((data.wishlist?.items || []).length);
+      } catch {}
+    };
+    loadWishlistCount();
+    return () => { active = false; };
+  }, [isAuthenticated, isAdmin]);
 
   return (
     <nav className="sticky top-0 z-40 border-b border-gold/20 bg-cream/95 shadow-sm backdrop-blur">
       <div className="mx-auto px-4 py-3 lg:px-8">
         <div className="flex items-center justify-between gap-4">
           {/* Brand */}
-          <Link to="/" className="flex items-center gap-3">
-            <div className="rounded-full bg-gradient-to-br from-primary-600 to-primary-400 p-2.5 text-white shadow-luxury">
-              <FaGem size={16} />
-            </div>
-            <div>
-              <p className="font-serif text-lg font-bold text-primary-800">
-                Sunita's <span className="text-gold-gradient">Collection</span>
-              </p>
-              <p className="text-xs tracking-wide text-ink-light">Women's fashion & accessories</p>
-            </div>
+          <Link to="/" className="flex items-center">
+            <img 
+              src={logo} 
+              alt="Sunita'z Collection" 
+              className="h-14 w-auto object-contain"
+            />
           </Link>
 
           {/* Desktop links */}
@@ -55,10 +73,10 @@ const Navbar = () => {
               <Link
                 key={link.label}
                 to={link.to}
-                className={`text-sm font-medium transition ${
+className={`text-sm font-medium transition ${
                   isActive(link.to)
-                    ? 'text-gold-600'
-                    : 'text-ink-light hover:text-primary-600'
+                    ? 'text-red-600'
+                    : 'text-ink-light hover:text-red-600'
                 }`}
               >
                 {link.label}
@@ -68,10 +86,10 @@ const Navbar = () => {
 
           {/* Icons */}
           <div className="flex items-center gap-2.5">
-            <button
+<button
               type="button"
               onClick={() => navigate('/shop')}
-              className="rounded-full border border-gold/40 p-2.5 text-ink-light transition hover:border-gold-500 hover:text-gold-600"
+              className="rounded-full border border-red-300 p-2.5 text-ink-light transition hover:border-red-500 hover:text-red-600"
               aria-label="Search products"
             >
               <FaSearch />
@@ -81,29 +99,47 @@ const Navbar = () => {
 
             <Link
               to="/cart"
-              className="relative rounded-full border border-gold/40 p-2.5 text-ink-light transition hover:border-gold-500 hover:text-gold-600"
+              className="relative rounded-full border border-red-300 p-2.5 text-ink-light transition hover:border-red-500 hover:text-red-600"
               aria-label="Shopping cart"
             >
               <FaShoppingCart />
               {totalItems > 0 && (
-                <span className="absolute -right-2 -top-2 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-gradient-to-br from-gold-500 to-gold-600 px-1.5 text-[11px] font-bold text-white shadow">
+                <span className="absolute -right-2 -top-2 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-gradient-to-br from-red-500 to-red-600 px-1.5 text-[11px] font-bold text-white shadow">
                   {totalItems}
                 </span>
               )}
             </Link>
 
-            {isAuthenticated ? (
-              <button
-                type="button"
-                onClick={() => {
-                  logout();
-                  navigate('/');
-                }}
-                className="btn-elegant hidden items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold sm:flex"
-              >
-                <FaSignOutAlt />
-                Logout
-              </button>
+            <Link
+              to="/wishlist"
+              className="relative rounded-full border border-red-300 p-2.5 text-ink-light transition hover:border-red-500 hover:text-red-600"
+              aria-label="Wishlist"
+            >
+              <FaHeart />
+              {wishlistCount > 0 && (
+                <span className="absolute -right-2 -top-2 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-gradient-to-br from-red-500 to-red-600 px-1.5 text-[11px] font-bold text-white shadow">
+                  {wishlistCount}
+                </span>
+              )}
+            </Link>
+
+             {isAuthenticated ? (
+              <div className="flex items-center gap-2">
+                <Link to="/profile" title="My Profile">
+                  <Avatar src={user?.avatar} name={user?.name} size="sm" showBorder={true} borderColor="border-red-400 hover:border-red-600" />
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    logout();
+                    navigate('/');
+                  }}
+                  className="btn-elegant hidden items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold sm:flex"
+                >
+                  <FaSignOutAlt />
+                  Logout
+                </button>
+              </div>
             ) : (
               <Link
                 to="/login"
@@ -115,10 +151,10 @@ const Navbar = () => {
             )}
 
             {/* Mobile toggle */}
-            <button
+<button
               type="button"
               onClick={() => setMobileOpen((v) => !v)}
-              className="rounded-full border border-gold/40 p-2.5 text-primary-700 lg:hidden"
+              className="rounded-full border border-red-300 p-2.5 text-red-600 lg:hidden"
               aria-label="Toggle menu"
             >
               {mobileOpen ? <FaTimes /> : <FaBars />}
@@ -134,27 +170,38 @@ const Navbar = () => {
                 key={link.label}
                 to={link.to}
                 onClick={() => setMobileOpen(false)}
-                className={`block rounded-xl px-4 py-2.5 text-sm font-medium transition ${
+className={`block rounded-xl px-4 py-2.5 text-sm font-medium transition ${
                   isActive(link.to)
-                    ? 'bg-primary-50 text-primary-700'
-                    : 'text-ink-light hover:bg-cream'
+                    ? 'bg-red-50 text-red-600'
+                    : 'text-ink-light hover:bg-red-50'
                 }`}
               >
                 {link.label}
               </Link>
             ))}
-            {isAuthenticated ? (
-              <button
-                type="button"
-                onClick={() => {
-                  logout();
-                  navigate('/');
-                  setMobileOpen(false);
-                }}
-                className="btn-elegant mt-2 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold"
-              >
-                <FaSignOutAlt /> Logout
-              </button>
+{isAuthenticated ? (
+              <>
+                <div className="mt-2 flex items-center gap-3 rounded-xl bg-primary-50 px-4 py-3">
+                  <div className="h-10 w-10 overflow-hidden rounded-full border-2 border-red-400">
+                    <Avatar src={user?.avatar} name={user?.name} size="sm" showBorder={false} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-primary-800">{user?.name || 'User'}</p>
+                    <p className="truncate text-xs text-ink-light">{user?.email || ''}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    logout();
+                    navigate('/');
+                    setMobileOpen(false);
+                  }}
+                  className="btn-elegant mt-2 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold"
+                >
+                  <FaSignOutAlt /> Logout
+                </button>
+              </>
             ) : (
               <Link
                 to="/login"

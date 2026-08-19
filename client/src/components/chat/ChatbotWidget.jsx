@@ -21,12 +21,6 @@ const ChatbotWidget = () => {
   const [escalated, setEscalated] = useState(false);
   const bodyRef = useRef(null);
 
-  // The chatbot is strictly for authenticated customers. Do not render the
-  // floating button or widget until the user has logged in.
-  if (authLoading || !isAuthenticated) {
-    return null;
-  }
-
   useEffect(() => {
     if (bodyRef.current) {
       bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
@@ -40,8 +34,8 @@ const ChatbotWidget = () => {
           id: 'welcome',
           role: 'bot',
           text: isAuthenticated
-            ? `Namaste ${user?.name?.split(' ')[0] || 'there'}! 👋 Welcome to Sunita's Collection. How can I help you today? You can ask about your orders, products, returns, and more.`
-            : "Namaste! 👋 Welcome to Sunita's Collection. Ask me about our products, delivery, returns, or anything else!",
+            ? `Namaste ${user?.name?.split(' ')[0] || 'there'}! 👋 Welcome. How can I help you today? You can ask about your orders, products, returns, and more.`
+            : "Namaste! 👋 Welcome. Ask me about our products, delivery, returns, or anything else!",
         },
       ]);
     }
@@ -60,11 +54,10 @@ const ChatbotWidget = () => {
     setLoading(true);
 
     try {
-const { data } = await api.post('/chatbot/message', {
+      const { data } = await api.post('/chatbot/message', {
         message: text,
         language,
       });
-      // The backend returns `reply` as a plain string (the bot's message text).
       const botReply = data.reply;
       setMessages((cur) => [
         ...cur,
@@ -102,25 +95,30 @@ const { data } = await api.post('/chatbot/message', {
         ...cur,
         { id: Date.now(), role: 'bot', text: 'A human agent has been notified. They will reach out shortly. You can also send us a message in the Messages section.' },
       ]);
-    } catch (error) {
+    } catch {
       toast.error('Unable to escalate. Please use the Messages page.');
     }
   };
 
   return (
     <>
-      {/* Floating button */}
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-pink-600 text-white shadow-lg transition hover:bg-pink-700"
-        aria-label="Open chatbot"
-      >
-        {open ? <FaTimes className="text-xl" /> : <FaRobot className="text-xl" />}
-      </button>
+      {/* Chatbot Button - only for authenticated users */}
+      {!authLoading && isAuthenticated && (
+        <div className="fixed bottom-6 right-6 z-50 flex flex-col items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            className="flex h-14 w-14 items-center justify-center rounded-full bg-pink-600 text-white shadow-lg transition hover:bg-pink-700"
+            aria-label="Open chatbot"
+          >
+            {open ? <FaTimes className="text-xl" /> : <FaRobot className="text-xl" />}
+          </button>
+        </div>
+      )}
 
-      {open && (
-        <div className="fixed bottom-24 right-6 z-50 flex w-[360px] max-w-[calc(100vw-3rem)] flex-col overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-2xl">
+      {/* Chat Panel - only for authenticated users */}
+      {isAuthenticated && open && (
+        <div className="fixed bottom-[13rem] right-6 z-50 flex w-[360px] max-w-[calc(100vw-3rem)] flex-col overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-2xl">
           {/* Header */}
           <div className="flex items-center justify-between bg-gradient-to-r from-pink-600 to-rose-700 px-4 py-3 text-white">
             <div className="flex items-center gap-3">

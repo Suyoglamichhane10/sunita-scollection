@@ -104,7 +104,7 @@ const AdminCategories = () => {
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
                     required
                     className="mt-2 w-full rounded-3xl border border-gray-200 bg-gray-50 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                    placeholder="e.g. Sarees"
+                     placeholder="e.g. Tops"
                   />
                 </div>
                 <div>

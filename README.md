@@ -1,8 +1,8 @@
-# Sunita's Collection
+# Sunita'z Collection
 
-A complete, production-ready **MERN e-commerce** platform for a **women's fashion and accessories** store — selling **Sarees, Bags, Sandals, Earrings, and Necklaces**.
+A complete, production-ready **MERN e-commerce** platform for a **women's fashion** store — selling **trendy tops, dresses, bottoms, footwear, and accessories** for girls and young women.
 
-> **Tagline:** *Elegance for Every Woman*
+> **Tagline:** *Style That Speaks — Trendy Fashion for the Modern Girl*
 
 This full-stack application solves the real business problems of a small fashion store (currently selling only on TikTok): manual order management, scattered messages across platforms, and no centralized inventory tracking.
 
@@ -182,7 +182,7 @@ EMAIL_PORT=587
 EMAIL_SECURE=false
 EMAIL_USER=you@gmail.com
 EMAIL_PASS=your_app_password
-EMAIL_FROM="Sunita's Collection <you@gmail.com>"
+EMAIL_FROM="Sunita'z Collection <you@gmail.com>"
 ```
 
 ### Client (`client/.env`)

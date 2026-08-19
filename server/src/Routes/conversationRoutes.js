@@ -9,6 +9,7 @@ const {
   typing,
   markRead,
   updateConversation,
+  deleteConversation,
   searchMessages,
   getInboxStats,
 } = require('../controllers/conversationController');
@@ -22,5 +23,6 @@ router.post('/:id/typing', protect, typing);
 router.put('/:id/read', protect, markRead);
 router.get('/:id/search', protect, searchMessages);
 router.put('/:id', protect, authorize('admin'), updateConversation);
+router.delete('/:id', protect, authorize('admin'), deleteConversation);
 
 module.exports = router;

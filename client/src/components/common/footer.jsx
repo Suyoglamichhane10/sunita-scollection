@@ -1,6 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { FaFacebookF, FaInstagram, FaEnvelope, FaPhoneAlt, FaGem } from 'react-icons/fa';
+import { FaFacebookF, FaInstagram, FaTiktok, FaEnvelope, FaPhoneAlt } from 'react-icons/fa';
+import logo from '../../assets/LOGO!.png';
+import QRCode from '../../assets/QR.png';
 
 const Footer = () => {
   return (
@@ -8,17 +10,12 @@ const Footer = () => {
       <div className="mx-auto px-4 py-12 lg:px-8">
         <div className="grid gap-8 md:grid-cols-3">
           {/* Brand */}
-          <div>
-            <div className="flex items-center gap-2">
-              <div className="rounded-full bg-gradient-to-br from-gold-400 to-gold-600 p-2 text-primary-900">
-                <FaGem />
-              </div>
-              <h3 className="font-serif text-xl font-bold">
-                Sunita's <span className="text-gold-gradient">Collection</span>
-              </h3>
+          <div className="flex flex-col items-center text-center">
+            <div className="flex items-center gap-3">
+              <img src={logo} alt="Sunita'z Collection" className="h-20 w-auto object-contain" />
             </div>
             <p className="mt-3 max-w-xs text-sm leading-6 text-white/70">
-              Elegance for every woman. Explore women's fashion, accessories, and elegant pieces made for every occasion.
+              Trendy fashion for the modern girl. Discover your perfect style.
             </p>
           </div>
 
@@ -44,7 +41,7 @@ const Footer = () => {
           </div>
 
           {/* Contact */}
-          <div>
+          <div className="flex flex-col items-end text-right pr-4">
             <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-gold-300">
               Contact Us
             </h4>
@@ -57,18 +54,28 @@ const Footer = () => {
               </li>
             </ul>
             <div className="mt-4 flex gap-3">
-              <a href="#" className="rounded-full border border-white/30 p-2 transition hover:border-gold-400 hover:bg-gold-500 hover:text-primary-900" aria-label="Facebook">
+              <a href="https://www.facebook.com/share/1HUAXCsjZz/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer" className="rounded-full border border-white/30 p-2 transition hover:border-gold-400 hover:bg-gold-500 hover:text-primary-900" aria-label="Facebook">
                 <FaFacebookF />
               </a>
-              <a href="#" className="rounded-full border border-white/30 p-2 transition hover:border-gold-400 hover:bg-gold-500 hover:text-primary-900" aria-label="Instagram">
+              <a href="https://www.instagram.com/sunita651562?igsh=ZDNyMmJ0MGtpMnM=" target="_blank" rel="noopener noreferrer" className="rounded-full border border-white/30 p-2 transition hover:border-gold-400 hover:bg-gold-500 hover:text-primary-900" aria-label="Instagram">
                 <FaInstagram />
               </a>
+              <a href="https://www.tiktok.com/@sunitalamichhane27?_r=1&_t=ZS-98yy5adPc8O" target="_blank" rel="noopener noreferrer" className="rounded-full border border-white/30 p-2 transition hover:border-gold-400 hover:bg-gold-500 hover:text-primary-900" aria-label="TikTok">
+                <FaTiktok />
+              </a>
+            </div>
+
+            <div className="mt-6 flex flex-col items-end">
+              <a href="https://www.tiktok.com/@sunitalamichhane27?_r=1&_t=ZS-98yy5adPc8O" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center rounded-lg bg-white p-1.5 shadow">
+                <img src={QRCode} alt="Scan to follow us on TikTok" className="h-20 w-20 object-contain" />
+              </a>
+              <p className="mt-2 text-center text-xs font-medium text-white/80">Scan to follow us on TikTok</p>
             </div>
           </div>
         </div>
 
         <div className="mt-8 border-t border-white/10 pt-6 text-center text-sm text-white/60">
-          &copy; {new Date().getFullYear()} Sunita's Collection. All rights reserved. Elegance for every woman.
+          &copy; {new Date().getFullYear()} All rights reserved. Trendy fashion for the modern girl.
         </div>
       </div>
     </footer>

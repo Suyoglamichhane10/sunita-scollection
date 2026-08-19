@@ -1,5 +1,4 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 
 // ErrorBoundary prevents a single crashing page from blanking the whole app.
 // It shows a friendly fallback instead of a white screen.
@@ -41,13 +40,13 @@ class ErrorBoundary extends React.Component {
               >
                 Refresh page
               </button>
-              <Link
-                to="/"
+              <a
+                href="/"
                 onClick={this.handleReset}
                 className="w-full rounded-full border border-gray-300 bg-white px-6 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
               >
                 Back to Home
-              </Link>
+              </a>
             </div>
           </div>
         </div>

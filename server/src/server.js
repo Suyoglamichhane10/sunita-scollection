@@ -77,6 +77,11 @@ socket.on('join-conversation', (conversationId) => {
     socket.leave(`conversation_${conversationId}`);
   });
 
+  socket.on('join-delivery-room', (orderId) => {
+    socket.join(`order_${orderId}`);
+    console.log(`📍 Delivery tracking joined order ${orderId}`);
+  });
+
   socket.on('send-message', (data) => {
     io.to(`user_${data.receiverId}`).emit('receive-message', data);
   });

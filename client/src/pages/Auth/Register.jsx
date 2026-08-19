@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { FaEye, FaEyeSlash, FaGem, FaLock, FaEnvelope, FaUser } from 'react-icons/fa';
+import { FaEye, FaEyeSlash, FaLock, FaEnvelope, FaUser } from 'react-icons/fa';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../Context/Authcontext';
 import toast from 'react-hot-toast';
+import logo from '../../assets/LOGO!.png';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -45,23 +46,17 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-cream to-blush p-6">
+    <div className="mesh-rose min-h-screen flex items-center justify-center p-4 sm:p-6">
       <div className="w-full max-w-4xl rounded-3xl shadow-luxury overflow-hidden flex flex-col md:flex-row bg-white">
         {/* Left brand panel */}
 <div className="glow-panel hidden md:flex md:w-1/2 flex-col justify-center px-10 py-12 bg-gradient-to-b from-primary-800 to-primary-950 text-white relative">
           <div className="relative">
-            <div className="mb-6 flex items-center gap-3">
-              <div className="rounded-full bg-gradient-to-br from-gold-400 to-gold-600 p-3 text-primary-900">
-                <FaGem size={20} />
-              </div>
-              <div>
-                <div className="font-serif text-2xl font-bold">Sunita's Collection</div>
-                <div className="text-sm text-gold-200">Women's fashion & accessories</div>
-              </div>
+            <div className="mb-6 flex justify-center">
+              <img src={logo} alt="Brand logo" className="h-28 w-auto object-contain" />
             </div>
-            <h2 className="font-serif text-3xl font-bold text-gold-200">Join the Collection</h2>
-            <p className="mt-3 leading-7 text-white/80">
-              Create your account to explore our elegant women's collection and enjoy a seamless shopping experience.
+            <h2 className="font-serif text-3xl font-bold text-gold-200 text-center">Join the Collection</h2>
+            <p className="mt-3 leading-7 text-white/80 text-center">
+              Create your account to explore our trendy collection and enjoy a seamless shopping experience.
             </p>
             <div className="mt-8 space-y-3 text-sm text-white/80">
               <p className="flex items-center gap-2"><span className="text-gold-300">✦</span> Simple, secure & fast signup</p>
@@ -75,14 +70,11 @@ const Register = () => {
         <div className="w-full md:w-1/2 p-8 bg-white">
           <div className="max-w-md mx-auto">
             <div className="text-center mb-6 md:hidden">
-              <div className="mx-auto mb-2 inline-flex rounded-full bg-gradient-to-br from-primary-600 to-primary-400 p-3 text-white">
-                <FaGem />
-              </div>
-              <div className="font-serif text-xl font-bold text-primary-800">Sunita's Collection</div>
+              <img src={logo} alt="Brand logo" className="mx-auto mb-3 h-20 w-auto object-contain" />
             </div>
 
             <h2 className="font-serif text-center text-2xl font-bold text-primary-800 mb-1">Create account</h2>
-            <p className="text-center text-sm text-ink-light mb-7">Join the elegance</p>
+            <p className="text-center text-sm text-ink-light mb-7">Join the trendy fashion movement</p>
 
             <form className="space-y-4" onSubmit={handleSubmit}>
               <div className="relative">

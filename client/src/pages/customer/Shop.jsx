@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../../Services/api';
 import { useCart } from '../../Context/CartContext';
 import { useAuth } from '../../Context/Authcontext';
-import toast from 'react-hot-toast';
-import { FaHeart, FaShoppingBag, FaSearch } from 'react-icons/fa';
+import { FaShoppingBag, FaSearch, FaListUl, FaHeart } from 'react-icons/fa';
+import wishlistApi from '../../Services/wishlistApi';
 
 const variantLabel = (variant) => {
   if (!variant) return '';
@@ -16,6 +16,7 @@ const variantLabel = (variant) => {
 
 const ShopProductCard = ({ product, addToCart, isAuthenticated, navigate }) => {
   const [selectedVariant, setSelectedVariant] = useState(product.variants?.[0] || null);
+  const [inWishlist, setInWishlist] = useState(false);
 
   const handleAdd = () => {
     if (!isAuthenticated) {
@@ -24,13 +25,30 @@ const ShopProductCard = ({ product, addToCart, isAuthenticated, navigate }) => {
     }
     addToCart(product, 1, selectedVariant);
   };
+
+  const toggleWishlist = async (e) => {
+    e.preventDefault();
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    try {
+      if (inWishlist) {
+        await wishlistApi.removeFromWishlist(product._id, selectedVariant?.sku);
+        setInWishlist(false);
+      } else {
+        await wishlistApi.addToWishlist(product._id, selectedVariant?.sku);
+        setInWishlist(true);
+      }
+    } catch {}
+  };
   const variant = selectedVariant;
   const stock = variant?.stock ?? product.stock;
   const price = variant?.price ?? product.price;
   const hasVariants = (product.variants || []).length > 0;
 
   return (
-    <div className="card-luxury overflow-hidden rounded-3xl border border-gold/20 bg-white shadow-card">
+    <div className="card-luxury relative overflow-hidden rounded-3xl border border-gold/20 bg-white shadow-card">
       <Link to={`/product/${product._id}`} className="block overflow-hidden">
         <img
           src={variant?.images?.[0]?.url || product.images?.[0]?.url || 'https://via.placeholder.com/400x400?text=Product'}
@@ -38,6 +56,15 @@ const ShopProductCard = ({ product, addToCart, isAuthenticated, navigate }) => {
           className="h-64 w-full object-cover transition duration-300 hover:scale-105"
         />
       </Link>
+      <button
+        type="button"
+        onClick={toggleWishlist}
+        className={`absolute right-3 top-3 rounded-full p-2 shadow-lg transition ${
+          inWishlist ? 'bg-red-500 text-white' : 'bg-white text-red-500 hover:bg-red-50'
+        }`}
+      >
+        <FaHeart />
+      </button>
       <div className="p-5">
         <div className="mb-3 flex items-center justify-between text-sm text-gold-600 uppercase tracking-[0.18em]">
           <span>{product.category?.name || 'Women'}</span>
@@ -72,9 +99,9 @@ const ShopProductCard = ({ product, addToCart, isAuthenticated, navigate }) => {
           </div>
         )}
 
-        <div className="mt-4 flex items-center justify-between">
+<div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <p className="text-lg font-bold text-gold-600">Rs. {price}</p>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Link
               to={`/product/${product._id}`}
               className="rounded-full border border-gold/40 px-4 py-2 text-sm font-semibold text-primary-700 transition hover:bg-cream"
@@ -89,20 +116,18 @@ const ShopProductCard = ({ product, addToCart, isAuthenticated, navigate }) => {
             >
               <FaShoppingBag className="mr-1 inline" /> Add
             </button>
-            <button
+<button
               type="button"
               onClick={() => {
                 if (!isAuthenticated) {
                   navigate('/login');
                   return;
                 }
-                api.post(`/users/profile/wishlist/${product._id}`)
-                  .then(() => toast.success('Added to wishlist'))
-                  .catch(() => toast.error('Unable to add to wishlist'));
+                navigate(`/product/${product._id}`);
               }}
               className="rounded-full border border-gold-500 bg-white px-4 py-2 text-sm font-semibold text-gold-600 transition hover:bg-gold-50"
             >
-              <FaHeart className="mr-1 inline" /> Wishlist
+              Details
             </button>
           </div>
         </div>
@@ -125,23 +150,36 @@ const Shop = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchCategories = async () => {
       try {
-        const [productRes, categoryRes] = await Promise.all([
-          api.get('/products', {
-            params: { search, category, minPrice, maxPrice, sort },
-          }),
-          api.get('/categories'),
-        ]);
-        setProducts(productRes.data.products);
-        setCategories(categoryRes.data.categories || []);
+        const { data } = await api.get('/categories');
+        setCategories(data.categories || []);
       } catch (error) {
-        console.error(error);
-      } finally {
-        setLoading(false);
+        console.error('Failed to load categories', error);
       }
     };
-    fetchData();
+    fetchCategories();
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    const timer = setTimeout(async () => {
+      try {
+        const { data } = await api.get('/products', {
+          params: { search, category, minPrice, maxPrice, sort },
+        });
+        if (active) setProducts(data.products || []);
+      } catch (error) {
+        if (active) console.error('Failed to load products', error);
+      } finally {
+        if (active) setLoading(false);
+      }
+    }, 300);
+
+    return () => {
+      clearTimeout(timer);
+      active = false;
+    };
   }, [search, category, minPrice, maxPrice, sort]);
 
   const filteredProducts = products;
@@ -153,29 +191,35 @@ const Shop = () => {
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-gold-600">The Collection</p>
             <h1 className="font-serif mt-2 text-3xl font-bold text-primary-800">Shop Women's Collections</h1>
-            <p className="mt-2 text-ink-light">Browse sarees, bags, sandals, earrings, and necklaces.</p>
+            <p className="mt-2 text-ink-light">Browse trendy tops, dresses, bottoms, footwear, and accessories.</p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="relative">
-              <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gold-500" />
+              <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gold-500" size={16} />
               <input
                 type="search"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search products"
-                className="w-full rounded-full border border-gold/30 bg-white py-3 pl-11 pr-4 shadow-sm outline-none focus:border-gold-500 focus:ring-2 focus:ring-gold-200"
+                className="w-full rounded-full border border-gold/30 bg-white py-3 pl-11 pr-4 text-sm shadow-sm outline-none focus:border-gold-500 focus:ring-2 focus:ring-gold-200"
               />
             </div>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full rounded-full border border-gold/30 bg-white px-4 py-3 shadow-sm outline-none focus:border-gold-500 focus:ring-2 focus:ring-gold-200"
-            >
-              <option value="">All categories</option>
-              {categories.map((cat) => (
-                <option key={cat._id} value={cat._id}>{cat.name}</option>
-              ))}
-            </select>
+            <div className="relative">
+              <FaListUl className="absolute left-4 top-1/2 -translate-y-1/2 text-gold-500" size={16} />
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full appearance-none rounded-full border border-gold/30 bg-white py-3 pl-11 pr-10 text-sm shadow-sm outline-none focus:border-gold-500 focus:ring-2 focus:ring-gold-200"
+              >
+                <option value="">All categories</option>
+                {categories.map((cat) => (
+                  <option key={cat._id} value={cat._id}>{cat.name}</option>
+                ))}
+              </select>
+              <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-gold-500">
+                ▾
+              </span>
+            </div>
           </div>
         </div>
 

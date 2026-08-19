@@ -1,5 +1,6 @@
 const Product = require('../Models/Product');
 const Category = require('../Models/Category');
+const { decrementStock, restoreStock } = require('../services/stockService');
 
 // @desc    Get all products
 // @route   GET /api/products
@@ -10,11 +11,20 @@ exports.getProducts = async (req, res, next) => {
     const limit = parseInt(req.query.limit) || 12;
     const skip = (page - 1) * limit;
     
-    let query = { isActive: true };
+    let query = { isActive: true, stock: { $gt: 0 } };
 
     // Search
     if (req.query.search) {
-      query.$text = { $search: req.query.search };
+      const searchTerm = req.query.search.trim();
+      if (searchTerm) {
+        const escaped = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const searchRegex = new RegExp(escaped, 'i');
+        query.$or = [
+          { name: searchRegex },
+          { description: searchRegex },
+          { brand: searchRegex },
+        ];
+      }
     }
 
     // Category filter
@@ -150,6 +160,24 @@ exports.createProduct = async (req, res, next) => {
   }
 };
 
+// @desc    Get all products for admin panel (active + inactive)
+// @route   GET /api/products/admin
+// @access  Private/Admin
+exports.adminGetProducts = async (req, res, next) => {
+  try {
+    const products = await Product.find()
+      .populate('category')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      products,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Update product
 // @route   PUT /api/products/:id
 // @access  Private/Admin
@@ -164,7 +192,7 @@ exports.updateProduct = async (req, res, next) => {
       });
     }
 
-// If category is changing, update counts
+    // If category is changing, update counts
     if (req.body.category && req.body.category !== product.category.toString()) {
       await Category.findByIdAndUpdate(product.category, {
         $inc: { productCount: -1 },
@@ -206,7 +234,7 @@ exports.updateProduct = async (req, res, next) => {
   }
 };
 
-// @desc    Delete product
+// @desc    Soft delete product (marks as inactive)
 // @route   DELETE /api/products/:id
 // @access  Private/Admin
 exports.deleteProduct = async (req, res, next) => {
@@ -220,16 +248,73 @@ exports.deleteProduct = async (req, res, next) => {
       });
     }
 
+    // Soft delete - mark as inactive instead of removing from database
+    product.isActive = false;
+    product.isFeatured = false; // Also remove from featured
+    await product.save();
+
     // Update category product count
     await Category.findByIdAndUpdate(product.category, {
       $inc: { productCount: -1 },
     });
 
-    await product.deleteOne();
-
     res.status(200).json({
       success: true,
       message: 'Product deleted successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Toggle product active status
+// @route   PUT /api/products/:id/toggle-status
+// @access  Private/Admin
+exports.toggleProductStatus = async (req, res, next) => {
+  try {
+    const product = await Product.findById(req.params.id);
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found',
+      });
+    }
+
+    product.isActive = !product.isActive;
+    await product.save();
+
+    res.status(200).json({
+      success: true,
+      message: product.isActive ? 'Product is now visible' : 'Product is now hidden',
+      product,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Toggle product featured status
+// @route   PUT /api/products/:id/toggle-featured
+// @access  Private/Admin
+exports.toggleFeaturedStatus = async (req, res, next) => {
+  try {
+    const product = await Product.findById(req.params.id);
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found',
+      });
+    }
+
+    product.isFeatured = !product.isFeatured;
+    await product.save();
+
+    res.status(200).json({
+      success: true,
+      message: product.isFeatured ? 'Product added to featured' : 'Product removed from featured',
+      product,
     });
   } catch (error) {
     next(error);
@@ -246,7 +331,7 @@ exports.getInventory = async (req, res, next) => {
       .sort({ updatedAt: -1 });
 
     const inventory = products.map((product) => {
-      const threshold = product.lowStockThreshold || 0;
+      const threshold = product.lowStockThreshold || 5;
       const lowBaseStock = product.stock <= threshold;
       const lowVariants = (product.variants || []).filter((variant) => variant.stock <= threshold);
 
@@ -254,6 +339,7 @@ exports.getInventory = async (req, res, next) => {
         ...product.toObject(),
         inventoryStatus: lowBaseStock || lowVariants.length ? 'low' : 'healthy',
         lowVariantCount: lowVariants.length,
+        isLowStock: lowBaseStock,
       };
     });
 
@@ -261,6 +347,78 @@ exports.getInventory = async (req, res, next) => {
       success: true,
       inventory,
       lowStockCount: inventory.filter((product) => product.inventoryStatus === 'low').length,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update product stock manually
+// @route   PUT /api/products/:id/stock
+// @access  Private/Admin
+exports.updateProductStock = async (req, res, next) => {
+  try {
+    const { stock } = req.body;
+    const product = await Product.findById(req.params.id);
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found',
+      });
+    }
+
+    if (stock < 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Stock cannot be negative',
+      });
+    }
+
+    product.stock = stock;
+    await product.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Stock updated successfully',
+      product,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Bulk update product stock
+// @route   PUT /api/products/bulk/stock
+// @access  Private/Admin
+exports.bulkUpdateStock = async (req, res, next) => {
+  try {
+    const { updates } = req.body; // Array of { productId, stock }
+
+    if (!Array.isArray(updates)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Updates must be an array',
+      });
+    }
+
+    const results = await Promise.all(
+      updates.map(async (update) => {
+        const product = await Product.findById(update.productId);
+        if (!product) return null;
+
+        product.stock = Math.max(0, update.stock);
+        await product.save();
+        return product;
+      })
+    );
+
+    const successful = results.filter((r) => r !== null);
+
+    res.status(200).json({
+      success: true,
+      message: `Updated ${successful.length} products`,
+      products: successful,
     });
   } catch (error) {
     next(error);

@@ -124,6 +124,25 @@ const orderSchema = new mongoose.Schema(
       default: false,
     },
     deliveredAt: Date,
+    delivery: {
+      assigned: { type: Boolean, default: false },
+      deliveryPersonId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+      status: { type: String, default: 'pending' },
+      trackingUrl: { type: String, default: '' },
+      estimatedTime: { type: Date, default: null },
+      actualTime: { type: Date, default: null },
+      notes: { type: String, default: '' },
+      pickupLocation: {
+        lat: { type: Number, default: 27.7172 },
+        lng: { type: Number, default: 85.324 },
+        address: { type: String, default: '' },
+      },
+      deliveryLocation: {
+        lat: { type: Number, default: null },
+        lng: { type: Number, default: null },
+        address: { type: String, default: '' },
+      },
+    },
   },
   {
     timestamps: true,

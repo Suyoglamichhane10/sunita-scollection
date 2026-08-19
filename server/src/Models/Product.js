@@ -88,7 +88,7 @@ const productSchema = new mongoose.Schema(
     },
     lowStockThreshold: {
       type: Number,
-      default: 10,
+      default: 5,
     },
     rating: {
       average: {
@@ -109,6 +109,14 @@ const productSchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       default: true,
+    },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
+    deletedAt: {
+      type: Date,
+      default: null,
     },
     specifications: {
       type: Map,
@@ -137,13 +145,29 @@ const productSchema = new mongoose.Schema(
   }
 );
 
+// Create text index for search functionality
+productSchema.index({ name: 'text', description: 'text', brand: 'text', category: 'text' });
+
 // Create slug before saving
-productSchema.pre('save', function (next) {
+productSchema.pre('save', async function (next) {
   if (this.isModified('name')) {
-    this.slug = this.name
+    const baseSlug = this.name
       .toLowerCase()
       .replace(/[^a-zA-Z0-9]/g, '-')
-      .replace(/-+/g, '-');
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+
+    // Ensure the slug is unique by appending a counter (+1, +2, ...) if needed.
+    let slug = baseSlug || 'product';
+    const Product = this.constructor;
+    let count = 0;
+    // If this is an existing document, ignore itself when checking uniqueness.
+    const excludeId = this._id;
+    while (await Product.exists({ slug, _id: { $ne: excludeId } })) {
+      count += 1;
+      slug = `${baseSlug || 'product'}-${count}`;
+    }
+    this.slug = slug;
   }
   next();
 });

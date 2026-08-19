@@ -1,20 +1,40 @@
 import React from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import AppRoutes from './Routes/AppRoutes';
-import { AuthProvider, useAuth } from './Context/Authcontext';
+import { AuthProvider } from './Context/Authcontext';
 import { CartProvider } from './Context/CartContext';
 import { ChatProvider } from './Context/ChatContext';
-import ChatbotWidget from './components/chat/ChatbotWidget';
+import WhatsAppChatWidget from './components/chat/WhatsAppChatWidget';
 import ErrorBoundary from './components/common/ErrorBoundary';
+import ScrollToTop from './components/common/ScrollToTop';
 import { Toaster } from 'react-hot-toast';
+import { useLocation } from 'react-router-dom';
 
-// Chatbot is rendered globally, but only actually appears for authenticated
-// users (the widget itself guards against unauthenticated access).
-const GlobalChatbot = () => {
-  const { isAuthenticated, loading } = useAuth();
-  if (loading || !isAuthenticated) return null;
-  return <ChatbotWidget />;
-};
+function AppContent() {
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith('/admin');
+  const isAuthRoute = ['/login', '/register', '/forgot-password', '/reset-password'].some((path) =>
+    location.pathname === path || location.pathname.startsWith(`${path}/`)
+  );
+
+  return (
+    <>
+      <ScrollToTop />
+      <AppRoutes />
+      {!isAdminRoute && !isAuthRoute && <WhatsAppChatWidget />}
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#363636',
+            color: '#fff',
+          },
+        }}
+      />
+    </>
+  );
+}
 
 function App() {
   return (
@@ -23,18 +43,7 @@ function App() {
         <AuthProvider>
           <CartProvider>
             <ChatProvider>
-              <AppRoutes />
-              <GlobalChatbot />
-              <Toaster
-                position="top-right"
-                toastOptions={{
-                  duration: 4000,
-                  style: {
-                    background: '#363636',
-                    color: '#fff',
-                  },
-                }}
-              />
+              <AppContent />
             </ChatProvider>
           </CartProvider>
         </AuthProvider>

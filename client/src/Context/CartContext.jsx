@@ -11,6 +11,7 @@ export const useCart = () => useContext(CartContext);
 const normalizeServerItem = (cartItem) => {
   const product = cartItem.product;
   if (!product) return null;
+  // Normalize the variant reference: prefer the SKU, fall back to the _id.
   const variantSku = cartItem.variantSku || null;
   const variant = product.variants?.find(
     (v) => (v.sku && v.sku === variantSku) || (v._id && v._id.toString() === variantSku)
@@ -32,6 +33,25 @@ const normalizeServerItem = (cartItem) => {
   };
 };
 
+// Consolidate cart items by their unique key (productId + variantSku). This
+// merges duplicate rows for the same product+variant into a single entry with
+// the summed quantity (capped at available stock), preventing "bought one but
+// shows many" / duplicate-rows issues.
+const consolidateCartItems = (items) => {
+  const map = new Map();
+  for (const item of items) {
+    const existing = map.get(item.key);
+    if (existing) {
+      const mergedQty = Math.min(existing.quantity + item.quantity, item.stock || (existing.stock || 1));
+      existing.quantity = mergedQty;
+      existing.stock = item.stock || existing.stock;
+    } else {
+      map.set(item.key, { ...item });
+    }
+  }
+  return Array.from(map.values());
+};
+
 const GUEST_CART_KEY = 'guest_cart';
 
 export const CartProvider = ({ children }) => {
@@ -47,10 +67,10 @@ export const CartProvider = ({ children }) => {
   const fetchServerCart = useCallback(async () => {
     try {
       setLoading(true);
-      const { data } = await api.get('/users/profile/cart');
-      const serverItems = (data.cart || [])
-        .map(normalizeServerItem)
-        .filter(Boolean);
+const { data } = await api.get('/users/profile/cart');
+      const serverItems = consolidateCartItems(
+        (data.cart || []).map(normalizeServerItem).filter(Boolean)
+      );
 
       // Merge guest cart into the server cart ONLY when the guest actually has
       // items. New users (no guest items) simply get their (empty) server cart.
@@ -62,8 +82,12 @@ export const CartProvider = ({ children }) => {
       }
 
       if (Array.isArray(guestItems) && guestItems.length) {
+        // Consolidate the guest list first so duplicate product+variant rows
+        // are merged into a single quantity before pushing to the server. This
+        // prevents the guest→server merge from creating duplicate cart entries.
+        const consolidatedGuest = consolidateCartItems(guestItems);
         await Promise.all(
-          guestItems.map((item) =>
+          consolidatedGuest.map((item) =>
             api.post('/users/profile/cart', {
               productId: item.productId,
               quantity: item.quantity,
@@ -73,7 +97,9 @@ export const CartProvider = ({ children }) => {
         );
         const refreshed = await api.get('/users/profile/cart');
         setCartItems(
-          (refreshed.data.cart || []).map(normalizeServerItem).filter(Boolean)
+          consolidateCartItems(
+            (refreshed.data.cart || []).map(normalizeServerItem).filter(Boolean)
+          )
         );
         localStorage.removeItem(GUEST_CART_KEY);
       } else {
@@ -176,28 +202,54 @@ const addToCart = useCallback(
       const image = variant?.images?.[0]?.url || product.images?.[0]?.url || '/placeholder.jpg';
       const stock = variant?.stock ?? product.stock;
 
+const sanitizedQty = Math.max(1, Math.floor(Number(quantity) || 1));
       const newItem = {
         key,
         productId: product._id,
         name: product.name,
         price,
         image,
-        quantity: Math.min(quantity, stock || quantity),
+        quantity: Math.min(sanitizedQty, stock || sanitizedQty),
         stock,
         variant: variant ? { sku: variant.sku || variant._id, attributes: variant.attributes } : null,
       };
 
+      // Optimistic update: if the product+variant already exists in the cart,
+      // bump its quantity instead of appending a duplicate row. This handles
+      // the "add the same item twice should update quantity" case immediately.
+      setCartItems((prev) => {
+        const existing = prev.find((item) => item.key === key);
+        if (existing) {
+          const mergedQty = Math.min(existing.quantity + sanitizedQty, existing.stock || sanitizedQty);
+          return prev.map((item) =>
+            item.key === key ? { ...item, quantity: mergedQty } : item
+          );
+        }
+        return consolidateCartItems([...prev, newItem]);
+      });
+
       // Sync to server
       api
-        .post('/users/profile/cart', { productId: product._id, quantity, variantSku })
+        .post('/users/profile/cart', { productId: product._id, quantity: sanitizedQty, variantSku })
         .then(({ data }) => {
-          setCartItems((data.cart || []).map(normalizeServerItem).filter(Boolean));
+          // Reconcile with the (consolidated) server response so the UI
+          // always reflects the true, deduplicated cart state.
+          setCartItems(
+            consolidateCartItems(
+              (data.cart || []).map(normalizeServerItem).filter(Boolean)
+            )
+          );
         })
-        .catch((error) => toast.error(error.response?.data?.message || 'Unable to add to cart'));
-      toast.success('Added to cart!');
+        .catch((error) => {
+          toast.error(error.response?.data?.message || 'Unable to add to cart');
+          // Re-fetch the server cart on failure so the optimistic update does
+          // not leave the UI out of sync with the backend.
+          fetchServerCart();
+        });
+toast.success('Added to cart!');
       return true;
     },
-    [isAuthenticated]
+    [isAuthenticated, fetchServerCart]
   );
 
   const removeFromCart = useCallback(
