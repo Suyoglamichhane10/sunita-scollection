@@ -3,6 +3,9 @@ import { Link, useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import api from '../../Services/api';
 import { useCart } from '../../Context/CartContext';
 import toast from 'react-hot-toast';
+import EsewaLogo from '../../assets/Esewa_logo.webp';
+import KhaltiLogo from '../../assets/khalti.png';
+import FonepayLogo from '../../assets/fonepay.png';
 
 const OrderSuccess = () => {
   const { orderId } = useParams();
@@ -15,6 +18,7 @@ const OrderSuccess = () => {
 // Callback detection
   const isEsewaCallback = searchParams.get('refId') || searchParams.get('oid') || searchParams.get('transaction_uuid');
   const isKhaltiCallback = searchParams.get('pidx');
+  const isFonepayCallback = searchParams.get('oid') || searchParams.get('transaction_uuid');
   const isStripeCallback = searchParams.get('gateway') === 'stripe';
 
   useEffect(() => {
@@ -54,25 +58,64 @@ const OrderSuccess = () => {
         // If redirected from eSewa, verify via our eSewa verify endpoint.
         const txnId = searchParams.get('transaction_uuid') || searchParams.get('transactionUuid') || searchParams.get('oid');
         if (orderId && isEsewaCallback) {
-          const res = await api.post('/payments/esewa/verify', { orderId, transactionUuid: txnId });
-          if (!res.data.success) {
-            navigate(`/payment-failure/${orderId}`, { replace: true });
-            return;
+          try {
+            const res = await api.post('/payments/esewa/verify', { orderId, transactionUuid: txnId });
+            if (!res.data.success) {
+              navigate(`/payment-failure/${orderId}`, { replace: true });
+              return;
+            }
+            toast.success('Payment confirmed via eSewa!');
+            clearCart();
+          } catch (error) {
+            if (error.response?.status === 503 && import.meta.env.MODE === 'development') {
+              toast.success('Order placed successfully! (Development mode - eSewa bypassed)');
+              clearCart();
+            } else {
+              throw error;
+            }
           }
-          toast.success('Payment confirmed via eSewa!');
-          clearCart();
         }
 
         // If redirected from Khalti, verify via our Khalti verify endpoint.
         if (orderId && isKhaltiCallback) {
-          const pidx = searchParams.get('pidx');
-          const res = await api.post('/payments/khalti/verify', { orderId, pidx });
-          if (!res.data.success) {
-            navigate(`/payment-failure/${orderId}`, { replace: true });
-            return;
+          try {
+            const pidx = searchParams.get('pidx');
+            const res = await api.post('/payments/khalti/verify', { orderId, pidx });
+            if (!res.data.success) {
+              navigate(`/payment-failure/${orderId}`, { replace: true });
+              return;
+            }
+            toast.success('Payment confirmed via Khalti!');
+            clearCart();
+          } catch (error) {
+            if (error.response?.status === 503 && import.meta.env.MODE === 'development') {
+              toast.success('Order placed successfully! (Development mode - Khalti bypassed)');
+              clearCart();
+            } else {
+              throw error;
+            }
           }
-          toast.success('Payment confirmed via Khalti!');
-          clearCart();
+        }
+
+        // If redirected from FonePay, verify via our FonePay verify endpoint.
+        if (orderId && isFonepayCallback) {
+          try {
+            const transactionUuid = searchParams.get('transaction_uuid') || searchParams.get('transactionUuid');
+            const res = await api.post('/payments/fonepay/verify', { orderId, transactionUuid });
+            if (!res.data.success) {
+              navigate(`/payment-failure/${orderId}`, { replace: true });
+              return;
+            }
+            toast.success('Payment confirmed via FonePay!');
+            clearCart();
+          } catch (error) {
+            if (error.response?.status === 503 && import.meta.env.MODE === 'development') {
+              toast.success('Order placed successfully! (Development mode - FonePay bypassed)');
+              clearCart();
+            } else {
+              throw error;
+            }
+          }
         }
 
         if (orderId) {
@@ -93,7 +136,7 @@ const OrderSuccess = () => {
         console.error(error);
         const msg = error.response?.data?.message || 'Unable to load order';
         // On verification failure (payment not confirmed/timeout), show failure page
-        if (orderId && (isEsewaCallback || isKhaltiCallback)) {
+        if (orderId && (isEsewaCallback || isKhaltiCallback || isFonepayCallback)) {
           navigate(`/payment-failure/${orderId}`, { replace: true });
         } else {
           toast.error(msg);
@@ -108,7 +151,7 @@ const OrderSuccess = () => {
     return () => {
       cancelled = true;
     };
-  }, [orderId, isEsewaCallback, isKhaltiCallback, isStripeCallback, clearCart, navigate]);
+  }, [orderId, isEsewaCallback, isKhaltiCallback, isFonepayCallback, isStripeCallback, clearCart, navigate, searchParams]);
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
@@ -157,7 +200,12 @@ const OrderSuccess = () => {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Payment method</span>
-                  <span className="font-semibold text-gray-900">{order.paymentMethod?.toUpperCase()}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-gray-900">{order.paymentMethod?.toUpperCase()}</span>
+                    {order.paymentMethod === 'esewa' && <img src={EsewaLogo} alt="eSewa" className="h-6 w-auto object-contain" />}
+                    {order.paymentMethod === 'khalti' && <img src={KhaltiLogo} alt="Khalti" className="h-6 w-auto object-contain" />}
+                    {order.paymentMethod === 'fonepay' && <img src={FonepayLogo} alt="FonePay" className="h-6 w-auto object-contain" />}
+                  </div>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Payment status</span>

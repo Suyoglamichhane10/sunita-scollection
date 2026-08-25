@@ -10,7 +10,7 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const { login } = useAuth();
+  const { login, user, loading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -20,6 +20,24 @@ const Login = () => {
       setRememberMe(true);
     }
   }, []);
+
+  useEffect(() => {
+    if (!loading && user) {
+      navigate(user.role === 'admin' ? '/admin' : '/dashboard');
+    }
+  }, [user, loading, navigate]);
+
+  if (loading) {
+    return (
+      <div className="mesh-rose min-h-screen flex items-center justify-center">
+        <p className="text-sm text-ink-light">Loading...</p>
+      </div>
+    );
+  }
+
+  if (user) {
+    return null;
+  }
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -41,10 +59,10 @@ const Login = () => {
   };
 
   return (
-<div className="mesh-rose min-h-screen flex items-center justify-center p-4 sm:p-6">
+    <div className="mesh-rose min-h-screen flex items-center justify-center p-4 sm:p-6">
       <div className="w-full max-w-4xl rounded-3xl shadow-luxury overflow-hidden flex flex-col md:flex-row bg-white">
         {/* Left brand panel */}
-<div className="glow-panel hidden md:flex md:w-1/2 flex-col justify-center px-10 py-12 bg-gradient-to-b from-primary-800 to-primary-950 text-white relative">
+        <div className="glow-panel hidden md:flex md:w-1/2 flex-col justify-center px-10 py-12 bg-gradient-to-b from-primary-800 to-primary-950 text-white relative">
           <div className="relative">
             <div className="mb-6 flex justify-center">
               <img src={logo} alt="Brand logo" className="h-28 w-auto object-contain" />

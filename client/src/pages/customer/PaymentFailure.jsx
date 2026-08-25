@@ -3,6 +3,9 @@ import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { FaTimesCircle } from 'react-icons/fa';
 import api from '../../Services/api';
 import toast from 'react-hot-toast';
+import EsewaLogo from '../../assets/Esewa_logo.webp';
+import KhaltiLogo from '../../assets/khalti.png';
+import FonepayLogo from '../../assets/fonepay.png';
 
 const PaymentFailure = () => {
   const { orderId } = useParams();
@@ -115,7 +118,12 @@ const PaymentFailure = () => {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">Payment method</span>
-                <span className="font-semibold text-gray-900">{order.paymentMethod?.toUpperCase()}</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-gray-900">{order.paymentMethod?.toUpperCase()}</span>
+                  {order.paymentMethod === 'esewa' && <img src={EsewaLogo} alt="eSewa" className="h-6 w-auto object-contain" />}
+                  {order.paymentMethod === 'khalti' && <img src={KhaltiLogo} alt="Khalti" className="h-6 w-auto object-contain" />}
+                  {order.paymentMethod === 'fonepay' && <img src={FonepayLogo} alt="FonePay" className="h-6 w-auto object-contain" />}
+                </div>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">Payment status</span>

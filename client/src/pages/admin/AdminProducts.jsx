@@ -9,7 +9,7 @@ const AdminProducts = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const { data } = await api.get('/products');
+        const { data } = await api.get('/products/admin');
         setProducts(data.products);
       } catch (error) {
         console.error(error);

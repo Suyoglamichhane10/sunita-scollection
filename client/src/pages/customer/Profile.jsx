@@ -377,7 +377,7 @@ const [styleProfile, setStyleProfile] = useState({ shoeSize: '', dressSize: '', 
           <div className="mt-8">
             {activeTab === 'profile' && (
               <form className="space-y-6" onSubmit={handleProfileSubmit}>
-                <div className="grid gap-4 lg:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                   <div>
                     <label className="mb-2 block text-sm font-medium text-gray-700">Full name</label>
                     <input
@@ -445,7 +445,7 @@ const [styleProfile, setStyleProfile] = useState({ shoeSize: '', dressSize: '', 
                 <button
                   type="submit"
                   disabled={saving}
-                  className="rounded-full bg-pink-600 px-8 py-3 text-sm font-semibold text-white transition hover:bg-pink-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+                  className="w-full rounded-full bg-pink-600 px-8 py-3 text-sm font-semibold text-white transition hover:bg-pink-700 disabled:cursor-not-allowed disabled:bg-gray-300 sm:w-auto"
                 >
                   {saving ? 'Saving...' : 'Save Changes'}
                 </button>
@@ -557,7 +557,7 @@ const [styleProfile, setStyleProfile] = useState({ shoeSize: '', dressSize: '', 
 
                 {showAddressForm && (
                   <form onSubmit={handleAddAddress} className="mt-6 rounded-3xl border border-gray-200 bg-gray-50 p-6">
-                    <div className="grid gap-4 md:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                       <input
                         required
                         value={newAddress.fullName}
@@ -608,14 +608,14 @@ const [styleProfile, setStyleProfile] = useState({ shoeSize: '', dressSize: '', 
                         Set as default address
                       </label>
                     </div>
-                    <div className="mt-5 flex gap-3">
-                      <button type="submit" className="rounded-full bg-pink-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-pink-700">Save Address</button>
-                      <button type="button" onClick={() => setShowAddressForm(false)} className="rounded-full border border-gray-300 bg-white px-6 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-100">Cancel</button>
+                    <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                      <button type="submit" className="w-full rounded-full bg-pink-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-pink-700 sm:w-auto">Save Address</button>
+                      <button type="button" onClick={() => setShowAddressForm(false)} className="w-full rounded-full border border-gray-300 bg-white px-6 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-100 sm:w-auto">Cancel</button>
                     </div>
                   </form>
                 )}
 
-                <div className="mt-6 grid gap-4 md:grid-cols-2">
+                <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
                   {addresses.length ? (
                     addresses.map((address) => (
                       <div key={address._id} className="rounded-3xl border border-gray-200 bg-white p-5">
@@ -625,7 +625,7 @@ const [styleProfile, setStyleProfile] = useState({ shoeSize: '', dressSize: '', 
                         <p className="text-sm text-gray-600">{address.state ? `${address.state}, ` : ''}{address.country}</p>
                         <p className="mt-1 text-sm text-gray-600">{address.phone}</p>
                         {address.zipCode && <p className="text-sm text-gray-600">ZIP: {address.zipCode}</p>}
-                        <div className="mt-4 flex gap-3">
+                        <div className="mt-4 flex flex-wrap gap-3">
                           {!address.isDefault && (
                             <button onClick={() => handleSetDefault(address._id)} className="text-sm font-semibold text-blue-600 hover:text-blue-700">Set default</button>
                           )}

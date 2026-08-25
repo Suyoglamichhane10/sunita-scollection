@@ -14,21 +14,103 @@ const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
   .filter(Boolean);
 
 // Rate limiting
+const isDev = process.env.NODE_ENV === 'development';
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: isDev ? 1000 : 100,
   message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
 // Middleware
 if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1);
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+}));
 app.use(compression());
-app.use(cors({
-  origin(origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error('Origin is not allowed by CORS'));
+
+app.use(helmet.contentSecurityPolicy({
+  directives: {
+    defaultSrc: ["'self'"],
+    scriptSrc: [
+      "'self'",
+      "'unsafe-inline'",
+      "'unsafe-eval'",
+      "http://localhost:5173",
+      "http://localhost:3000",
+    ],
+    styleSrc: [
+      "'self'",
+      "'unsafe-inline'",
+      "http://localhost:5173",
+      "https://fonts.googleapis.com",
+    ],
+    imgSrc: [
+      "'self'",
+      "data:",
+      "blob:",
+      "http://localhost:5173",
+      "http://localhost:5000",
+      "https://res.cloudinary.com",
+    ],
+    connectSrc: [
+      "'self'",
+      "http://localhost:5173",
+      "http://localhost:5000",
+      "ws://localhost:5000",
+      "wss://localhost:5000",
+      "https://api.fonepay.com",
+      "https://dev.fonepay.com",
+      "https://epay.esewa.com.np",
+      "https://rc-epay.esewa.com.np",
+      "https://a.khalti.com",
+      "https://khalti.com",
+      "https://api.stripe.com",
+    ],
+    fontSrc: [
+      "'self'",
+      "data:",
+      "https://fonts.gstatic.com",
+      "https://fonts.googleapis.com",
+    ],
+    frameSrc: [
+      "'self'",
+      "https://epay.esewa.com.np",
+      "https://rc-epay.esewa.com.np",
+      "https://a.khalti.com",
+      "https://khalti.com",
+      "https://api.stripe.com",
+      "https://checkout.stripe.com",
+      "https://js.stripe.com",
+    ],
+    formAction: [
+      "'self'",
+      "https://epay.esewa.com.np",
+      "https://rc-epay.esewa.com.np",
+      "https://a.khalti.com",
+      "https://khalti.com",
+      "https://api.stripe.com",
+      "https://checkout.stripe.com",
+    ],
+    objectSrc: ["'none'"],
+    baseUri: ["'self'"],
   },
+  reportOnly: isDev,
+}));
+
+// Cache control for API responses
+app.use((req, res, next) => {
+  if (req.method === 'GET') {
+    res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=120');
+  } else {
+    res.setHeader('Cache-Control', 'no-store');
+  }
+  next();
+});
+
+app.use(cors({
+  origin: isDev ? true : allowedOrigins,
   credentials: true,
 }));
 app.use(cookieParser());
@@ -47,8 +129,12 @@ app.use('/api/payments', stripeWebhookRouter);
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
-app.use('/api', limiter);
-app.use('/api/auth', rateLimit({ windowMs: 15 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false }));
+if (!isDev) {
+  app.use('/api', limiter);
+  app.use('/api/auth', rateLimit({ windowMs: 15 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false }));
+} else {
+  app.use('/api/auth', rateLimit({ windowMs: 15 * 60 * 1000, max: 50, standardHeaders: true, legacyHeaders: false }));
+}
 
 // Import routes
 const authRoutes = require('./Routes/authRoutes');

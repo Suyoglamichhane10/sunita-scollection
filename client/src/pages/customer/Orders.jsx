@@ -27,8 +27,8 @@ const StatusTimeline = ({ status }) => {
   const currentIndex = ORDER_FLOW.indexOf(status);
 
   return (
-    <div className="my-6">
-      <div className="flex items-center">
+    <div className="my-6 overflow-x-auto">
+      <div className="flex items-center min-w-[500px]">
         {ORDER_FLOW.map((step, index) => (
           <React.Fragment key={step}>
             {index > 0 && (
@@ -175,7 +175,7 @@ const Orders = () => {
 
                 <StatusTimeline status={order.orderStatus} />
 
-                <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                   <div>
                     <p className="text-sm text-gray-600">Payment</p>
                     <p className="mt-1 text-gray-900">{order.paymentMethod?.toUpperCase()}</p>
@@ -216,7 +216,7 @@ const Orders = () => {
                   </div>
                 )}
 
-                <div className="mt-4 grid gap-3 rounded-3xl bg-gray-50 p-4 text-sm text-gray-700 sm:grid-cols-2">
+                <div className="mt-4 grid grid-cols-1 gap-3 rounded-3xl bg-gray-50 p-4 text-sm text-gray-700 sm:grid-cols-2">
                   <div>
                     <p className="font-semibold text-gray-900">Shipping to</p>
                     <p className="mt-1">{order.shippingAddress?.street}, {order.shippingAddress?.city}</p>
@@ -227,13 +227,13 @@ const Orders = () => {
                   </div>
                 </div>
 
-                <div className="mt-4 flex flex-wrap gap-3">
+                <div className="mt-4 flex flex-wrap gap-2">
                   {(order.orderStatus === 'pending' || order.orderStatus === 'confirmed') && (
                     <div>
                       <button
                         onClick={() => handleCancelOrder(order._id)}
                         disabled={cancellingOrderId === order._id}
-                        className="flex items-center gap-2 rounded-full border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex h-10 items-center gap-2 rounded-full border border-red-300 bg-white px-4 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <FaTimes />
                         {cancellingOrderId === order._id ? 'Cancelling...' : 'Cancel Order'}
@@ -242,19 +242,19 @@ const Orders = () => {
                   )}
                   <button
                     onClick={() => navigate(`/track-order/${order._id}`)}
-                    className="flex items-center gap-2 rounded-full bg-pink-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-pink-700"
+                    className="flex h-10 items-center gap-2 rounded-full bg-pink-600 px-4 text-sm font-semibold text-white transition hover:bg-pink-700"
                   >
                     <FaMapMarkerAlt /> Track Order
                   </button>
                   <button
                     onClick={() => handleDownloadInvoice(order._id)}
-                    className="flex items-center gap-2 rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+                    className="flex h-10 items-center gap-2 rounded-full border border-gray-300 bg-white px-4 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
                   >
                     <FaFileInvoice /> Invoice
                   </button>
                   <button
                     onClick={() => handleReorder(order)}
-                    className="flex items-center gap-2 rounded-full border border-blue-300 bg-white px-4 py-2 text-sm font-semibold text-blue-600 transition hover:bg-blue-50"
+                    className="flex h-10 items-center gap-2 rounded-full border border-blue-300 bg-white px-4 text-sm font-semibold text-blue-600 transition hover:bg-blue-50"
                   >
                     <FaRedo /> Reorder
                   </button>

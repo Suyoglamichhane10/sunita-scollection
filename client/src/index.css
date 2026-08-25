@@ -309,3 +309,120 @@ h1, h2, h3, .font-serif {
 .glamour-about-hero {
   min-height: 100vh;
 }
+
+/* Slowly moving rectangular border */
+@keyframes rotateBorder {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+.moving-rect-border {
+  position: relative;
+  padding: 3px;
+  border-radius: 1.5rem;
+  overflow: hidden;
+  background: #fff;
+}
+
+.moving-rect-border::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 200%;
+  height: 200%;
+  transform: translate(-50%, -50%);
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 60deg,
+    #C9A855 70deg,
+    #EAD9AA 80deg,
+    transparent 90deg,
+    transparent 270deg,
+    #C9A855 280deg,
+    #EAD9AA 290deg,
+    transparent 300deg,
+    transparent 360deg
+  );
+  animation: rotateBorder 12s linear infinite;
+  z-index: 0;
+}
+
+.moving-rect-border-inner {
+  position: relative;
+  z-index: 1;
+  background: #fff;
+  border-radius: calc(1.5rem - 3px);
+}
+
+/* Product Marquee */
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.marquee-track {
+  display: flex;
+  gap: 1rem;
+  width: max-content;
+  animation: marquee 40s linear infinite;
+  will-change: transform;
+}
+
+.marquee-wrapper:hover .marquee-track {
+  animation-play-state: paused;
+}
+
+@keyframes ownerShimmer {
+  0% {
+    transform: translateX(-100%) skewX(-15deg);
+  }
+  100% {
+    transform: translateX(200%) skewX(-15deg);
+  }
+}
+
+.owner-photo-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.15) 45%,
+    rgba(255, 255, 255, 0.4) 50%,
+    rgba(255, 255, 255, 0.15) 55%,
+    transparent 100%
+  );
+  animation: ownerShimmer 4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Slow moving vertical line on owner image */
+@keyframes moveLine {
+  0% { top: 0; }
+  50% { top: calc(100% - 2px); }
+  100% { top: 0; }
+}
+
+.owner-moving-line {
+  position: relative;
+  overflow: hidden;
+}
+
+.owner-moving-line::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.7), transparent);
+  animation: moveLine 4s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 10;
+}

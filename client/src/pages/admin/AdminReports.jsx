@@ -140,7 +140,7 @@ const AdminReports = () => {
         {loading ? (
           <div className="mt-10 rounded-3xl border border-gray-200 bg-white p-10 text-center shadow-sm">Loading analytics...</div>
         ) : (
-          <div className="mt-8 grid gap-6 lg:grid-cols-2">
+          <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
             {/* Revenue overview */}
             <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
               <h2 className="text-lg font-semibold text-gray-900">Revenue Trends</h2>

@@ -18,7 +18,7 @@ const getEsewaConfig = () => {
       : 'https://rc-epay.esewa.com.np/api/epay/main/v2/form'),
     verifyUrl: process.env.ESEWA_VERIFY_URL || process.env.ESEWA_STATUS_URL || (isLive
       ? 'https://epay.esewa.com.np/api/epay/transaction/status/'
-      : 'https://rc-epay.esewa.com.np/api/epay/transaction/status/'),
+      : 'https://rc.esewa.com.np/api/epay/transaction/status/'),
     
     // Success/Failure URLs
     successUrl: process.env.ESEWA_SUCCESS_URL || 'http://localhost:5173/order-success',

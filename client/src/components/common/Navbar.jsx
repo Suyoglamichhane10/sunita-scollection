@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { FaUser, FaSearch, FaShoppingCart, FaSignOutAlt, FaBars, FaTimes, FaHeart } from 'react-icons/fa';
+import { FaUser, FaSignOutAlt, FaBars, FaTimes, FaSearch, FaShoppingCart } from 'react-icons/fa';
 import { useAuth } from '../../Context/Authcontext';
 import { useCart } from '../../Context/CartContext';
-import wishlistApi from '../../Services/wishlistApi';
 import NotificationCenter from '../chat/NotificationCenter';
 import Avatar from './Avatar';
 import logo from '../../assets/LOGO!.png';
@@ -14,7 +13,6 @@ const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [wishlistCount, setWishlistCount] = useState(0);
 
   const publicLinks = [
     { label: 'Home', to: '/' },
@@ -26,12 +24,11 @@ const Navbar = () => {
   const customerLinks = [
     { label: 'Dashboard', to: '/dashboard' },
     { label: 'Orders', to: '/orders' },
-    { label: 'Wishlist', to: '/wishlist' },
     { label: 'Messages', to: '/messages' },
     { label: 'Profile', to: '/profile' },
   ];
 
-const links = [...publicLinks];
+  const links = [...publicLinks];
   if (isAuthenticated) {
     links.push(...(isAdmin
       ? customerLinks.filter((l) => l.label === 'Profile')
@@ -41,24 +38,11 @@ const links = [...publicLinks];
 
   const isActive = (to) => location.pathname === to;
 
-  useEffect(() => {
-    if (!isAuthenticated || isAdmin) return;
-    let active = true;
-    const loadWishlistCount = async () => {
-      try {
-        const { data } = await wishlistApi.getWishlist();
-        if (active) setWishlistCount((data.wishlist?.items || []).length);
-      } catch {}
-    };
-    loadWishlistCount();
-    return () => { active = false; };
-  }, [isAuthenticated, isAdmin]);
-
   return (
     <nav className="sticky top-0 z-40 border-b border-gold/20 bg-cream/95 shadow-sm backdrop-blur">
       <div className="mx-auto px-4 py-3 lg:px-8">
         <div className="flex items-center justify-between gap-4">
-          {/* Brand */}
+          {/* Brand - left side, original position */}
           <Link to="/" className="flex items-center">
             <img 
               src={logo} 
@@ -67,16 +51,16 @@ const links = [...publicLinks];
             />
           </Link>
 
-          {/* Desktop links */}
+          {/* Desktop links - center */}
           <div className="hidden items-center gap-5 lg:flex">
             {links.map((link) => (
               <Link
                 key={link.label}
                 to={link.to}
-className={`text-sm font-medium transition ${
+                className={`text-sm font-medium transition ${
                   isActive(link.to)
-                    ? 'text-red-600'
-                    : 'text-ink-light hover:text-red-600'
+                    ? 'text-primary font-semibold'
+                    : 'text-ink-light hover:text-primary'
                 }`}
               >
                 {link.label}
@@ -84,81 +68,100 @@ className={`text-sm font-medium transition ${
             ))}
           </div>
 
-          {/* Icons */}
+          {/* Right side: Icons + Auth + Hamburger */}
           <div className="flex items-center gap-2.5">
-<button
-              type="button"
-              onClick={() => navigate('/shop')}
-              className="rounded-full border border-red-300 p-2.5 text-ink-light transition hover:border-red-500 hover:text-red-600"
-              aria-label="Search products"
-            >
-              <FaSearch />
-            </button>
-
-            {isAuthenticated && <NotificationCenter />}
-
-            <Link
-              to="/cart"
-              className="relative rounded-full border border-red-300 p-2.5 text-ink-light transition hover:border-red-500 hover:text-red-600"
-              aria-label="Shopping cart"
-            >
-              <FaShoppingCart />
-              {totalItems > 0 && (
-                <span className="absolute -right-2 -top-2 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-gradient-to-br from-red-500 to-red-600 px-1.5 text-[11px] font-bold text-white shadow">
-                  {totalItems}
-                </span>
-              )}
-            </Link>
-
-            <Link
-              to="/wishlist"
-              className="relative rounded-full border border-red-300 p-2.5 text-ink-light transition hover:border-red-500 hover:text-red-600"
-              aria-label="Wishlist"
-            >
-              <FaHeart />
-              {wishlistCount > 0 && (
-                <span className="absolute -right-2 -top-2 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-gradient-to-br from-red-500 to-red-600 px-1.5 text-[11px] font-bold text-white shadow">
-                  {wishlistCount}
-                </span>
-              )}
-            </Link>
-
-             {isAuthenticated ? (
-              <div className="flex items-center gap-2">
-                <Link to="/profile" title="My Profile">
-                  <Avatar src={user?.avatar} name={user?.name} size="sm" showBorder={true} borderColor="border-red-400 hover:border-red-600" />
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => {
-                    logout();
-                    navigate('/');
-                  }}
-                  className="btn-elegant hidden items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold sm:flex"
-                >
-                  <FaSignOutAlt />
-                  Logout
-                </button>
-              </div>
-            ) : (
-              <Link
-                to="/login"
-                className="btn-elegant hidden items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold sm:flex"
+            {/* Desktop icons */}
+            <div className="hidden items-center gap-1.5 lg:flex">
+              <button
+                type="button"
+                onClick={() => navigate('/shop')}
+                className="rounded-full border border-gold/40 p-2.5 text-ink-light transition hover:border-primary hover:text-primary"
+                aria-label="Search products"
               >
-                <FaUser />
-                Login
-              </Link>
-            )}
+                <FaSearch />
+              </button>
 
-            {/* Mobile toggle */}
-<button
+              {isAuthenticated && <NotificationCenter />}
+
+              <Link
+                to="/cart"
+                className="relative rounded-full border border-gold/40 p-2.5 text-ink-light transition hover:border-primary hover:text-primary"
+                aria-label="Shopping cart"
+              >
+                <FaShoppingCart />
+                {totalItems > 0 && (
+                  <span className="absolute -right-2 -top-2 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary-dark px-1.5 text-[11px] font-bold text-white shadow">
+                    {totalItems}
+                  </span>
+                )}
+              </Link>
+            </div>
+
+            {/* Mobile icons - cart and notification on right side */}
+            <div className="flex items-center gap-1.5 lg:hidden">
+              <button
+                type="button"
+                onClick={() => navigate('/shop')}
+                className="rounded-full border border-gold/40 p-2.5 text-ink-light transition hover:border-primary hover:text-primary"
+                aria-label="Search products"
+              >
+                <FaSearch />
+              </button>
+
+              {isAuthenticated && <NotificationCenter />}
+              <Link
+                to="/cart"
+                className="relative rounded-full border border-gold/40 p-2.5 text-ink-light transition hover:border-primary hover:text-primary"
+                aria-label="Shopping cart"
+              >
+                <FaShoppingCart />
+                {totalItems > 0 && (
+                  <span className="absolute -right-2 -top-2 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary-dark px-1.5 text-[11px] font-bold text-white shadow">
+                    {totalItems}
+                  </span>
+                )}
+              </Link>
+            </div>
+
+            {/* Hamburger menu - right side, after icons */}
+            <button
               type="button"
               onClick={() => setMobileOpen((v) => !v)}
-              className="rounded-full border border-red-300 p-2.5 text-red-600 lg:hidden"
+              className="rounded-full border border-gold/40 p-2.5 text-primary lg:hidden"
               aria-label="Toggle menu"
             >
               {mobileOpen ? <FaTimes /> : <FaBars />}
             </button>
+
+            {/* Auth buttons - desktop only */}
+            <div className="hidden lg:flex lg:items-center lg:gap-2">
+              {isAuthenticated ? (
+                <>
+                  <Link to="/profile" title="My Profile">
+                    <Avatar src={user?.avatar} name={user?.name} size="sm" showBorder={true} borderColor="border-primary hover:border-primary/80" />
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      logout();
+                      navigate('/');
+                    }}
+                    className="btn-elegant flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-dark"
+                  >
+                    <FaSignOutAlt />
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <Link
+                  to="/login"
+                  className="btn-elegant flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-dark"
+                >
+                  <FaUser />
+                  Login
+                </Link>
+              )}
+            </div>
           </div>
         </div>
 
@@ -170,23 +173,23 @@ className={`text-sm font-medium transition ${
                 key={link.label}
                 to={link.to}
                 onClick={() => setMobileOpen(false)}
-className={`block rounded-xl px-4 py-2.5 text-sm font-medium transition ${
+                className={`block rounded-xl px-4 py-2.5 text-sm font-medium transition ${
                   isActive(link.to)
-                    ? 'bg-red-50 text-red-600'
-                    : 'text-ink-light hover:bg-red-50'
+                    ? 'bg-primary/10 text-primary'
+                    : 'text-ink-light hover:bg-primary/5'
                 }`}
               >
                 {link.label}
               </Link>
             ))}
-{isAuthenticated ? (
+            {isAuthenticated ? (
               <>
-                <div className="mt-2 flex items-center gap-3 rounded-xl bg-primary-50 px-4 py-3">
-                  <div className="h-10 w-10 overflow-hidden rounded-full border-2 border-red-400">
+                <div className="mt-2 flex items-center gap-3 rounded-xl bg-primary/5 px-4 py-3">
+                  <div className="h-10 w-10 overflow-hidden rounded-full border-2 border-primary">
                     <Avatar src={user?.avatar} name={user?.name} size="sm" showBorder={false} />
                   </div>
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-primary-800">{user?.name || 'User'}</p>
+                    <p className="truncate text-sm font-semibold text-primary">{user?.name || 'User'}</p>
                     <p className="truncate text-xs text-ink-light">{user?.email || ''}</p>
                   </div>
                 </div>
@@ -197,7 +200,7 @@ className={`block rounded-xl px-4 py-2.5 text-sm font-medium transition ${
                     navigate('/');
                     setMobileOpen(false);
                   }}
-                  className="btn-elegant mt-2 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold"
+                  className="btn-elegant mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-dark"
                 >
                   <FaSignOutAlt /> Logout
                 </button>
@@ -206,7 +209,7 @@ className={`block rounded-xl px-4 py-2.5 text-sm font-medium transition ${
               <Link
                 to="/login"
                 onClick={() => setMobileOpen(false)}
-                className="btn-elegant mt-2 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold"
+                className="btn-elegant mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-dark"
               >
                 <FaUser /> Login
               </Link>

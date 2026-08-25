@@ -1,15 +1,15 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || '/api';
+const API_URL = import.meta.env.DEV ? '/api' : (import.meta.env.VITE_API_URL || '/api');
 
 const api = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 15000,
 });
 
-// Request interceptor
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -21,15 +21,30 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    const originalRequest = error.config;
+    const is408 = error.response?.status === 408;
+    const isNetwork = error.code === 'ECONNABORTED' || error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED';
+    const retryCount = originalRequest?.__retryCount || 0;
+
+    if ((is408 || isNetwork) && retryCount < 3) {
+      originalRequest.__retryCount = retryCount + 1;
+
+      const retryAfter = error.response?.headers?.['retry-after'];
+      const delay = retryAfter ? parseInt(retryAfter) * 1000 : 1000 * (retryCount + 1);
+
+      await new Promise((resolve) => setTimeout(resolve, delay));
+
+      return api(originalRequest);
+    }
+
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       delete axios.defaults.headers.common['Authorization'];
-      window.location.href = '/login';
     }
+
     return Promise.reject(error);
   }
 );

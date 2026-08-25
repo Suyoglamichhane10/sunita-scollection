@@ -113,6 +113,4 @@ const gamificationSchema = new mongoose.Schema(
   }
 );
 
-gamificationSchema.index({ user: 1 });
-
 module.exports = mongoose.model('Gamification', gamificationSchema);

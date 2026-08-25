@@ -37,11 +37,11 @@ const Cart = () => {
 
           <div className="mt-8 space-y-6">
             {cartItems.map((item) => (
-              <div key={item.key} className="grid gap-4 rounded-3xl border border-gray-200 p-5 md:grid-cols-[140px_1fr_auto]">
+              <div key={item.key} className="grid grid-cols-1 gap-4 rounded-3xl border border-gray-200 p-5 sm:grid-cols-[140px_1fr_auto]">
                 <img
                   src={item.image}
                   alt={item.name}
-                  className="h-36 w-full rounded-3xl object-cover md:h-full"
+                  className="h-36 w-full rounded-3xl object-cover sm:h-full"
                 />
                 <div>
                   <h2 className="text-lg font-semibold text-gray-900">{item.name}</h2>
@@ -53,14 +53,14 @@ const Cart = () => {
                   <div className="mt-4 flex items-center gap-3">
                     <button
                       onClick={() => updateQuantity(item.key, item.quantity - 1)}
-                      className="rounded-full border border-gray-300 px-3 py-1 text-gray-600 hover:bg-gray-100"
+                      className="h-10 w-10 rounded-full border border-gray-300 text-gray-600 transition hover:bg-gray-100"
                     >
                       -
                     </button>
                     <span className="min-w-[36px] text-center">{item.quantity}</span>
                     <button
                       onClick={() => updateQuantity(item.key, item.quantity + 1)}
-                      className="rounded-full border border-gray-300 px-3 py-1 text-gray-600 hover:bg-gray-100"
+                      className="h-10 w-10 rounded-full border border-gray-300 text-gray-600 transition hover:bg-gray-100"
                     >
                       +
                     </button>

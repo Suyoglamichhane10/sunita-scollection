@@ -4,6 +4,9 @@ import { useCart } from '../../Context/CartContext';
 import { useAuth } from '../../Context/Authcontext';
 import api from '../../Services/api';
 import toast from 'react-hot-toast';
+import EsewaLogo from '../../assets/Esewa_logo.webp';
+import KhaltiLogo from '../../assets/khalti.png';
+import FonepayLogo from '../../assets/fonepay.png';
 
 const Checkout = () => {
   const { cartItems, totalPrice, clearCart } = useCart();
@@ -59,31 +62,35 @@ const handleSubmit = async (e) => {
 
       // eSewa payment initiation — build and submit the eSewa form
       if (paymentMethod === 'esewa' && orderId) {
-        // Development mode: bypass eSewa and go directly to success page
-        if (import.meta.env.MODE === 'development' && import.meta.env.VITE_BYPASS_ESEWA === 'true') {
-          toast.success('Order placed successfully! (Development mode - eSewa bypassed)');
-          clearCart();
-          navigate(`/order-success/${orderId}`);
+        try {
+          const esewaRes = await api.post('/payments/esewa/initiate', { orderId });
+          const { paymentUrl, params } = esewaRes.data.data;
+          const form = document.createElement('form');
+          form.method = 'POST';
+          form.action = paymentUrl;
+          form.id = 'esewa-form';
+          Object.entries(params).forEach(([key, value]) => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = key;
+            input.value = value;
+            form.appendChild(input);
+          });
+          document.body.appendChild(form);
+          form.submit(); // redirects customer to the eSewa gateway
+          // Cart is kept until payment is verified on the success page.
+          return;
+        } catch (error) {
+          if (error.response?.status === 503 && import.meta.env.MODE === 'development') {
+            toast.success('Order placed successfully! (Development mode - eSewa bypassed)');
+            clearCart();
+            navigate(`/order-success/${orderId}`);
+            return;
+          }
+          toast.error(error.response?.data?.message || 'eSewa payment is not configured. Please use COD.');
+          setLoading(false);
           return;
         }
-        
-        const esewaRes = await api.post('/payments/esewa/initiate', { orderId });
-        const { paymentUrl, params } = esewaRes.data.data;
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = paymentUrl;
-        form.id = 'esewa-form';
-        Object.entries(params).forEach(([key, value]) => {
-          const input = document.createElement('input');
-          input.type = 'hidden';
-          input.name = key;
-          input.value = value;
-          form.appendChild(input);
-        });
-        document.body.appendChild(form);
-        form.submit(); // redirects customer to the eSewa gateway
-        // Cart is kept until payment is verified on the success page.
-        return;
       }
 
       // Khalti payment initiation — redirect to Khalti gateway
@@ -93,7 +100,32 @@ const handleSubmit = async (e) => {
           window.location.href = khaltiRes.data.data.paymentUrl;
           return;
         } catch (error) {
-          toast.error(error.response?.data?.message || 'Khalti payment is not configured. Please use COD or eSewa.');
+          if (error.response?.status === 503 && import.meta.env.MODE === 'development') {
+            toast.success('Order placed successfully! (Development mode - Khalti bypassed)');
+            clearCart();
+            navigate(`/order-success/${orderId}`);
+            return;
+          }
+          toast.error(error.response?.data?.message || 'Khalti payment is not configured. Please use COD.');
+          setLoading(false);
+          return;
+        }
+      }
+
+      // FonePay payment initiation — redirect to FonePay gateway
+      if (paymentMethod === 'fonepay' && orderId) {
+        try {
+          const fonepayRes = await api.post('/payments/fonepay/initiate', { orderId });
+          window.location.href = fonepayRes.data.data.paymentUrl;
+          return;
+        } catch (error) {
+          if (error.response?.status === 503 && import.meta.env.MODE === 'development') {
+            toast.success('Order placed successfully! (Development mode - FonePay bypassed)');
+            clearCart();
+            navigate(`/order-success/${orderId}`);
+            return;
+          }
+          toast.error(error.response?.data?.message || 'FonePay payment is not configured. Please use COD.');
           setLoading(false);
           return;
         }
@@ -119,7 +151,7 @@ const handleSubmit = async (e) => {
           <p className="mt-2 text-gray-600">Fill in your shipping details and payment preference.</p>
 
           <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <input
                 type="text"
                 placeholder="Full Name"
@@ -168,38 +200,42 @@ const handleSubmit = async (e) => {
               />
             </div>
 
-            <div className="rounded-3xl border border-gray-200 bg-gray-50 p-5">
-              <h2 className="text-lg font-semibold text-gray-900">Payment Method</h2>
-              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                <div className="rounded-3xl border border-gray-200 bg-gray-50 p-5">
+                  <h2 className="text-lg font-semibold text-gray-900">Payment Method</h2>
+                  <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
                 {[
-                  { id: 'cod', label: 'Cash on Delivery', desc: 'Pay when your order arrives', badge: 'COD' },
-                  { id: 'stripe', label: 'Card Payment', desc: 'Pay securely with your card', badge: 'CARD' },
-                  { id: 'esewa', label: 'eSewa', desc: 'Pay using your eSewa wallet', badge: 'ESEWA' },
-                  { id: 'khalti', label: 'Khalti', desc: 'Pay using your Khalti wallet', badge: 'KHALTI' },
+                  { id: 'cod', label: 'Cash on Delivery', desc: 'Pay when your order arrives', badge: 'COD', color: 'bg-gray-700', logo: null },
+                  { id: 'esewa', label: 'eSewa', desc: 'Pay using your eSewa wallet', badge: 'ESEWA', color: 'bg-green-600', logo: EsewaLogo },
+                  { id: 'khalti', label: 'Khalti', desc: 'Pay using your Khalti wallet', badge: 'KHALTI', color: 'bg-purple-700', logo: KhaltiLogo },
+                  { id: 'fonepay', label: 'FonePay', desc: 'Pay using your FonePay wallet', badge: 'FONEPAY', color: 'bg-primary', logo: FonepayLogo },
                 ].map((method) => (
-                  <label
-                    key={method.id}
-                    className={`flex cursor-pointer items-center gap-3 rounded-3xl border p-4 transition ${paymentMethod === method.id ? 'border-pink-600 bg-pink-50' : 'border-gray-200 bg-white'}`}
-                  >
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value={method.id}
-                      checked={paymentMethod === method.id}
-                      onChange={() => setPaymentMethod(method.id)}
-                      className="hidden"
-                    />
-                    <div className={`rounded-full px-3 py-2 text-sm font-semibold text-white ${method.id === 'esewa' ? 'bg-green-600' : method.id === 'khalti' ? 'bg-purple-700' : method.id === 'stripe' ? 'bg-indigo-600' : 'bg-gray-700'}`}>
-                      {method.badge}
-                    </div>
-                    <div>
-                      <p className="font-semibold text-gray-900">{method.label}</p>
-                      <p className="text-sm text-gray-600">{method.desc}</p>
-                    </div>
-                  </label>
-                ))}
+                    <label
+                      key={method.id}
+                      className={`flex cursor-pointer items-center gap-3 rounded-3xl border p-4 transition ${paymentMethod === method.id ? 'border-primary bg-primary/5' : 'border-gray-200 bg-white hover:border-primary/40'}`}
+                    >
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value={method.id}
+                        checked={paymentMethod === method.id}
+                        onChange={() => setPaymentMethod(method.id)}
+                        className="hidden"
+                      />
+                      {method.logo ? (
+                        <img src={method.logo} alt={method.label} className="h-8 w-auto object-contain" />
+                      ) : (
+                        <div className={`rounded-full px-3 py-2 text-sm font-semibold text-white ${method.color}`}>
+                          {method.badge}
+                        </div>
+                      )}
+                      <div>
+                        <p className="font-semibold text-gray-900">{method.label}</p>
+                        <p className="text-sm text-gray-600">{method.desc}</p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
               </div>
-            </div>
 
             <div className="rounded-3xl border border-gray-200 bg-white p-6">
               <div className="flex items-center justify-between text-gray-600">

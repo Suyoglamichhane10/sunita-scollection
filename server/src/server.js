@@ -33,10 +33,11 @@ server.on('error', (err) => {
 });
 
 // Socket.io setup
+const isDev = process.env.NODE_ENV === 'development';
 const io = new Server(server, {
   cors: {
     origin(origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+      if (!origin || allowedOrigins.includes(origin) || isDev) return callback(null, true);
       return callback(new Error('Socket origin is not allowed by CORS'));
     },
     credentials: true,
@@ -156,6 +157,21 @@ if (process.env.SEED_ADMIN === 'true') {
       console.log(`🚀 Server running on http://localhost:${PORT}`);
       console.log(`📡 Environment: ${process.env.NODE_ENV}`);
     });
+
+    // Periodically refresh automated merchandising categories (Best Sellers +
+    // Trending) from live order/view data so the homepage stays current without
+    // manual admin intervention. Runs every 6 hours (configurable via env).
+    const refreshIntervalMs = Number(process.env.MERCHANDISING_REFRESH_MS) || 6 * 60 * 60 * 1000;
+    const analyticsService = require('./services/analyticsService');
+    const refreshMerchandising = async () => {
+      try {
+        const result = await analyticsService.refreshMerchandising();
+        console.log('🔄 Merchandising refreshed:', result);
+      } catch (err) {
+        console.error('⚠️ Merchandising refresh failed:', err.message);
+      }
+    };
+    setInterval(refreshMerchandising, refreshIntervalMs);
   } catch (error) {
     console.error('❌ Failed to start server:', error.message);
     process.exit(1);

@@ -8,6 +8,10 @@ const {
   getEsewaStatus,
   initiateKhalti,
   verifyKhalti,
+  initiateFonepay,
+  verifyFonepay,
+  fonepaySuccess,
+  fonepayFailure,
   getPaymentStatus,
   stripeWebhook,
 } = require('../controllers/paymentController');
@@ -19,6 +23,10 @@ const { protect } = require('../Middleware/auth');
 router.get('/esewa/success', esewaSuccess);
 router.get('/esewa/failure', esewaFailure);
 
+// Public callback endpoints for FonePay.
+router.get('/fonepay/success', fonepaySuccess);
+router.get('/fonepay/failure', fonepayFailure);
+
 // Public callback verification endpoints.
 // These are hit when the payment gateway redirects the browser back to the
 // success page. The order is looked up via the orderId in the URL and the
@@ -26,6 +34,7 @@ router.get('/esewa/failure', esewaFailure);
 // `protect` because the gateway redirect does not carry a JWT.
 router.post('/esewa/verify', verifyEsewa);
 router.post('/khalti/verify', verifyKhalti);
+router.post('/fonepay/verify', verifyFonepay);
 
 // Stripe webhook (public, verified via Stripe signature).
 // NOTE: This route is mounted with a raw body parser in app.js so that
@@ -37,6 +46,7 @@ router.use(protect);
 
 router.post('/esewa/initiate', initiateEsewa);
 router.post('/khalti/initiate', initiateKhalti);
+router.post('/fonepay/initiate', initiateFonepay);
 router.get('/esewa/status/:transactionId', getEsewaStatus);
 router.get('/status/:orderId', getPaymentStatus);
 

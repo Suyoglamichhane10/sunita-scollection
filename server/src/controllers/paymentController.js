@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const Stripe = require('stripe');
 const { finalizePaidOrder, failOrder } = require('../services/orderFinalizeService');
 const { getEsewaConfig } = require('../config/esewa');
+const { getFonepayConfig } = require('../config/fonepay');
 
 const stripe = process.env.STRIPE_SECRET_KEY ? Stripe(process.env.STRIPE_SECRET_KEY) : null;
 
@@ -42,7 +43,7 @@ const getKhaltiConfig = () => {
  * Helper: compute eSewa HMAC-SHA256 signature.
  * The message must be the signed_field_names values joined by commas.
  * @param {string} secretKey
- * @param {string} message - e.g. "total_amount=1000,transaction_uuid=...,product_code=..."
+ * @param {string} message - e.g. "tAmt=1000,transaction_uuid=...,pid=..."
  * @returns {string} base64 encoded signature
  */
 const esewaSign = (secretKey, message) => {
@@ -64,10 +65,10 @@ exports.initiateEsewa = async (req, res, next) => {
     }
 
     const config = getEsewaConfig();
-    if (!config.productCode || !config.secretKey) {
+    if (!config.merchantId || !config.productCode || !config.secretKey) {
       return res.status(503).json({
         success: false,
-        message: 'eSewa is not configured on the server (missing product code or secret key)',
+        message: 'eSewa is not configured on the server (missing merchant ID, product code, or secret key)',
       });
     }
 
@@ -174,7 +175,7 @@ exports.verifyEsewa = async (req, res, next) => {
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 15000); // 15s timeout
-      gatewayResponse = await fetch(`${config.statusUrl}?${params.toString()}`, {
+      gatewayResponse = await fetch(`${config.verifyUrl}?${params.toString()}`, {
         signal: controller.signal,
       });
       clearTimeout(timeout);
@@ -517,6 +518,282 @@ exports.esewaFailure = async (req, res, next) => {
   } catch (error) {
     console.error('eSewa failure callback error:', error);
     res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment-failure?error=server_error`);
+  }
+};
+
+// @desc    FonePay success callback (public endpoint)
+// @route   GET /api/payments/fonepay/success
+// @access  Public
+exports.fonepaySuccess = async (req, res, next) => {
+  try {
+    const { oid, transaction_uuid, refId } = req.query;
+
+    if (!oid || !transaction_uuid) {
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment-failure/${oid || 'unknown'}?error=missing_params`);
+    }
+
+    const order = await Order.findById(oid);
+    if (!order) {
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment-failure/${oid}?error=order_not_found`);
+    }
+
+    if (order.isPaid && order.orderStatus === 'confirmed') {
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/order-success/${oid}`);
+    }
+
+    const config = getFonepayConfig();
+    if (!config.merchantId || !config.merchantSecret || !config.appId) {
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment-failure/${oid}?error=not_configured`);
+    }
+
+    const expectedTotal = Math.round(order.totalAmount);
+    const lookupPayload = {
+      merchant_id: config.merchantId,
+      app_id: config.appId,
+      transaction_uuid,
+    };
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    let gatewayResponse;
+    try {
+      gatewayResponse = await fetch(`${config.baseUrl}ipn/request`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(lookupPayload),
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+    } catch (fetchErr) {
+      clearTimeout(timeout);
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment-failure/${oid}?error=verification_timeout`);
+    }
+
+    let gatewayData;
+    try {
+      gatewayData = await gatewayResponse.json();
+    } catch {
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment-failure/${oid}?error=invalid_response`);
+    }
+
+    const isSuccess = gatewayData.status === 'SUCCESS' || gatewayData.status === 'COMPLETE' || gatewayData.response_code === '00' || gatewayData.response_code === '0';
+    if (!isSuccess) {
+      await failOrder(order, `FonePay payment status: ${gatewayData.status || gatewayData.response_code || 'NOT FOUND'}`);
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment-failure/${oid}?error=payment_not_complete`);
+    }
+
+    await finalizePaidOrder(
+      order,
+      {
+        transactionId: gatewayData.transaction_id || refId || transaction_uuid,
+        paymentId: transaction_uuid,
+        paymentDate: new Date(),
+        gateway: 'fonepay',
+      },
+      order.user
+    );
+
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/order-success/${oid}`);
+  } catch (error) {
+    console.error('FonePay success callback error:', error);
+    const oid = req.query.oid || 'unknown';
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment-failure/${oid}?error=server_error`);
+  }
+};
+
+// @desc    FonePay failure callback (public endpoint)
+// @route   GET /api/payments/fonepay/failure
+// @access  Public
+exports.fonepayFailure = async (req, res, next) => {
+  try {
+    const { oid } = req.query;
+
+    if (oid) {
+      const order = await Order.findById(oid);
+      if (order && !order.isPaid) {
+        await failOrder(order, 'FonePay payment cancelled or failed by user');
+      }
+    }
+
+    const failureUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment-failure/${oid || 'unknown'}`;
+    res.redirect(failureUrl);
+  } catch (error) {
+    console.error('FonePay failure callback error:', error);
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment-failure?error=server_error`);
+  }
+};
+
+const isValidFonepayConfig = (config) => {
+  if (!config.merchantId || !config.merchantSecret || !config.appId) return false;
+  if (/your[_ ]?merchant[_ ]?id/i.test(config.merchantId)) return false;
+  if (/your[_ ]?merchant[_ ]?secret/i.test(config.merchantSecret)) return false;
+  if (/your[_ ]?app[_ ]?id/i.test(config.appId)) return false;
+  return true;
+};
+
+// @desc    Initiate FonePay payment
+// @route   POST /api/payments/fonepay/initiate
+// @access  Private
+exports.initiateFonepay = async (req, res, next) => {
+  try {
+    const { orderId } = req.body;
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+    if (order.user.toString() !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const config = getFonepayConfig();
+    if (!isValidFonepayConfig(config)) {
+      return res.status(503).json({
+        success: false,
+        message: 'FonePay is not configured on the server (missing merchant ID, secret, or app ID). Replace the placeholder values in server/.env and restart.',
+      });
+    }
+
+    const frontendUrl = process.env.FRONTEND_URL || DEFAULT_FRONTEND_URL;
+    const successUrl = `${frontendUrl}/order-success/${order._id}`;
+    const failureUrl = `${frontendUrl}/payment-failure/${order._id}`;
+
+    const transactionUuid = `${order.orderNumber}-${Date.now()}`;
+    const amount = Math.round(order.totalAmount);
+
+    const payload = {
+      merchant_id: config.merchantId,
+      app_id: config.appId,
+      amount: String(amount),
+      transaction_uuid: transactionUuid,
+      product_code: 'SunitaCollection',
+      return_url: successUrl,
+      failure_url: failureUrl,
+      customer_info: {
+        name: order.shippingAddress?.fullName || 'Customer',
+        email: '',
+        phone: order.shippingAddress?.phone || '',
+      },
+    };
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    let gatewayData;
+    let gatewayResponse;
+    try {
+      gatewayResponse = await fetch(`${config.baseUrl}ipn/request`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+      gatewayData = await gatewayResponse.json();
+    } catch (fetchErr) {
+      clearTimeout(timeout);
+      return res.status(504).json({ success: false, message: 'FonePay initiation timed out or could not reach the gateway' });
+    }
+    clearTimeout(timeout);
+
+    const paymentUrl = gatewayData.payment_url || gatewayData.redirect_url || gatewayData.url;
+    if (!gatewayResponse.ok || !paymentUrl) {
+      return res.status(502).json({
+        success: false,
+        message: gatewayData?.message || gatewayData?.detail || 'Unable to start FonePay payment',
+      });
+    }
+
+    order.paymentDetails = { paymentId: transactionUuid, gateway: 'fonepay' };
+    await order.save();
+
+    res.status(200).json({
+      success: true,
+      data: { paymentUrl, transactionUuid },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Verify FonePay payment
+// @route   POST /api/payments/fonepay/verify
+// @access  Private
+exports.verifyFonepay = async (req, res, next) => {
+  try {
+    const { orderId, transactionUuid } = req.body;
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+    if (req.user && order.user.toString() !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
+
+    if (order.isPaid && order.orderStatus === 'confirmed') {
+      return res.status(200).json({ success: true, message: 'Payment already verified', order });
+    }
+
+    if (!transactionUuid || order.paymentDetails?.paymentId !== transactionUuid) {
+      await failOrder(order, 'Invalid FonePay transaction reference');
+      return res.status(400).json({ success: false, message: 'Invalid FonePay transaction reference' });
+    }
+
+    const config = getFonepayConfig();
+    if (!config.merchantId || !config.merchantSecret || !config.appId) {
+      return res.status(503).json({ success: false, message: 'FonePay is not configured on the server' });
+    }
+
+    const lookupPayload = {
+      merchant_id: config.merchantId,
+      app_id: config.appId,
+      transaction_uuid,
+    };
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    let gatewayResponse;
+    try {
+      gatewayResponse = await fetch(`${config.baseUrl}ipn/request`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(lookupPayload),
+        signal: controller.signal,
+      });
+    } catch (fetchErr) {
+      clearTimeout(timeout);
+      return res.status(504).json({ success: false, message: 'FonePay verification timed out or could not reach the gateway' });
+    }
+    clearTimeout(timeout);
+
+    let gatewayData;
+    try {
+      gatewayData = await gatewayResponse.json();
+    } catch {
+      return res.status(502).json({ success: false, message: 'Invalid response from FonePay gateway' });
+    }
+
+    const isSuccess = gatewayData.status === 'SUCCESS' || gatewayData.status === 'COMPLETE' || gatewayData.response_code === '00' || gatewayData.response_code === '0';
+    if (!gatewayResponse.ok || !isSuccess) {
+      await failOrder(order, `FonePay payment status: ${gatewayData.status || gatewayData.response_code || 'NOT COMPLETED'}`);
+      return res.status(409).json({
+        success: false,
+        message: 'FonePay payment is not confirmed',
+        status: gatewayData.status,
+      });
+    }
+
+    const finalOrder = await finalizePaidOrder(
+      order,
+      {
+        transactionId: gatewayData.transaction_id || transactionUuid,
+        paymentId: transactionUuid,
+        paymentDate: new Date(),
+        gateway: 'fonepay',
+      },
+      order.user
+    );
+
+    res.status(200).json({ success: true, message: 'Payment verified successfully', order: finalOrder });
+  } catch (error) {
+    next(error);
   }
 };
 

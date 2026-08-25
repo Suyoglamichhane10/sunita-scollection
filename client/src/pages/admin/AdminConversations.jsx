@@ -106,7 +106,7 @@ const AdminConversations = () => {
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[340px_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[340px_minmax(0,1fr)]">
         {/* Conversation list */}
         <div className="rounded-3xl border border-gray-200 bg-white p-4 shadow-sm">
           <h2 className="mb-3 px-2 text-sm font-semibold uppercase text-gray-500">Conversations</h2>

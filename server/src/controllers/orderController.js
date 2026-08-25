@@ -146,7 +146,7 @@ const products = await Product.find({ _id: { $in: consolidatedItems.map((item) =
     // For gateway payments (eSewa / Khalti / Stripe), stock is decremented only
     // after payment verification (see orderFinalizeService). For COD, decrement
     // stock now using atomic operations to prevent overselling.
-    const isDeferredPayment = ['esewa', 'khalti', 'stripe'].includes(paymentMethod);
+    const isDeferredPayment = ['esewa', 'khalti', 'fonepay'].includes(paymentMethod);
     if (!isDeferredPayment) {
       const stockItems = lineItems.map((li) => ({
         product: li.product,
@@ -156,43 +156,7 @@ const products = await Product.find({ _id: { $in: consolidatedItems.map((item) =
       await decrementStock(stockItems);
     }
 
-    if (paymentMethod === 'stripe') {
-      if (!process.env.STRIPE_SECRET_KEY) {
-        return res.status(500).json({
-          success: false,
-          message: 'Stripe API key not configured on server',
-        });
-      }
-
-      const session = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
-line_items: lineItems.map((item) => ({
-          price_data: {
-            currency: 'npr',
-            product_data: {
-              name: item.name,
-              images: item.image ? [item.image] : [],
-            },
-            unit_amount: Math.round(item.price * 100),
-          },
-          quantity: item.quantity,
-        })),
-mode: 'payment',
-        success_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/order-success/${order._id}?gateway=stripe`,
-        cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment-failure/${order._id}`,
-        metadata: {
-          orderId: order._id.toString(),
-        },
-      });
-
-return res.status(201).json({
-        success: true,
-        order,
-        checkoutUrl: session.url,
-      });
-    }
-
-// Send order confirmation email + award loyalty points (non-blocking).
+    // Send order confirmation email + award loyalty points (non-blocking).
     // For eSewa/Khalti these are deferred until payment verification
     // (handled in orderFinalizeService), so they are skipped here.
     if (!isDeferredPayment) {

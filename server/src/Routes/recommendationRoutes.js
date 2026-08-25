@@ -17,7 +17,7 @@ router.post('/view', protect, trackView);
 router.get('/recommended', protect, getRecommendedForYou);
 router.get('/trending', protect, getTrending);
 router.post('/complementary', protect, getComplementary);
-router.get('/recently-viewed', protect, getRecentlyViewed);
+router.get('/recently-viewed', getRecentlyViewed);
 router.get('/size/:productId', protect, getSizeRecommendation);
 router.post('/looks', protect, saveLook);
 router.get('/looks', protect, getSavedLooks);

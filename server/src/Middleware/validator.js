@@ -45,6 +45,7 @@ exports.validateProduct = [
     .notEmpty()
     .withMessage('Category is required'),
   body('stock')
+    .optional()
     .isNumeric()
     .withMessage('Stock must be a number')
     .isInt({ min: 0 })

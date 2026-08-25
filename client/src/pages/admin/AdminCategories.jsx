@@ -93,7 +93,7 @@ const AdminCategories = () => {
             </div>
           </div>
 
-          <div className="mt-10 grid gap-8 xl:grid-cols-[0.95fr_1.05fr]">
+          <div className="mt-10 grid grid-cols-1 gap-8 xl:grid-cols-[0.95fr_1.05fr]">
             <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
               <h2 className="text-xl font-semibold text-gray-900">Category details</h2>
               <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
@@ -126,7 +126,7 @@ const AdminCategories = () => {
                     placeholder="https://example.com/image.jpg"
                   />
                 </div>
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Display order</label>
                     <input

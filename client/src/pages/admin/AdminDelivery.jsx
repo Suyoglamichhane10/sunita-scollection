@@ -148,7 +148,7 @@ const AdminDelivery = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container-custom px-4 lg:px-8">
-        <section className="mb-8 grid gap-4 sm:grid-cols-3">
+        <section className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
             <div className="flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-600"><FaTruck /></div>
@@ -210,7 +210,7 @@ const AdminDelivery = () => {
         {viewMode === 'map' && (
           <section className="mb-8 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
             <h2 className="mb-4 text-lg font-bold text-gray-900">Active Deliveries Map</h2>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {activeDeliveries.map((delivery) => (
                 <div key={delivery._id} className="rounded-2xl border border-gray-100 p-3">
                   <div className="flex items-center justify-between">
@@ -315,7 +315,7 @@ const AdminDelivery = () => {
               </button>
             </div>
 
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+             <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="rounded-2xl border border-gray-200 p-4">
                 <p className="text-sm font-semibold text-gray-500">Order</p>
                 <p className="mt-2 font-semibold text-gray-900">Order {selectedDelivery.order.orderNumber}</p>
@@ -330,18 +330,18 @@ const AdminDelivery = () => {
             <div className="mt-4 rounded-2xl border border-gray-200 p-4">
               <p className="text-sm font-semibold text-gray-500">Live Map</p>
               <div className="mt-3">
-                {modalReady ? (
-                  <DeliveryMap
-                    pickup={selectedDelivery.delivery.pickupLocation}
-                    delivery={selectedDelivery.delivery.deliveryLocation}
-                    currentLocation={selectedDelivery.delivery.currentLocation}
-                    routePoints={selectedDelivery.delivery.route || []}
-                  />
-                ) : (
-                  <div className="flex h-[400px] items-center justify-center rounded-xl bg-gray-100 text-gray-500">
-                    Loading map...
-                  </div>
-                )}
+                 {modalReady ? (
+                   <DeliveryMap
+                     pickup={selectedDelivery.delivery.pickupLocation}
+                     delivery={selectedDelivery.delivery.deliveryLocation}
+                     currentLocation={selectedDelivery.delivery.currentLocation}
+                     routePoints={selectedDelivery.delivery.route || []}
+                   />
+                 ) : (
+                   <div className="flex h-[300px] sm:h-[400px] items-center justify-center rounded-xl bg-gray-100 text-gray-500">
+                     Loading map...
+                   </div>
+                 )}
               </div>
             </div>
 

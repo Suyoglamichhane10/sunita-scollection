@@ -4,6 +4,8 @@ import AppRoutes from './Routes/AppRoutes';
 import { AuthProvider } from './Context/Authcontext';
 import { CartProvider } from './Context/CartContext';
 import { ChatProvider } from './Context/ChatContext';
+import { WishlistProvider } from './Context/WishlistContext';
+import { CompareProvider } from './Context/CompareContext';
 import WhatsAppChatWidget from './components/chat/WhatsAppChatWidget';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import ScrollToTop from './components/common/ScrollToTop';
@@ -43,7 +45,11 @@ function App() {
         <AuthProvider>
           <CartProvider>
             <ChatProvider>
-              <AppContent />
+              <WishlistProvider>
+                <CompareProvider>
+                  <AppContent />
+                </CompareProvider>
+              </WishlistProvider>
             </ChatProvider>
           </CartProvider>
         </AuthProvider>

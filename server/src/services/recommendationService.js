@@ -103,23 +103,6 @@ const query = { isActive: true };
   }
 };
 
-// "Recommended for you" — combines collaborative + trending
-exports.getRecommendedForYou = async (userId, limit = 8) => {
-  const [collaborative, trending] = await Promise.all([
-    exports.getCollaborativeRecommendations(userId, limit),
-    exports.getTrendingForUser(userId, limit),
-  ]);
-  const seen = new Set();
-  const merged = [];
-  [...collaborative, ...trending].forEach((p) => {
-    if (!seen.has(p._id.toString()) && merged.length < limit) {
-      seen.add(p._id.toString());
-      merged.push(p);
-    }
-  });
-  return merged;
-};
-
 // Recently viewed products (with quick-reorder support)
 exports.getRecentlyViewed = async (userId, limit = 6) => {
   const user = await User.findById(userId).select('recentlyViewed').populate({
@@ -130,6 +113,57 @@ exports.getRecentlyViewed = async (userId, limit = 6) => {
     .map((rv) => rv.product)
     .filter(Boolean) // drop deleted/missing products so they never crash the dashboard
     .slice(0, limit);
+};
+
+// "Recommended For You" based on the customer segments a product/visitor
+// belongs to. Products can be manually tagged with segments in the admin panel
+// (product.recommendedSegments) and we also match on style/occasion tags.
+exports.getSegmentBasedRecommendations = (segments = [], limit = 8) => {
+  const clean = (Array.isArray(segments) ? segments : [segments])
+    .map((s) => String(s || '').trim().toLowerCase())
+    .filter(Boolean);
+
+  if (!clean.length) {
+    return Product.find({ isActive: true, isRecommended: true })
+      .sort({ featuredOrder: 1, soldCount: -1 })
+      .limit(limit)
+      .populate('category', 'name');
+  }
+
+  return Product.find({
+    isActive: true,
+    $or: [
+      { recommendedSegments: { $in: clean } },
+      { tags: { $in: clean } },
+      { isRecommended: true },
+    ],
+  })
+    .sort({ featuredOrder: 1, soldCount: -1 })
+    .limit(limit)
+    .populate('category', 'name');
+};
+
+// Build "Recommended For You" mixing manual admin picks (isRecommended),
+// collaborative filtering and the user's trending profile.
+exports.getRecommendedForYou = async (userId, limit = 8) => {
+  const [collaborative, trending, adminPicks] = await Promise.all([
+    exports.getCollaborativeRecommendations(userId, limit),
+    exports.getTrendingForUser(userId, limit),
+    Product.find({ isActive: true, isRecommended: true })
+      .sort({ featuredOrder: 1, soldCount: -1 })
+      .limit(limit)
+      .populate('category', 'name'),
+  ]);
+
+  const seen = new Set();
+  const merged = [];
+  [...adminPicks, ...collaborative, ...trending].forEach((p) => {
+    if (p && !seen.has(p._id.toString()) && merged.length < limit) {
+      seen.add(p._id.toString());
+      merged.push(p);
+    }
+  });
+  return merged;
 };
 
 // Size recommendation engine based on past purchases

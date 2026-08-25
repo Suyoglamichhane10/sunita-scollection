@@ -79,7 +79,7 @@ const orderSchema = new mongoose.Schema(
     },
     paymentMethod: {
       type: String,
-      enum: ['cod', 'esewa', 'khalti', 'stripe'],
+      enum: ['cod', 'esewa', 'khalti', 'fonepay'],
       required: true,
     },
     paymentStatus: {
@@ -166,5 +166,8 @@ orderSchema.pre('validate', function (next) {
   }
   next();
 });
+
+orderSchema.index({ paymentStatus: 1, orderStatus: 1 });
+orderSchema.index({ createdAt: -1 });
 
 module.exports = mongoose.model('Order', orderSchema);

@@ -189,8 +189,6 @@ const { data } = await api.get('/users/profile/cart');
 
 const addToCart = useCallback(
     (product, quantity = 1, variant = null) => {
-      // Adding to cart requires authentication. Guests must log in first so
-      // a new customer always starts with a clean, empty cart.
       if (!isAuthenticated) {
         toast.error('Please login to add items to your cart');
         return false;
@@ -202,7 +200,7 @@ const addToCart = useCallback(
       const image = variant?.images?.[0]?.url || product.images?.[0]?.url || '/placeholder.jpg';
       const stock = variant?.stock ?? product.stock;
 
-const sanitizedQty = Math.max(1, Math.floor(Number(quantity) || 1));
+      const sanitizedQty = Math.max(1, Math.floor(Number(quantity) || 1));
       const newItem = {
         key,
         productId: product._id,
@@ -214,9 +212,6 @@ const sanitizedQty = Math.max(1, Math.floor(Number(quantity) || 1));
         variant: variant ? { sku: variant.sku || variant._id, attributes: variant.attributes } : null,
       };
 
-      // Optimistic update: if the product+variant already exists in the cart,
-      // bump its quantity instead of appending a duplicate row. This handles
-      // the "add the same item twice should update quantity" case immediately.
       setCartItems((prev) => {
         const existing = prev.find((item) => item.key === key);
         if (existing) {
@@ -228,25 +223,20 @@ const sanitizedQty = Math.max(1, Math.floor(Number(quantity) || 1));
         return consolidateCartItems([...prev, newItem]);
       });
 
-      // Sync to server
       api
         .post('/users/profile/cart', { productId: product._id, quantity: sanitizedQty, variantSku })
         .then(({ data }) => {
-          // Reconcile with the (consolidated) server response so the UI
-          // always reflects the true, deduplicated cart state.
           setCartItems(
             consolidateCartItems(
               (data.cart || []).map(normalizeServerItem).filter(Boolean)
             )
           );
+          toast.success('Added to cart!');
         })
         .catch((error) => {
           toast.error(error.response?.data?.message || 'Unable to add to cart');
-          // Re-fetch the server cart on failure so the optimistic update does
-          // not leave the UI out of sync with the backend.
           fetchServerCart();
         });
-toast.success('Added to cart!');
       return true;
     },
     [isAuthenticated, fetchServerCart]

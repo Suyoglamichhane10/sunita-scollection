@@ -44,7 +44,7 @@ const AdminDashboard = () => {
           <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
           <p className="mt-2 text-gray-600">Manage products, orders, and customer messages.</p>
 
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {loading ? (
               <div className="col-span-full rounded-3xl border border-gray-200 bg-gray-50 p-6 text-center text-gray-600 shadow-sm">Loading stats...</div>
             ) : (

@@ -1,10 +1,15 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { FaShoppingBag, FaHeart } from 'react-icons/fa';
 import api from '../../Services/api';
+import wishlistApi from '../../Services/wishlistApi';
 import { useCart } from '../../Context/CartContext';
 import { useAuth } from '../../Context/Authcontext';
-import { FaShoppingBag, FaSearch, FaListUl, FaHeart } from 'react-icons/fa';
-import wishlistApi from '../../Services/wishlistApi';
+import SearchBar from '../../components/shop/SearchBar';
+import CategoryFilter from '../../components/shop/CategoryFilter';
+import PriceFilter from '../../components/shop/PriceFilter';
+import SortDropdown from '../../components/shop/SortDropdown';
+import ProductGrid from '../../components/shop/ProductGrid';
 
 const variantLabel = (variant) => {
   if (!variant) return '';
@@ -14,24 +19,18 @@ const variantLabel = (variant) => {
   return 'Variant';
 };
 
-const ShopProductCard = ({ product, addToCart, isAuthenticated, navigate }) => {
+const ShopProductCard = React.memo(({ product, addToCart, isAuthenticated, navigate }) => {
   const [selectedVariant, setSelectedVariant] = useState(product.variants?.[0] || null);
   const [inWishlist, setInWishlist] = useState(false);
 
   const handleAdd = () => {
-    if (!isAuthenticated) {
-      navigate('/login');
-      return;
-    }
+    if (!isAuthenticated) return navigate('/login');
     addToCart(product, 1, selectedVariant);
   };
 
   const toggleWishlist = async (e) => {
     e.preventDefault();
-    if (!isAuthenticated) {
-      navigate('/login');
-      return;
-    }
+    if (!isAuthenticated) return navigate('/login');
     try {
       if (inWishlist) {
         await wishlistApi.removeFromWishlist(product._id, selectedVariant?.sku);
@@ -42,6 +41,7 @@ const ShopProductCard = ({ product, addToCart, isAuthenticated, navigate }) => {
       }
     } catch {}
   };
+
   const variant = selectedVariant;
   const stock = variant?.stock ?? product.stock;
   const price = variant?.price ?? product.price;
@@ -99,7 +99,7 @@ const ShopProductCard = ({ product, addToCart, isAuthenticated, navigate }) => {
           </div>
         )}
 
-<div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <p className="text-lg font-bold text-gold-600">Rs. {price}</p>
           <div className="flex flex-wrap gap-2">
             <Link
@@ -116,13 +116,10 @@ const ShopProductCard = ({ product, addToCart, isAuthenticated, navigate }) => {
             >
               <FaShoppingBag className="mr-1 inline" /> Add
             </button>
-<button
+            <button
               type="button"
               onClick={() => {
-                if (!isAuthenticated) {
-                  navigate('/login');
-                  return;
-                }
+                if (!isAuthenticated) return navigate('/login');
                 navigate(`/product/${product._id}`);
               }}
               className="rounded-full border border-gold-500 bg-white px-4 py-2 text-sm font-semibold text-gold-600 transition hover:bg-gold-50"
@@ -134,13 +131,16 @@ const ShopProductCard = ({ product, addToCart, isAuthenticated, navigate }) => {
       </div>
     </div>
   );
-};
+});
 
 const Shop = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [category, setCategory] = useState('');
+  const [query, setQuery] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('');
   const [categories, setCategories] = useState([]);
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
@@ -148,25 +148,28 @@ const Shop = () => {
   const { addToCart } = useCart();
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const suggestionsTimerRef = useRef(null);
 
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const { data } = await api.get('/categories');
-        setCategories(data.categories || []);
-      } catch (error) {
-        console.error('Failed to load categories', error);
-      }
-    };
-    fetchCategories();
+  const fetchCategories = useCallback(async () => {
+    try {
+      const { data } = await api.get('/categories');
+      setCategories(data.categories || []);
+    } catch (error) {
+      console.error('Failed to load categories', error);
+    }
   }, []);
 
   useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
+
+  useEffect(() => {
     let active = true;
+    setLoading(true);
     const timer = setTimeout(async () => {
       try {
         const { data } = await api.get('/products', {
-          params: { search, category, minPrice, maxPrice, sort },
+          params: { search: query, category: selectedCategory, minPrice, maxPrice, sort },
         });
         if (active) setProducts(data.products || []);
       } catch (error) {
@@ -174,19 +177,65 @@ const Shop = () => {
       } finally {
         if (active) setLoading(false);
       }
-    }, 300);
+    }, 400);
 
     return () => {
       clearTimeout(timer);
       active = false;
     };
-  }, [search, category, minPrice, maxPrice, sort]);
+  }, [query, selectedCategory, minPrice, maxPrice, sort]);
 
-  const filteredProducts = products;
+  useEffect(() => {
+    if (!search) {
+      setSuggestions([]);
+      setSuggestionsLoading(false);
+      return;
+    }
+
+    clearTimeout(suggestionsTimerRef.current);
+    setSuggestionsLoading(true);
+    suggestionsTimerRef.current = setTimeout(async () => {
+      try {
+        const { data } = await api.get('/products/suggestions', {
+          params: { q: search, limit: 8 },
+        });
+        setSuggestions(data.suggestions || []);
+      } catch {
+        setSuggestions([]);
+      } finally {
+        setSuggestionsLoading(false);
+      }
+    }, 250);
+
+    return () => clearTimeout(suggestionsTimerRef.current);
+  }, [search]);
+
+  const handleSearchChange = useCallback((value) => {
+    setSearch(value);
+  }, []);
+
+  const handleSelectSuggestion = useCallback((suggestion) => {
+    if (!suggestion) return;
+    setSearch(suggestion.name);
+    setQuery(suggestion.name);
+  }, []);
+
+  const handleCategoryChange = useCallback((catId) => {
+    setSelectedCategory(catId);
+  }, []);
+
+  const handlePriceApply = useCallback(() => {
+    setMinPrice(minPrice);
+    setMaxPrice(maxPrice);
+  }, [minPrice, maxPrice]);
+
+  const handleSortChange = useCallback((val) => {
+    setSort(val);
+  }, []);
 
   return (
     <div className="bg-cream py-10 text-ink">
-      <div className="mx-auto max-w-7xl px-4 lg:px-8">
+      <div className="mx-auto max-w-[96rem] px-4 sm:px-6 lg:px-8">
         <div className="mb-8 grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-gold-600">The Collection</p>
@@ -194,93 +243,52 @@ const Shop = () => {
             <p className="mt-2 text-ink-light">Browse trendy tops, dresses, bottoms, footwear, and accessories.</p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="relative">
-              <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gold-500" size={16} />
-              <input
-                type="search"
+            <div>
+              <SearchBar
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search products"
-                className="w-full rounded-full border border-gold/30 bg-white py-3 pl-11 pr-4 text-sm shadow-sm outline-none focus:border-gold-500 focus:ring-2 focus:ring-gold-200"
+                onChange={handleSearchChange}
+                onSelectSuggestion={handleSelectSuggestion}
+                suggestions={suggestions}
+                loading={suggestionsLoading}
               />
             </div>
             <div className="relative">
-              <FaListUl className="absolute left-4 top-1/2 -translate-y-1/2 text-gold-500" size={16} />
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="w-full appearance-none rounded-full border border-gold/30 bg-white py-3 pl-11 pr-10 text-sm shadow-sm outline-none focus:border-gold-500 focus:ring-2 focus:ring-gold-200"
-              >
-                <option value="">All categories</option>
-                {categories.map((cat) => (
-                  <option key={cat._id} value={cat._id}>{cat.name}</option>
-                ))}
-              </select>
-              <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-gold-500">
-                ▾
-              </span>
+              <SortDropdown sort={sort} onChange={handleSortChange} />
             </div>
           </div>
         </div>
 
-        <div className="mb-8 grid gap-3 rounded-3xl border border-gold/20 bg-white p-4 shadow-card md:grid-cols-3">
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wide text-ink-light">Min price (Rs.)</label>
-            <input
-              type="number"
-              min="0"
-              value={minPrice}
-              onChange={(e) => setMinPrice(e.target.value)}
-              placeholder="0"
-              className="mt-1 w-full rounded-full border border-gold/30 bg-cream/50 px-4 py-2.5 text-sm outline-none focus:border-gold-500 focus:ring-2 focus:ring-gold-200"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wide text-ink-light">Max price (Rs.)</label>
-            <input
-              type="number"
-              min="0"
-              value={maxPrice}
-              onChange={(e) => setMaxPrice(e.target.value)}
-              placeholder="5000"
-              className="mt-1 w-full rounded-full border border-gold/30 bg-cream/50 px-4 py-2.5 text-sm outline-none focus:border-gold-500 focus:ring-2 focus:ring-gold-200"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wide text-ink-light">Sort by</label>
-            <select
-              value={sort}
-              onChange={(e) => setSort(e.target.value)}
-              className="mt-1 w-full rounded-full border border-gold/30 bg-cream/50 px-4 py-2.5 text-sm outline-none focus:border-gold-500 focus:ring-2 focus:ring-gold-200"
-            >
-              <option value="newest">Newest</option>
-              <option value="price-low">Price: Low to High</option>
-              <option value="price-high">Price: High to Low</option>
-              <option value="rating">Top rated</option>
-              <option value="popular">Most popular</option>
-            </select>
-          </div>
+        <div className="mb-6 flex flex-wrap items-center gap-3">
+          <CategoryFilter
+            categories={categories}
+            selected={selectedCategory}
+            onChange={handleCategoryChange}
+          />
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-          {loading ? (
-            <div className="col-span-full rounded-3xl border border-gold/20 bg-white p-10 text-center shadow-card">Loading products...</div>
-          ) : filteredProducts.length ? (
-            filteredProducts.map((product) => (
-              <ShopProductCard
-                key={product._id}
-                product={product}
-                addToCart={addToCart}
-                isAuthenticated={isAuthenticated}
-                navigate={navigate}
-              />
-            ))
-          ) : (
-            <div className="col-span-full rounded-3xl border border-gold/20 bg-white p-10 text-center shadow-card">
-              No products found. Try a different search or category.
-            </div>
+        <div className="mb-8 rounded-3xl border border-gold/20 bg-white p-4 shadow-card md:p-5">
+          <PriceFilter
+            minPrice={minPrice}
+            maxPrice={maxPrice}
+            onMinChange={setMinPrice}
+            onMaxChange={setMaxPrice}
+            onApply={handlePriceApply}
+          />
+        </div>
+
+        <ProductGrid
+          products={products}
+          loading={loading}
+          renderCard={(product) => (
+            <ShopProductCard
+              key={product._id}
+              product={product}
+              addToCart={addToCart}
+              isAuthenticated={isAuthenticated}
+              navigate={navigate}
+            />
           )}
-        </div>
+        />
       </div>
     </div>
   );

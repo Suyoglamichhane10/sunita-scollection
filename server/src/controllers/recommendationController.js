@@ -79,7 +79,11 @@ exports.getComplementary = async (req, res, next) => {
 exports.getRecentlyViewed = async (req, res, next) => {
   try {
     const limit = parseInt(req.query.limit, 10) || 6;
-    const products = await recommendationService.getRecentlyViewed(req.user.id, limit);
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(200).json({ success: true, products: [] });
+    }
+    const products = await recommendationService.getRecentlyViewed(userId, limit);
     res.status(200).json({ success: true, products });
   } catch (error) {
     next(error);

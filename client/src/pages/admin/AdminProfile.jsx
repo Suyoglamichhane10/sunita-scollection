@@ -226,7 +226,7 @@ const AdminProfile = () => {
         <div className="mt-8">
           {activeTab === 'profile' && (
             <form className="space-y-6" onSubmit={handleProfileSubmit}>
-              <div className="grid gap-4 lg:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <div>
                   <label className="mb-2 block text-sm font-medium text-gray-700">Full name</label>
                   <input

@@ -141,8 +141,8 @@ const OrderTracking = () => {
           </button>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2 space-y-6">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="space-y-6 lg:col-span-2">
             <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
               <h2 className="text-lg font-bold text-gray-900">Live Location</h2>
               <p className="mt-1 text-sm text-gray-600">
@@ -151,7 +151,7 @@ const OrderTracking = () => {
                   : 'Waiting for location update...'}
               </p>
               <div className="mt-4 rounded-xl border border-gray-100 bg-gray-50 p-4">
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   {delivery.pickupLocation && (
                     <div className="rounded-xl border border-gray-200 bg-white p-3 text-sm text-gray-700">
                       <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Pickup</p>
@@ -209,7 +209,7 @@ const OrderTracking = () => {
                       href={mapsUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="flex items-center gap-2 rounded-full bg-pink-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-pink-700"
+                      className="flex items-center justify-center gap-2 rounded-full bg-pink-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-pink-700"
                     >
                       <FaMapMarkerAlt /> View on Map
                     </a>
@@ -219,7 +219,7 @@ const OrderTracking = () => {
                       href={directionsUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="flex items-center gap-2 rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+                      className="flex items-center justify-center gap-2 rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
                     >
                       <FaLocationArrow /> Directions
                     </a>
@@ -260,7 +260,7 @@ const OrderTracking = () => {
                     <p className="text-sm text-gray-600">{delivery.deliveryPersonVehicle}</p>
                   </div>
                 </div>
-                <div className="mt-4 flex gap-3">
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row">
                   {delivery.deliveryPersonPhone && (
                     <a
                       href={`tel:${delivery.deliveryPersonPhone}`}

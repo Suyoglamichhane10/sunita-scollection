@@ -41,12 +41,6 @@ const productSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    sku: {
-      type: String,
-      unique: true,
-      sparse: true,
-      trim: true,
-    },
     images: [
       {
         url: {
@@ -139,6 +133,47 @@ const productSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    trendingScore: {
+      type: Number,
+      default: 0,
+    },
+    // === Admin-controlled homepage merchandising categories ===
+    isNewArrival: {
+      type: Boolean,
+      default: false,
+    },
+    isBestSeller: {
+      type: Boolean,
+      default: false,
+    },
+    isTrending: {
+      type: Boolean,
+      default: false,
+    },
+    isRecommended: {
+      type: Boolean,
+      default: false,
+    },
+    // Manual ordering within a featured category (lower shows first)
+    featuredOrder: {
+      type: Number,
+      default: 0,
+    },
+    // Date range the product should appear as a "New Arrival"
+    newArrivalStart: {
+      type: Date,
+      default: null,
+    },
+    newArrivalEnd: {
+      type: Date,
+      default: null,
+    },
+    // Populated by analyticsService; customer segment keys this product is
+    // manually assigned to for "Recommended For You" (e.g. ['new-moms', 'trendsetters'])
+    recommendedSegments: {
+      type: [String],
+      default: [],
+    },
   },
   {
     timestamps: true,
@@ -147,6 +182,14 @@ const productSchema = new mongoose.Schema(
 
 // Create text index for search functionality
 productSchema.index({ name: 'text', description: 'text', brand: 'text', category: 'text' });
+productSchema.index({ isActive: 1, createdAt: -1 });
+productSchema.index({ isFeatured: 1, createdAt: -1 });
+productSchema.index({ soldCount: -1 });
+productSchema.index({ trendingScore: -1, views: -1 });
+productSchema.index({ isNewArrival: 1, featuredOrder: 1 });
+productSchema.index({ isBestSeller: 1, featuredOrder: 1 });
+productSchema.index({ isTrending: 1, featuredOrder: 1 });
+productSchema.index({ isRecommended: 1, featuredOrder: 1 });
 
 // Create slug before saving
 productSchema.pre('save', async function (next) {

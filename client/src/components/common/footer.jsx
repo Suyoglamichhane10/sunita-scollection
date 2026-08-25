@@ -3,10 +3,13 @@ import { Link } from 'react-router-dom';
 import { FaFacebookF, FaInstagram, FaTiktok, FaEnvelope, FaPhoneAlt } from 'react-icons/fa';
 import logo from '../../assets/LOGO!.png';
 import QRCode from '../../assets/QR.png';
+import EsewaLogo from '../../assets/Esewa_logo.webp';
+import KhaltiLogo from '../../assets/khalti.png';
+import FonepayLogo from '../../assets/fonepay.png';
 
 const Footer = () => {
   return (
-<footer className="footer-gradient mt-auto border-t border-gold/20 text-white">
+    <footer className="footer-gradient mt-auto border-t border-gold/20 text-white">
       <div className="mx-auto px-4 py-12 lg:px-8">
         <div className="grid gap-8 md:grid-cols-3">
           {/* Brand */}
@@ -71,6 +74,16 @@ const Footer = () => {
               </a>
               <p className="mt-2 text-center text-xs font-medium text-white/80">Scan to follow us on TikTok</p>
             </div>
+          </div>
+        </div>
+
+        {/* Payment Methods */}
+        <div className="mt-10 border-t border-white/10 pt-6">
+          <p className="mb-4 text-center text-xs font-semibold uppercase tracking-[0.2em] text-gold-300">We Accept</p>
+          <div className="flex flex-wrap items-center justify-center gap-6">
+            <img src={EsewaLogo} alt="eSewa" className="h-10 w-auto object-contain" />
+            <img src={KhaltiLogo} alt="Khalti" className="h-10 w-auto object-contain" />
+            <img src={FonepayLogo} alt="FonePay" className="h-10 w-auto object-contain" />
           </div>
         </div>
 
