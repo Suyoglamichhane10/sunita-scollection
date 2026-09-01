@@ -183,7 +183,7 @@ app.use('/api/delivery', deliveryRoutes);
 app.use('/api/wishlist', require('./Routes/wishlistRoutes'));
 app.use('/api/slides', slideRoutes);
 
-// Serve uploaded files in development
+// Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Health check
@@ -198,5 +198,15 @@ app.get('/api/health', (req, res) => {
 // Error handling middleware
 const errorHandler = require('./Middleware/errorHandler');
 app.use(errorHandler);
+
+// Serve static client build in production (SPA fallback)
+if (process.env.NODE_ENV === 'production') {
+  const clientDistPath = path.join(__dirname, '../../client/dist');
+  app.use(express.static(clientDistPath));
+
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(clientDistPath, 'index.html'));
+  });
+}
 
 module.exports = app;
