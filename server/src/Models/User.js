@@ -72,6 +72,15 @@ address: {
       type: String,
       default: '',
     },
+    socialProvider: {
+      type: String,
+      enum: ['local', 'facebook', 'google', 'apple'],
+      default: 'local',
+    },
+    socialId: {
+      type: String,
+      default: '',
+    },
     isEmailVerified: {
       type: Boolean,
       default: false,

@@ -3,7 +3,10 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { sendPasswordReset } = require('../services/emailService');
 
-// Generate JWT Token
+const https = require('https');
+
+const FACEBOOK_GRAPH_URL = 'https://graph.facebook.com/v18.0';
+
 const generateToken = (user) => {
   return jwt.sign(
     { id: user._id, role: user.role },
@@ -12,7 +15,6 @@ const generateToken = (user) => {
   );
 };
 
-// Send token response
 const sendTokenResponse = (user, statusCode, res) => {
   const token = generateToken(user);
 
@@ -32,6 +34,59 @@ const sendTokenResponse = (user, statusCode, res) => {
     success: true,
     token,
     user,
+  });
+};
+
+const fetchFacebookUser = async (accessToken) => {
+  return new Promise((resolve, reject) => {
+    https.get(
+      `${FACEBOOK_GRAPH_URL}/me?fields=id,name,email,picture.type(large)&access_token=${accessToken}`,
+      (res) => {
+        let data = '';
+        res.on('data', (chunk) => (data += chunk));
+        res.on('end', () => {
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.error) {
+              return reject(new Error(parsed.error.message || 'Facebook fetch failed'));
+            }
+            resolve(parsed);
+          } catch (err) {
+            reject(err);
+          }
+        });
+      }
+    ).on('error', reject);
+  });
+};
+
+const exchangeCodeForToken = async (code) => {
+  return new Promise((resolve, reject) => {
+    const params = new URLSearchParams({
+      client_id: process.env.FACEBOOK_APP_ID,
+      client_secret: process.env.FACEBOOK_APP_SECRET,
+      redirect_uri: process.env.FACEBOOK_CALLBACK_URL,
+      code,
+    });
+
+    https.get(
+      `${FACEBOOK_GRAPH_URL}/oauth/access_token?${params.toString()}`,
+      (res) => {
+        let data = '';
+        res.on('data', (chunk) => (data += chunk));
+        res.on('end', () => {
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.error) {
+              return reject(new Error(parsed.error.message || 'Facebook token exchange failed'));
+            }
+            resolve(parsed.access_token);
+          } catch (err) {
+            reject(err);
+          }
+        });
+      }
+    ).on('error', reject);
   });
 };
 
@@ -99,6 +154,63 @@ exports.login = async (req, res, next) => {
     sendTokenResponse(user, 200, res);
   } catch (error) {
     next(error);
+  }
+};
+
+exports.facebookLogin = async (req, res, next) => {
+  try {
+    const appId = process.env.FACEBOOK_APP_ID;
+    const callbackUrl = process.env.FACEBOOK_CALLBACK_URL || `${process.env.FRONTEND_URL}/api/auth/facebook/callback`;
+    const facebookAuthUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(callbackUrl)}&scope=email,public_profile&display=popup`;
+    res.redirect(facebookAuthUrl);
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.facebookCallback = async (req, res, next) => {
+  try {
+    const code = req.query.code;
+    if (!code) {
+      return res.redirect(`${process.env.FRONTEND_URL}/login?error=facebook_auth_denied`);
+    }
+
+    const accessToken = await exchangeCodeForToken(code);
+    const fbUser = await fetchFacebookUser(accessToken);
+
+    if (!fbUser.email) {
+      return res.redirect(`${process.env.FRONTEND_URL}/login?error=facebook_email_required`);
+    }
+
+    let user = await User.findOne({ email: fbUser.email });
+
+    if (!user) {
+      user = await User.create({
+        name: fbUser.name,
+        email: fbUser.email,
+        password: crypto.randomBytes(20).toString('hex'),
+        socialProvider: 'facebook',
+        socialId: fbUser.id,
+        avatar: fbUser.picture?.data?.url || null,
+      });
+    } else if (!user.socialProvider) {
+      user.socialProvider = 'facebook';
+      user.socialId = fbUser.id;
+      if (!user.avatar && fbUser.picture?.data?.url) {
+        user.avatar = fbUser.picture.data.url;
+      }
+      await user.save();
+    }
+
+    user.lastLogin = Date.now();
+    await user.save();
+
+    const token = generateToken(user);
+
+    res.redirect(`${process.env.FRONTEND_URL}/login?token=${token}`);
+  } catch (error) {
+    console.error('Facebook callback error:', error);
+    res.redirect(`${process.env.FRONTEND_URL}/login?error=facebook_auth_failed`);
   }
 };
 

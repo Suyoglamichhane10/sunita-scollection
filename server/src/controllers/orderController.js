@@ -113,6 +113,16 @@ const products = await Product.find({ _id: { $in: consolidatedItems.map((item) =
       deliveryDate: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000),
     });
 
+    const customerName = req.user.name || 'A customer';
+    const io = req.app.get('io');
+    if (io) {
+      io.to('admins').emit('notification:new', {
+        message: `New order #${order._id.toString().slice(-6)} from ${customerName} — Rs. ${totals.totalAmount}`,
+        type: 'order',
+        createdAt: Date.now(),
+      });
+    }
+
     await User.findByIdAndUpdate(req.user.id, { $push: { orderHistory: order._id } });
 
     try {
@@ -276,6 +286,16 @@ await order.save();
         }
       });
     }
+
+    const ioAdmin = req.app.get('io');
+    if (ioAdmin && orderStatus) {
+      ioAdmin.to('admins').emit('notification:new', {
+        message: `Order #${order._id.toString().slice(-6)} status updated to ${orderStatus}`,
+        type: 'order',
+        createdAt: Date.now(),
+      });
+    }
+
     res.status(200).json({ success: true, order });
   } catch (error) {
     next(error);

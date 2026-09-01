@@ -133,7 +133,8 @@ if (!isDev) {
   app.use('/api', limiter);
   app.use('/api/auth', rateLimit({ windowMs: 15 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false }));
 } else {
-  app.use('/api/auth', rateLimit({ windowMs: 15 * 60 * 1000, max: 50, standardHeaders: true, legacyHeaders: false }));
+  app.use('/api', rateLimit({ windowMs: 15 * 60 * 1000, max: 2000, standardHeaders: true, legacyHeaders: false }));
+  app.use('/api/auth', rateLimit({ windowMs: 15 * 60 * 1000, max: 500, standardHeaders: true, legacyHeaders: false }));
 }
 
 // Import routes
@@ -156,6 +157,8 @@ const socialRoutes = require('./Routes/socialRoutes');
 const marketingRoutes = require('./Routes/marketingRoutes');
 const webhookRoutes = require('./Routes/webhookRoutes');
 const deliveryRoutes = require('./Routes/deliveryRoutes');
+const wishlistRoutes = require('./Routes/wishlistRoutes');
+const slideRoutes = require('./Routes/slideRoutes');
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -178,6 +181,7 @@ app.use('/api/marketing', marketingRoutes);
 app.use('/api/messages/webhook', webhookRoutes);
 app.use('/api/delivery', deliveryRoutes);
 app.use('/api/wishlist', require('./Routes/wishlistRoutes'));
+app.use('/api/slides', slideRoutes);
 
 // Serve uploaded files in development
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));

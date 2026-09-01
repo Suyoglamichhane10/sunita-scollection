@@ -11,7 +11,7 @@ const cloudinary = require('../config/cloudinary');
 
 // Helper: delete Cloudinary image by publicId (ignore local/null ids)
 const deleteCloudinaryImage = async (publicId) => {
-  if (!publicId || publicId === 'default-avatar' || publicId.startsWith('http')) {
+  if (!publicId || publicId === 'default-avatar.png' || publicId.startsWith('http')) {
     return;
   }
   try {
@@ -86,7 +86,7 @@ exports.getProfile = async (req, res, next) => {
 
 exports.updateProfile = async (req, res, next) => {
   try {
-    const { name, phone, address, avatar } = req.body;
+    const { name, phone, address, avatar, avatarPublicId } = req.body;
     const user = await User.findById(req.user.id);
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
@@ -95,6 +95,7 @@ exports.updateProfile = async (req, res, next) => {
     if (name) user.name = name;
     if (phone) user.phone = phone;
     if (avatar) user.avatar = avatar;
+    if (avatarPublicId) user.avatarPublicId = avatarPublicId;
     if (address) {
       user.address = {
         ...user.address,

@@ -54,6 +54,21 @@ const finalizePaidOrder = async (order, paymentDetails, userId) => {
     console.error('Confirmation email send failed:', emailErr.message);
   }
 
+  // 3.1 Notify admins of payment confirmation
+  try {
+    const app = require('../app');
+    const io = app.get('io');
+    if (io) {
+      io.to('admins').emit('notification:new', {
+        message: `Payment verified for order #${order._id.toString().slice(-6)} — Rs. ${order.totalAmount}`,
+        type: 'payment',
+        createdAt: Date.now(),
+      });
+    }
+  } catch (socketErr) {
+    console.error('Admin payment notification emit failed:', socketErr.message);
+  }
+
   // 4. Loyalty points & automation (non-blocking)
   setImmediate(async () => {
     try {
