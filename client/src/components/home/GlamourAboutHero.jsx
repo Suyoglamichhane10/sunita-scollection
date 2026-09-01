@@ -143,7 +143,7 @@ const GlamourAboutHero = () => {
           animate={mounted ? { opacity: 1, y: 0 } : {}}
           transition={{ delay: 0.5, duration: 0.7 }}
         >
-          Where trend meets confidence. We celebrate every girl with stylish, fashion-forward pieces that tell your story.
+          Built with love by Sunita Lamichhane — a Nepali brand growing with heart, style, and a promise to look good while doing good.
         </motion.p>
 
         <motion.div

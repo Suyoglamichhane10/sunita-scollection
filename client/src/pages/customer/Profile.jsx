@@ -128,7 +128,7 @@ const handleProfileSubmit = async (e) => {
     if (!window.confirm('Remove your profile photo?')) return;
     try {
       const response = await deleteAvatar();
-      setProfile((prev) => ({ ...prev, avatar: '' }));
+      setProfile((prev) => ({ ...prev, avatar: response?.user?.avatar || '' }));
       setAvatarError(false);
       setAvatarPreview(null);
       setAvatarDirty(false);

@@ -300,11 +300,6 @@ h1, h2, h3, .font-serif {
   display: inline-block;
 }
 
-/* About Us triangular trending banner */
-.about-triangular-banner {
-  clip-path: polygon(0 0, 100% 0, 96% 100%, 4% 100%);
-}
-
 /* GlamourAboutHero full viewport */
 .glamour-about-hero {
   min-height: 100vh;
@@ -378,51 +373,4 @@ h1, h2, h3, .font-serif {
   animation-play-state: paused;
 }
 
-@keyframes ownerShimmer {
-  0% {
-    transform: translateX(-100%) skewX(-15deg);
-  }
-  100% {
-    transform: translateX(200%) skewX(-15deg);
-  }
-}
 
-.owner-photo-shimmer::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.15) 45%,
-    rgba(255, 255, 255, 0.4) 50%,
-    rgba(255, 255, 255, 0.15) 55%,
-    transparent 100%
-  );
-  animation: ownerShimmer 4s ease-in-out infinite;
-  pointer-events: none;
-}
-
-/* Slow moving vertical line on owner image */
-@keyframes moveLine {
-  0% { top: 0; }
-  50% { top: calc(100% - 2px); }
-  100% { top: 0; }
-}
-
-.owner-moving-line {
-  position: relative;
-  overflow: hidden;
-}
-
-.owner-moving-line::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  width: 100%;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.7), transparent);
-  animation: moveLine 4s ease-in-out infinite;
-  pointer-events: none;
-  z-index: 10;
-}

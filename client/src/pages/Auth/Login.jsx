@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { FaEye, FaEyeSlash, FaLock, FaEnvelope } from 'react-icons/fa';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../Context/Authcontext';
 import toast from 'react-hot-toast';
 import logo from '../../assets/LOGO!.png';
@@ -10,8 +10,9 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const { login, user, loading } = useAuth();
+  const { login, loading, facebookLogin } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
     const savedEmail = localStorage.getItem('rememberedEmail');
@@ -19,13 +20,16 @@ const Login = () => {
       setFormData((prev) => ({ ...prev, email: savedEmail }));
       setRememberMe(true);
     }
-  }, []);
 
-  useEffect(() => {
-    if (!loading && user) {
-      navigate(user.role === 'admin' ? '/admin' : '/dashboard');
+    const token = searchParams.get('token');
+    const error = searchParams.get('error');
+    if (error) {
+      toast.error(decodeURIComponent(error).replace(/_/g, ' '));
     }
-  }, [user, loading, navigate]);
+    if (token) {
+      facebookLogin(token);
+    }
+  }, [searchParams, facebookLogin]);
 
   if (loading) {
     return (
@@ -33,10 +37,6 @@ const Login = () => {
         <p className="text-sm text-ink-light">Loading...</p>
       </div>
     );
-  }
-
-  if (user) {
-    return null;
   }
 
   const handleChange = (e) => {
@@ -52,10 +52,17 @@ const Login = () => {
     if (result.success) {
       if (rememberMe) localStorage.setItem('rememberedEmail', formData.email);
       else localStorage.removeItem('rememberedEmail');
-      navigate(result.user?.role === 'admin' ? '/admin' : '/dashboard');
+
+      const loggedInUser = result.user;
+      const target = loggedInUser?.role === 'admin' ? '/admin' : '/dashboard';
+      navigate(target, { replace: true });
       return;
     }
     toast.error(result.error || 'Login failed');
+  };
+
+  const handleFacebookLogin = () => {
+    window.location.href = '/api/auth/facebook';
   };
 
   return (
@@ -139,12 +146,32 @@ const Login = () => {
                 </Link>
               </div>
 
-              <button
+               <button
                 type="submit"
                 disabled={submitting}
                 className="btn-elegant w-full rounded-xl py-3 font-semibold disabled:opacity-60"
               >
                 {submitting ? 'Signing in...' : 'Sign In'}
+              </button>
+
+              <div className="relative py-2">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gold/20"></div>
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white px-3 text-ink-light">Or continue with</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleFacebookLogin}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white py-2.5 text-sm font-semibold text-gray-700 transition hover:border-blue-500 hover:text-blue-600"
+              >
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" />
+                </svg>
+                Continue with Facebook
               </button>
 
               <div className="text-center text-sm text-ink-light">

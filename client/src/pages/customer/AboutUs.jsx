@@ -85,10 +85,10 @@ const AboutUs = () => {
               </h3>
               <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-gold-600">Founder & Creative Head</p>
               <p className="mt-4 text-sm leading-7 text-ink-light">
-                Sunita&apos;z Collection is driven by one person&apos;s passion for fashion and her dream to make trendy, high-quality clothing accessible to every young woman in Nepal. From selecting the latest trends to ensuring every piece meets her standards, Sunita is personally involved in every step.
+                Sunita Lamichhane started Sunita&apos;z Collection with a big dream: to build a brand that young women across Nepal would love and remember. Every outfit she chooses carries her promise of quality, comfort, and a touch of confidence — because she believes fashion should make you feel good from the inside out.
               </p>
               <p className="mt-3 text-sm leading-7 text-ink-light">
-                With an eye for what looks good and feels great, she curates styles that celebrate confidence, comfort, and individuality — because every girl deserves to feel beautiful in what she wears.
+                She is building this brand with love, aiming to make Sunita&apos;z Collection a name everyone recognizes and trusts — while staying kind to nature by choosing thoughtfully and encouraging a greener, more mindful way to dress.
               </p>
               <div className="mt-6 flex flex-wrap justify-center gap-3">
                 <a
@@ -137,7 +137,7 @@ const AboutUs = () => {
               </div>
               <h3 className="font-serif text-lg font-bold text-primary-800">How It Started</h3>
               <p className="mt-3 text-sm leading-6 text-ink-light">
-                Sunita&apos;z Collection began with a simple dream: to make trendy, high-quality fashion accessible to every young woman in Nepal. What started as a small boutique with handpicked pieces has blossomed into a full e-commerce experience — but our heart still beats for personal service, genuine craftsmanship, and the joy of finding that perfect trendy outfit.
+                Sunita&apos;z Collection began with a simple dream: to build a fashion brand that young women across Nepal would recognize, trust, and love. What started as a small boutique with handpicked pieces has grown into an e-commerce experience — but Sunita&apos;s heart remains the same: quality over quantity, style with a conscience, and a commitment to building a brand that makes Nepal proud.
               </p>
             </div>
           </div>
@@ -149,7 +149,7 @@ const AboutUs = () => {
               </div>
               <h3 className="font-serif text-lg font-bold text-primary-800">Where We Are Now</h3>
               <p className="mt-3 text-sm leading-6 text-ink-light">
-                Today, we serve style-forward girls and young women across Nepal with a growing catalogue of trendy tops, dresses, bottoms, footwear, and accessories. From TikTok trends to runway-inspired looks, every piece is chosen to make you feel confident, beautiful, and uniquely you.
+                Today, Sunita&apos;z Collection is a growing name in Nepal&apos;s fashion scene — loved for its trendy styles, reliable quality, and the personal touch Sunita puts into every piece. She dreams big: to turn this brand into a household name while inspiring others to dress with purpose and kindness toward the planet.
               </p>
             </div>
           </div>

@@ -71,9 +71,10 @@ const MarqueeCard = React.memo(({ product, onAddToCart }) => {
 
 MarqueeCard.displayName = 'MarqueeCard';
 
-const ProductMarquee = () => {
+const ProductMarquee = ({ categories = [] }) => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeCategory, setActiveCategory] = useState('all');
   const trackRef = useRef(null);
   const { addToCart } = useCart();
   const { isAuthenticated } = useAuth();
@@ -94,7 +95,11 @@ const ProductMarquee = () => {
 
   const fetchProducts = useCallback(async () => {
     try {
-      const { data } = await api.get('/products?limit=100');
+      const params = new URLSearchParams({ limit: '100' });
+      if (activeCategory !== 'all') {
+        params.set('category', activeCategory);
+      }
+      const { data } = await api.get(`/products?${params.toString()}`);
       const inStock = (data.products || []).filter(
         (p) => p.isActive && hasAvailableStock(p)
       );
@@ -104,10 +109,11 @@ const ProductMarquee = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [activeCategory]);
 
   useEffect(() => {
     let active = true;
+    setLoading(true);
     fetchProducts();
     const interval = setInterval(() => {
       if (active) fetchProducts();
@@ -172,7 +178,7 @@ const ProductMarquee = () => {
     <section className="mx-auto max-w-7xl px-4 py-8 lg:px-8">
       <div className="mb-6 flex items-end justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-gold-600">Always in stock</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-gold-600">Available now</p>
           <h2 className="font-serif mt-2 text-3xl font-bold text-primary-800">Featured Collection</h2>
           <p className="mt-2 text-ink-light">Discover our latest arrivals — slides continuously</p>
         </div>
@@ -180,6 +186,35 @@ const ProductMarquee = () => {
           View all <FaArrowRight className="ml-1 inline" />
         </Link>
       </div>
+      {categories.length > 0 && (
+        <div className="mb-6 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveCategory('all')}
+            className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
+              activeCategory === 'all'
+                ? 'bg-primary-800 text-white'
+                : 'border border-gray-200 bg-white text-gray-700 hover:border-gold-400 hover:text-primary-800'
+            }`}
+          >
+            All
+          </button>
+          {categories.map((category) => (
+            <button
+              key={category._id}
+              type="button"
+              onClick={() => setActiveCategory(category._id)}
+              className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
+                activeCategory === category._id
+                  ? 'bg-primary-800 text-white'
+                  : 'border border-gray-200 bg-white text-gray-700 hover:border-gold-400 hover:text-primary-800'
+              }`}
+            >
+              {category.name}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="relative">
         <div className="pointer-events-none absolute left-0 top-0 z-10 h-full w-16 bg-gradient-to-r from-cream to-transparent" />
         <div className="pointer-events-none absolute right-0 top-0 z-10 h-full w-16 bg-gradient-to-l from-cream to-transparent" />

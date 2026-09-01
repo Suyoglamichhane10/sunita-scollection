@@ -27,7 +27,7 @@ const serviceHighlights = [
   { icon: FaLeaf, title: 'Trendy curation', text: 'Fresh styles chosen for quality, comfort, and runway-ready looks.' },
 ];
 
-const ProductSection = ({ title, subtitle, products, isLoading, viewAllLink, onQuickView, typewriter = false, compact = false }) => {
+const ProductSection = ({ title, subtitle, products, isLoading, viewAllLink, onQuickView, typewriter = false, compact = false, variant = 'default' }) => {
   if (isLoading) {
     return (
       <section className="mx-auto max-w-7xl px-4 py-6 lg:px-8">
@@ -46,23 +46,30 @@ const ProductSection = ({ title, subtitle, products, isLoading, viewAllLink, onQ
 
   if (!products.length) return null;
 
+  const isTrending = variant === 'trending';
+
   return (
-    <section className="mx-auto max-w-7xl px-4 py-6 lg:px-8">
-      <div className="mb-4 flex items-end justify-between gap-4">
+    <section className={`mx-auto max-w-7xl px-4 py-6 lg:px-8 ${isTrending ? 'relative' : ''}`}>
+      {isTrending && (
+        <div className="absolute -inset-4 -z-10 rounded-[2rem] bg-gradient-to-r from-amber-100 via-orange-50 to-rose-100 opacity-70 blur-2xl" aria-hidden="true" />
+      )}
+      <div className={`mb-4 flex items-end justify-between gap-4 ${isTrending ? 'rounded-2xl border border-amber-200 bg-white/80 px-6 py-5 shadow-[0_10px_40px_rgba(245,158,11,0.12)] backdrop-blur' : ''}`}>
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-600">Curated for you</p>
-          <h2 className="font-serif mt-1 text-2xl font-bold text-primary-800 sm:text-3xl">
+          <p className={`text-xs font-semibold uppercase tracking-[0.2em] ${isTrending ? 'text-amber-600' : 'text-gold-600'}`}>
+            {isTrending ? '🔥 Most wanted right now' : 'Curated for you'}
+          </p>
+          <h2 className={`font-serif mt-1 text-2xl font-bold sm:text-3xl ${isTrending ? 'bg-gradient-to-r from-amber-500 to-rose-500 bg-clip-text text-transparent' : 'text-primary-800'}`}>
             {typewriter ? <TypewriterTitle words={[title]} /> : title}
           </h2>
-          {subtitle && <p className="mt-1 text-sm text-ink-light">{subtitle}</p>}
+          {subtitle && <p className={`mt-1 text-sm ${isTrending ? 'text-amber-700/80' : 'text-ink-light'}`}>{subtitle}</p>}
         </div>
         {viewAllLink && (
-          <Link to={viewAllLink} className="shrink-0 text-sm font-semibold text-gold-600 hover:text-gold-700">
+          <Link to={viewAllLink} className={`shrink-0 text-sm font-semibold transition ${isTrending ? 'text-amber-600 hover:text-amber-700' : 'text-gold-600 hover:text-gold-700'}`}>
             View all <FaArrowRight className="ml-1 inline" />
           </Link>
         )}
       </div>
-      <div className={`grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 ${compact ? 'gap-2 sm:gap-3' : 'gap-4 sm:gap-6'}`}>
+      <div className={`grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 ${compact ? 'gap-2 sm:gap-3' : 'gap-4 sm:gap-6'} ${isTrending ? 'md:gap-5' : ''}`}>
         {products.map((product) => (
           <ProductCard key={product._id} product={product} onQuickView={onQuickView} compact={compact} />
         ))}
@@ -77,30 +84,80 @@ const BrandSection = ({ title, brands, onQuickView }) => {
 
   if (!brandEntries.length) return null;
 
+  const getBrandColor = (brand) => {
+    let hash = 0;
+    for (let i = 0; i < brand.length; i++) {
+      hash = brand.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const h = Math.abs(hash) % 360;
+    return `hsl(${h}, 55%, 55%)`;
+  };
+
+  const getBrandInitials = (brand) => {
+    return brand
+      .split(' ')
+      .map((word) => word[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase();
+  };
+
   return (
-    <section className="mx-auto max-w-7xl px-4 py-8 lg:px-8">
-      <div className="mb-6">
+    <section className="mx-auto max-w-7xl px-4 py-10 lg:px-8">
+      <div className="mb-8 text-center">
         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-gold-600">Shop by Brand</p>
-        <h2 className="font-serif mt-2 text-3xl font-bold text-primary-800">{title}</h2>
+        <h2 className="font-serif mt-2 text-3xl font-bold text-primary-800 sm:text-4xl">{title}</h2>
+        <p className="mx-auto mt-2 max-w-xl text-sm text-ink-light">Explore your favorite brands and discover their latest collections</p>
       </div>
-      <div className="grid gap-6">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
         {brandEntries.map(([brand, products]) => (
-          <div key={brand} className="rounded-3xl border border-gold/20 bg-white p-6 shadow-card">
-            <div className="flex items-center justify-between">
-              <h3 className="font-serif text-xl font-bold text-primary-800">{brand}</h3>
-              <button
-                type="button"
-                onClick={() => setExpanded((prev) => ({ ...prev, [brand]: !prev[brand] }))}
-                className="text-sm font-semibold text-gold-600 hover:text-gold-700"
+          <div
+            key={brand}
+            className="group relative overflow-hidden rounded-2xl bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-elegant"
+          >
+            <button
+              type="button"
+              onClick={() => setExpanded((prev) => ({ ...prev, [brand]: !prev[brand] }))}
+              className="flex w-full flex-col items-center p-5 text-center"
+            >
+              <div
+                className="flex h-16 w-16 items-center justify-center rounded-full text-xl font-bold text-white shadow-md transition-transform duration-300 group-hover:scale-110"
+                style={{ backgroundColor: getBrandColor(brand) }}
               >
-                {expanded[brand] ? 'Hide' : `Show ${products.length} products`}
-              </button>
-            </div>
+                {getBrandInitials(brand)}
+              </div>
+              <h3 className="mt-3 font-serif text-sm font-bold text-primary-800">{brand}</h3>
+              <span className="mt-1 text-xs text-gray-500">{products.length} {products.length === 1 ? 'product' : 'products'}</span>
+              <span className="mt-2 inline-flex items-center text-xs font-semibold text-gold-600">
+                {expanded[brand] ? 'Hide' : 'View products'}
+                <svg
+                  className={`ml-1 h-3 w-3 transition-transform duration-200 ${expanded[brand] ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </span>
+            </button>
             {expanded[brand] && (
-              <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                {products.map((product) => (
-                  <ProductCard key={product._id} product={product} onQuickView={onQuickView} compact />
-                ))}
+              <div className="border-t border-gold/10 px-3 pb-4 pt-3">
+                <div className="grid grid-cols-3 gap-2">
+                  {products.slice(0, 6).map((product) => (
+                    <Link
+                      key={product._id}
+                      to={`/product/${product._id}`}
+                      className="rounded-lg border border-gray-100 bg-white p-1 shadow-sm transition hover:border-gold-300 hover:shadow-sm"
+                    >
+                      <img
+                        src={getCloudinaryOptimizedUrl(product.images?.[0]?.url, 200)}
+                        alt={product.name}
+                        className="aspect-square rounded-md object-cover"
+                        loading="lazy"
+                      />
+                    </Link>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -169,6 +226,7 @@ const Home = () => {
   const [recentlyViewed, setRecentlyViewed] = useState([]);
   const [recommended, setRecommended] = useState([]);
   const [quickViewProduct, setQuickViewProduct] = useState(null);
+  const [heroSlides, setHeroSlides] = useState([]);
   const { isAuthenticated } = useAuth();
 
   const openQuickView = (product) => {
@@ -226,7 +284,7 @@ const Home = () => {
     if (isAuthenticated) fetchRecommendations();
   }, [isAuthenticated]);
 
-  useEffect(() => {
+   useEffect(() => {
     const fetchRecentlyViewed = async () => {
       try {
         const { data } = await api.get('/recommendations/recently-viewed?limit=6');
@@ -238,9 +296,42 @@ const Home = () => {
     fetchRecentlyViewed();
   }, []);
 
+   useEffect(() => {
+    const fetchHeroSlides = async () => {
+      try {
+        const { data } = await api.get('/slides');
+        if (data.success && Array.isArray(data.slides)) {
+          const activeSlides = data.slides
+            .filter((s) => s.isActive)
+            .sort((a, b) => (a.order || 0) - (b.order || 0))
+            .map((s) => ({
+              id: s._id,
+              image: s.imageUrl,
+              alt: s.title,
+              tagline: s.title,
+              description: s.subtitle || s.title,
+              cta: s.buttonText || 'Shop Now',
+              ctaLink: s.buttonLink || '/shop',
+            }));
+
+          if (activeSlides.length > 0) {
+            setHeroSlides(activeSlides);
+          } else {
+            setHeroSlides([]);
+          }
+        } else {
+          setHeroSlides([]);
+        }
+      } catch {
+        setHeroSlides([]);
+      }
+    };
+    fetchHeroSlides();
+  }, []);
+
   return (
     <div className="bg-cream text-ink">
-      <FullPageHeroSlideshow />
+      <FullPageHeroSlideshow slides={heroSlides} />
 
       <section className="mx-auto max-w-7xl px-4 py-10 lg:px-8">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -353,13 +444,14 @@ const Home = () => {
         onQuickView={openQuickView}
         typewriter
         compact
+        variant="trending"
       />
 
-      <BrandSection title="Shop by Brand" brands={brands} onQuickView={openQuickView} />
+      <BrandSection title="Shop by Brand" brands={brands} />
 
       <ColorSection title="Shop by Color" groups={colorGroups} />
 
-      <ProductMarquee />
+      <ProductMarquee categories={categories} />
 
       <section className="mx-auto max-w-7xl px-4 pb-14 lg:px-8">
         <div className="rounded-3xl border border-gold/20 bg-white p-8 text-center shadow-card sm:p-10">

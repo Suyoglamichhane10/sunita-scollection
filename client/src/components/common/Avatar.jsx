@@ -57,7 +57,13 @@ const Avatar = ({
 
   const isValidImageUrl = (url) => {
     if (!url || url.trim() === '') return false;
-    return url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/uploads');
+    return (
+      url.startsWith('http://') ||
+      url.startsWith('https://') ||
+      url.startsWith('/uploads') ||
+      url.startsWith('default-avatar') ||
+      url.startsWith('data:image/')
+    );
   };
 
   const shouldShowImage = isValidImageUrl(src) && !imgError;

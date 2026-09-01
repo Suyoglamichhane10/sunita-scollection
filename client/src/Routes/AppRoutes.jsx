@@ -39,6 +39,7 @@ const AdminConversations = lazy(() => import('../pages/admin/AdminConversations'
 const AdminMarketing = lazy(() => import('../pages/admin/AdminMarketing'));
 const AdminProfile = lazy(() => import('../pages/admin/AdminProfile'));
 const AdminDelivery = lazy(() => import('../pages/admin/AdminDelivery'));
+const AdminSlideshow = lazy(() => import('../pages/admin/AdminSlideshow'));
 
 // Layouts
 import CustomerLayout from '../Layouts/Customerlayout';
@@ -171,10 +172,9 @@ const AppRoutes = () => {
         <Route path="orders" element={<AdminOrders />} />
         <Route path="delivery" element={<AdminDelivery />} />
         <Route path="messages" element={<AdminMessages />} />
+        <Route path="slideshow" element={<AdminSlideshow />} />
         <Route path="users" element={<AdminUsers />} />
         <Route path="reports" element={<AdminReports />} />
-        <Route path="messages" element={<AdminMessages />} />
-        <Route path="users" element={<AdminUsers />} />
         <Route path="conversations" element={<AdminConversations />} />
         <Route path="marketing" element={<AdminMarketing />} />
         <Route path="profile" element={<AdminProfile />} />
