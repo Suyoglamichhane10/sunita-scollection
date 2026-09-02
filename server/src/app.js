@@ -8,6 +8,37 @@ const rateLimit = require('express-rate-limit');
 const app = express();
 const path = require('path');
 
+// 🔥 CORS CONFIGURATION - MUST BE FIRST!
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = [
+      'https://sunitacollection-frontend.vercel.app',
+      'http://localhost:5173',
+      'http://localhost:3000'
+    ];
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('🚫 Blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  exposedHeaders: ['Content-Range', 'X-Total-Count'],
+  optionsSuccessStatus: 200
+};
+
+// ✅ Apply CORS middleware FIRST
+app.use(cors(corsOptions));
+
+// ✅ Handle preflight OPTIONS requests
+app.options('*', cors(corsOptions));
+
 const allowedOrigins = (
   process.env.FRONTEND_URL ||
   'http://localhost:5173,http://localhost:3000,https://sunitacollection-frontend.vercel.app,https://sunitacollection-backend.onrender.com'
@@ -127,30 +158,6 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(cors({
-  origin: (origin, callback) => {
-    if (isDev) return callback(null, true);
-    if (isOriginAllowed(origin)) return callback(null, true);
-    console.warn(`[CORS] Blocked origin: ${origin}`);
-    return callback(null, false);
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  exposedHeaders: ['Content-Range', 'X-Total-Count'],
-}));
-// Ensure OPTIONS preflight requests always receive CORS headers, even when
-// downstream routers would otherwise consume the request (e.g. Stripe webhook).
-app.options('*', cors({
-  origin: (origin, callback) => {
-    if (isDev) return callback(null, true);
-    if (isOriginAllowed(origin)) return callback(null, true);
-    return callback(null, false);
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-}));
 app.use(cookieParser());
 
 // Stripe webhook must receive the RAW body so the signature can be verified.
