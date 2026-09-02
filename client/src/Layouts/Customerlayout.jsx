@@ -1,7 +1,7 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
 import Navbar from '../components/common/Navbar';
-import Footer from '../components/common/Footer';
+import Footer from '../components/common/footer';
 import ErrorBoundary from '../components/common/ErrorBoundary';
 
 const CustomerLayout = () => {
