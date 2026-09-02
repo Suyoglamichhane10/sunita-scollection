@@ -194,10 +194,30 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.status(200).json({ 
-    success: true, 
+  res.status(200).json({
+    success: true,
     message: 'Server is running',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// Root route - frontend is served by Vercel
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    service: 'sunitacollection-backend',
+    message: 'API is running. Frontend is served from Vercel: https://sunitacollection-frontend.vercel.app',
+  });
+});
+
+// Catch-all for non-API routes: return JSON instead of attempting to serve index.html
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/') || req.path.startsWith('/uploads/')) {
+    return next();
+  }
+  res.status(404).json({
+    success: false,
+    message: 'Not found. Frontend is served from Vercel: https://sunitacollection-frontend.vercel.app',
   });
 });
 
