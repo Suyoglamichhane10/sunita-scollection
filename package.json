@@ -1,6 +1,27 @@
 {
+  "name": "sunitas-collection",
+  "version": "1.0.0",
+  "description": "Sunita's Collection - Full-stack MERN e-commerce platform",
+  "private": true,
+  "workspaces": false,
+  "scripts": {
+    "install-server": "cd server && npm install",
+    "install-client": "cd client && npm install",
+    "build-client": "cd client && npm run build",
+    "start:server": "cd server && npm start",
+    "start": "cd server && node src/server.js",
+    "dev": "cd server && npm run dev",
+    "pm2:start": "pm2 start server/ecosystem.config.cjs --env production",
+    "pm2:stop": "pm2 stop sunitas-collection-api",
+    "pm2:reload": "pm2 reload sunitas-collection-api",
+    "pm2:restart": "pm2 restart sunitas-collection-api",
+    "pm2:logs": "pm2 logs sunitas-collection-api",
+    "pm2:status": "pm2 ls",
+    "deploy": "bash scripts/deploy.sh"
+  },
   "devDependencies": {
     "autoprefixer": "^10.4.20",
+    "pm2": "^6.2.0",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17"
   },

@@ -8,7 +8,10 @@ const rateLimit = require('express-rate-limit');
 const app = express();
 const path = require('path');
 
-const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
+const allowedOrigins = (
+  process.env.FRONTEND_URL ||
+  'http://localhost:5173,http://localhost:3000,https://sunitacollection-frontend.vercel.app,https://sunitacollection-backend.onrender.com'
+)
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
@@ -112,6 +115,9 @@ app.use((req, res, next) => {
 app.use(cors({
   origin: isDev ? true : allowedOrigins,
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Range', 'X-Total-Count'],
 }));
 app.use(cookieParser());
 
@@ -198,15 +204,5 @@ app.get('/api/health', (req, res) => {
 // Error handling middleware
 const errorHandler = require('./Middleware/errorHandler');
 app.use(errorHandler);
-
-// Serve static client build in production (SPA fallback)
-if (process.env.NODE_ENV === 'production') {
-  const clientDistPath = path.join(__dirname, '../../client/dist');
-  app.use(express.static(clientDistPath));
-
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(clientDistPath, 'index.html'));
-  });
-}
 
 module.exports = app;

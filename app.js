@@ -8,7 +8,10 @@ const rateLimit = require('express-rate-limit');
 const app = express();
 const path = require('path');
 
-const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
+const allowedOrigins = (
+  process.env.FRONTEND_URL ||
+  'http://localhost:5173,http://localhost:3000,https://sunitacollection-frontend.vercel.app,https://sunitacollection-backend.onrender.com'
+)
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
@@ -96,7 +99,7 @@ app.use(helmet({
     },
     reportOnly: process.env.NODE_ENV === 'development',
   },
-});
+}));
 app.use(compression());
 
 // Cache control for API responses
@@ -110,11 +113,11 @@ app.use((req, res, next) => {
 });
 
 app.use(cors({
-  origin(origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error('Origin is not allowed by CORS'));
-  },
+  origin: isDev ? true : allowedOrigins,
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Range', 'X-Total-Count'],
 }));
 app.use(cookieParser());
 

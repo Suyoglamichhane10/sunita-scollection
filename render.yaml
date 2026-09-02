@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: sunitas-collection-backend
+    runtime: node
+    buildCommand: "npm install --omit=dev"
+    startCommand: "node src/server.js"
+    rootDir: server
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: FRONTEND_URL
+        value: "https://sunitacollection-frontend.vercel.app,http://localhost:5173,http://localhost:3000"
+      - key: EMAIL_HOST
+        sync: false
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASS
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: ESEWA_PRODUCT_CODE
+        sync: false
+      - key: ESEWA_SECRET_KEY
+        sync: false
+      - key: KHALTI_SECRET_KEY
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false

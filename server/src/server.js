@@ -7,7 +7,10 @@ const dotenv = require('dotenv');
 // Load environment variables
 dotenv.config();
 
-const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
+const allowedOrigins = (
+  process.env.FRONTEND_URL ||
+  'http://localhost:5173,http://localhost:3000,https://sunitacollection-frontend.vercel.app,https://sunitacollection-backend.onrender.com'
+)
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
