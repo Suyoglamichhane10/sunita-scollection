@@ -13,8 +13,23 @@ const allowedOrigins = (
   'http://localhost:5173,http://localhost:3000,https://sunitacollection-frontend.vercel.app,https://sunitacollection-backend.onrender.com'
 )
   .split(',')
-  .map((origin) => origin.trim())
+  .map((origin) => origin.trim().replace(/\/$/, ''))
   .filter(Boolean);
+
+// Always allow the production Vercel frontend regardless of env var state.
+// This is a safety net so a misconfigured FRONTEND_URL cannot break the
+// production CORS handshake.
+const ALWAYS_ALLOWED = new Set([
+  'https://sunitacollection-frontend.vercel.app',
+  'https://sunitacollection-backend.onrender.com',
+  'http://localhost:5173',
+  'http://localhost:3000',
+]);
+const isOriginAllowed = (origin) => {
+  if (!origin) return true;
+  const normalized = origin.replace(/\/$/, '');
+  return ALWAYS_ALLOWED.has(normalized) || allowedOrigins.includes(normalized);
+};
 
 // Rate limiting
 const isDev = process.env.NODE_ENV === 'development';
@@ -114,18 +129,27 @@ app.use((req, res, next) => {
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin) return callback(null, true);
     if (isDev) return callback(null, true);
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-    const normalized = origin.replace(/\/$/, '');
-    if (allowedOrigins.includes(normalized)) return callback(null, true);
+    if (isOriginAllowed(origin)) return callback(null, true);
     console.warn(`[CORS] Blocked origin: ${origin}`);
-    return callback(new Error(`Origin ${origin} not allowed`));
+    return callback(null, false);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   exposedHeaders: ['Content-Range', 'X-Total-Count'],
+}));
+// Ensure OPTIONS preflight requests always receive CORS headers, even when
+// downstream routers would otherwise consume the request (e.g. Stripe webhook).
+app.options('*', cors({
+  origin: (origin, callback) => {
+    if (isDev) return callback(null, true);
+    if (isOriginAllowed(origin)) return callback(null, true);
+    return callback(null, false);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
 }));
 app.use(cookieParser());
 
