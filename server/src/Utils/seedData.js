@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const Category = require('../Models/Category');
 const Product = require('../Models/Product');
+const Slide = require('../Models/Slide');
 const ChatbotIntent = require('../Models/ChatbotIntent');
 const connectDB = require('../config/database');
 
@@ -387,6 +388,45 @@ const chatbotIntents = [
   },
 ];
 
+const slides = [
+  {
+    imageUrl: 'https://images.unsplash.com/photo-1562157873-818bc0726f68?auto=format&fit=crop&w=1600&q=80',
+    title: 'Elegance Redefined',
+    subtitle: 'Discover curated collections for every occasion',
+    buttonText: 'Shop Now',
+    buttonLink: '/shop',
+    order: 1,
+    isActive: true,
+  },
+  {
+    imageUrl: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=1600&q=80',
+    title: 'New Arrivals',
+    subtitle: 'Fresh styles have arrived — explore the latest trends',
+    buttonText: 'See New Arrivals',
+    buttonLink: '/shop?sort=newest',
+    order: 2,
+    isActive: true,
+  },
+  {
+    imageUrl: 'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?auto=format&fit=crop&w=1600&q=80',
+    title: 'Footwear Collection',
+    subtitle: 'Step into comfort and style with our latest footwear',
+    buttonText: 'Shop Footwear',
+    buttonLink: '/shop?category=Footwear',
+    order: 3,
+    isActive: true,
+  },
+];
+
+const seedSlides = async () => {
+  for (const slideData of slides) {
+    const existing = await Slide.findOne({ title: slideData.title, order: slideData.order });
+    if (existing) continue;
+    await Slide.create(slideData);
+    console.log(`🖼️  Slide created: ${slideData.title}`);
+  }
+};
+
 const seedChatbotIntents = async () => {
   for (const intentData of chatbotIntents) {
     const existing = await ChatbotIntent.findOne({ intent: intentData.intent });
@@ -401,6 +441,9 @@ const seedData = async () => {
 
   // Create chatbot intents
   await seedChatbotIntents();
+
+  // Create slides
+  await seedSlides();
 
   // Create categories
   const categoryMap = {};

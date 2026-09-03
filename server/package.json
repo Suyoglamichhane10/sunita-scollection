@@ -9,7 +9,9 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "seed": "node src/Utils/seedData.js",
+    "seed:admin": "node src/Utils/seedAdmin.js"
   },
   "type": "commonjs",
   "keywords": [
