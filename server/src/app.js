@@ -17,6 +17,9 @@ const recommendationRoutes = require('./Routes/recommendationRoutes');
 
 const app = express();
 
+// ✅ Fix rate limiter / CORS behind-proxy warning on Render
+app.set('trust proxy', 1);
+
 // ✅ CORS CONFIGURATION - MUST BE FIRST!
 const corsOptions = {
   origin: function (origin, callback) {
