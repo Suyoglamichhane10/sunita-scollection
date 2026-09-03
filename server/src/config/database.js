@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-const { MongoMemoryServer } = require('mongodb-memory-server');
 
 const MAX_RETRIES = 5;
 const RETRY_DELAY_MS = 2000;
@@ -63,14 +62,18 @@ const connectDB = async () => {
   }
 
   // Fallback to in-memory MongoDB for development when no URI provided or all
-  // retries failed.
-  const mongod = await MongoMemoryServer.create();
-  const uri = mongod.getUri();
-  const conn = await mongoose.connect(uri, baseOptions);
-  isConnected = true;
-  setupConnectionEvents('In-memory MongoDB');
-  console.log('✅ Connected to in-memory MongoDB for development');
-  return conn;
+  // retries failed. Only loaded here (not at module top-level) because
+  // mongodb-memory-server is a devDependency and is unavailable in production.
+  if (process.env.NODE_ENV !== 'production') {
+    const { MongoMemoryServer } = require('mongodb-memory-server');
+    const mongod = await MongoMemoryServer.create();
+    const uri = mongod.getUri();
+    const conn = await mongoose.connect(uri, baseOptions);
+    isConnected = true;
+    setupConnectionEvents('In-memory MongoDB');
+    console.log('✅ Connected to in-memory MongoDB for development');
+    return conn;
+  }
 };
 
 const setupConnectionEvents = (name) => {
