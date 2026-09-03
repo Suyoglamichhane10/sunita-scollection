@@ -4,7 +4,6 @@ const Category = require('../Models/Category');
 const Product = require('../Models/Product');
 const Slide = require('../Models/Slide');
 const ChatbotIntent = require('../Models/ChatbotIntent');
-const connectDB = require('../config/database');
 
 dotenv.config();
 
@@ -23,12 +22,35 @@ const products = [
     slug: 'classic-crop-top',
     description: 'Stylish crop top for casual wear',
     price: 899,
+    comparePrice: 1299,
     categoryName: 'Tops',
-    images: [{ url: 'https://images.unsplash.com/photo-1583744946564-b52ac1c389c8?w=500', isMain: true }],
+    images: [
+      { url: 'https://images.unsplash.com/photo-1583744946564-b52ac1c389c8?w=500', isMain: true },
+      { url: 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=500' },
+    ],
+    brand: 'Sunita\'s Collection',
+    variants: [
+      {
+        title: 'White',
+        sku: 'CROPTOP-WHT',
+        attributes: { color: 'White' },
+        price: 899,
+        stock: 25,
+        images: [{ url: 'https://images.unsplash.com/photo-1583744946564-b52ac1c389c8?w=500', isMain: true }],
+      },
+      {
+        title: 'Black',
+        sku: 'CROPTOP-BLK',
+        attributes: { color: 'Black' },
+        price: 899,
+        stock: 25,
+        images: [{ url: 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=500', isMain: true }],
+      },
+    ],
     stock: 50,
+    lowStockThreshold: 8,
     isActive: true,
     isFeatured: true,
-    lowStockThreshold: 8,
     tags: ['top', 'crop top', 'casual'],
   },
   {
@@ -36,12 +58,17 @@ const products = [
     slug: 'floral-maxi-dress',
     description: 'Elegant floral maxi dress',
     price: 1499,
+    comparePrice: 1999,
     categoryName: 'Dresses',
-    images: [{ url: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=500', isMain: true }],
+    images: [
+      { url: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=500', isMain: true },
+      { url: 'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=500' },
+    ],
+    brand: 'Sunita\'s Collection',
     stock: 30,
+    lowStockThreshold: 5,
     isActive: true,
     isFeatured: true,
-    lowStockThreshold: 5,
     tags: ['dress', 'maxi', 'floral'],
   },
   {
@@ -49,12 +76,17 @@ const products = [
     slug: 'white-sneakers',
     description: 'Comfortable white sneakers',
     price: 1999,
+    comparePrice: 2499,
     categoryName: 'Footwear',
-    images: [{ url: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=500', isMain: true }],
+    images: [
+      { url: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=500', isMain: true },
+      { url: 'https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?w=500' },
+    ],
+    brand: 'Sunita\'s Collection',
     stock: 40,
+    lowStockThreshold: 7,
     isActive: true,
     isFeatured: true,
-    lowStockThreshold: 7,
     tags: ['sneakers', 'footwear', 'casual'],
   },
   {
@@ -62,52 +94,59 @@ const products = [
     slug: 'designer-handbag',
     description: 'Elegant designer handbag',
     price: 1299,
+    comparePrice: 1699,
     categoryName: 'Accessories',
-    images: [{ url: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=500', isMain: true }],
+    images: [
+      { url: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=500', isMain: true },
+    ],
+    brand: 'Sunita\'s Collection',
     stock: 25,
+    lowStockThreshold: 5,
     isActive: true,
     isFeatured: true,
-    lowStockThreshold: 5,
-    tags: ['handbag', 'accessories', 'designer'],
+    tags: ['handbag', 'accessories'],
   },
   {
     name: 'Gold Plated Earrings',
     slug: 'gold-earrings',
     description: 'Beautiful gold plated earrings',
     price: 599,
+    comparePrice: 799,
     categoryName: 'Jewelry',
-    images: [{ url: 'https://images.unsplash.com/photo-1589674781759-21c0bb6f8d23?w=500', isMain: true }],
+    images: [
+      { url: 'https://images.unsplash.com/photo-1589674781759-21c0bb6f8d23?w=500', isMain: true },
+    ],
+    brand: 'Sunita\'s Collection',
     stock: 100,
-    isActive: true,
-    isFeatured: false,
     lowStockThreshold: 10,
+    isActive: true,
     tags: ['earrings', 'jewelry', 'gold'],
   },
 ];
 
 const slides = [
   {
-    imageUrl: 'https://images.unsplash.com/photo-1562157873-818bc0726f68?auto=format&fit=crop&w=1600&q=80',
     title: 'Elegance Redefined',
     subtitle: 'Discover curated collections for every occasion',
+    imageUrl: 'https://images.unsplash.com/photo-1562157873-818bc0726f68?auto=format&fit=crop&w=1600&q=80',
     buttonText: 'Shop Now',
     buttonLink: '/shop',
     order: 1,
     isActive: true,
   },
   {
-    imageUrl: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=1600&q=80',
     title: 'New Arrivals',
     subtitle: 'Fresh styles have arrived — explore the latest trends',
+    imageUrl: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=1600&q=80',
     buttonText: 'See New Arrivals',
     buttonLink: '/shop?sort=newest',
     order: 2,
     isActive: true,
   },
   {
-    imageUrl: 'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?auto=format&fit=crop&w=1600&q=80',
     title: 'Footwear Collection',
     subtitle: 'Step into comfort and style with our latest footwear',
+    imageUrl: 'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?auto=format&fit=crop&w=1600&q=80',
     buttonText: 'Shop Footwear',
     buttonLink: '/shop?category=Footwear',
     order: 3,
@@ -124,53 +163,14 @@ const chatbotIntents = [
     patterns: [
       { pattern: 'hello', language: 'both' },
       { pattern: 'hi', language: 'both' },
-      { pattern: 'hey', language: 'both' },
       { pattern: 'namaste', language: 'both' },
     ],
     responses: {
       en: [
         'Hello! 👋 Welcome to Sunita\'s Collection. How can I help you today?',
-        'Hi there! How can I assist you with our women\'s fashion collection?',
       ],
       ne: [
         'नमस्ते! 👋 सुनिता कलेक्सनमा स्वागत छ। म कसरी मद्दत गर्न सक्छु?',
-        'नमस्कार! हामी कसरी तपाईंलाई सहयोग गर्न सक्छौं?',
-      ],
-    },
-  },
-  {
-    intent: 'order_status',
-    category: 'order_status',
-    description: 'Check order status',
-    priority: 9,
-    patterns: [
-      { pattern: 'where is my order', language: 'both' },
-      { pattern: 'order status', language: 'both' },
-      { pattern: 'track my order', language: 'both' },
-      { pattern: 'my order', language: 'both' },
-    ],
-    responses: {
-      en: ['Let me check your latest order status for you.'],
-      ne: ['तपाईंको पछिल्लो अर्डरको स्थिति जाँच गर्दैछु।'],
-    },
-  },
-  {
-    intent: 'return_policy',
-    category: 'return_policy',
-    description: 'Return and exchange policy',
-    priority: 7,
-    patterns: [
-      { pattern: 'return', language: 'both' },
-      { pattern: 'exchange', language: 'both' },
-      { pattern: 'return policy', language: 'both' },
-      { pattern: 'refund', language: 'both' },
-    ],
-    responses: {
-      en: [
-        'We accept returns and exchanges within 7 days of delivery for items in original condition with tags attached. Refunds are processed within 5-7 business days after we receive the returned item.',
-      ],
-      ne: [
-        'हामी डेलिभरी भएको ७ दिनभित्र मूल अवस्थामा रहेका वस्तुहरू फिर्ता वा साट्न सक्छौं। फिर्ता प्राप्त भएपछि ५-७ कार्यदिनभित्र रिफन्ड गरिन्छ।',
       ],
     },
   },
@@ -182,15 +182,14 @@ const chatbotIntents = [
     patterns: [
       { pattern: 'shipping', language: 'both' },
       { pattern: 'delivery', language: 'both' },
-      { pattern: 'how long delivery', language: 'both' },
-      { pattern: 'shipping cost', language: 'both' },
+      { pattern: 'free delivery', language: 'both' },
     ],
     responses: {
       en: [
-        'We offer free delivery across Nepal on orders above Rs. 1,000. Standard delivery takes 3-5 business days. Same-day delivery is available in Kathmandu Valley on request.',
+        'We offer free delivery across Nepal on orders above Rs. 1,000. Standard delivery takes 3-5 business days.',
       ],
       ne: [
-        'हामी रु. १,००० भन्दा बढीको अर्डरमा नेपालभर निःशुल्क डेलिभरी प्रदान गर्छौं। मानक डेलिभरी ३-५ कार्यदिन लाग्छ।',
+        'हामी रु. १,००० भन्दा बढीको अर्डरमा नेपालभर निःशुल्क डेलिभरी प्रदान गर्छौं।',
       ],
     },
   },
@@ -200,19 +199,17 @@ const chatbotIntents = [
     description: 'Payment methods',
     priority: 5,
     patterns: [
-      { pattern: 'payment options', language: 'both' },
-      { pattern: 'how to pay', language: 'both' },
-      { pattern: 'payment method', language: 'both' },
+      { pattern: 'payment', language: 'both' },
       { pattern: 'cod', language: 'both' },
       { pattern: 'esewa', language: 'both' },
       { pattern: 'khalti', language: 'both' },
     ],
     responses: {
       en: [
-        'We accept Cash on Delivery (COD), eSewa, Khalti, and credit/debit card payments via Stripe. All payments are secure.',
+        'We accept Cash on Delivery (COD), eSewa, Khalti, and credit/debit cards via Stripe.',
       ],
       ne: [
-        'हामी क्यास अन डेलिभरी (COD), eSewa, Khalti र क्रेडिट/डेबिट कार्ड भुक्तानी स्वीकार गर्छौं। सबै भुक्तानी सुरक्षित छन्।',
+        'हामी क्यास अन डेलिभरी (COD), eSewa, Khalti र क्रेडिट/डेबिट कार्ड स्वीकार गर्छौं।',
       ],
     },
   },
@@ -227,62 +224,60 @@ const seedChatbotIntents = async () => {
   }
 };
 
-const seedSlides = async () => {
-  for (const slideData of slides) {
-    const existing = await Slide.findOne({ title: slideData.title, order: slideData.order });
-    if (existing) continue;
-    await Slide.create(slideData);
-    console.log(`🖼️  Slide created: ${slideData.title}`);
-  }
-};
-
 async function seed() {
   try {
-    await connectDB();
-
-    // Create categories
-    const categoryMap = {};
-    for (const categoryData of categories) {
-      const existing = await Category.findOne({ name: categoryData.name });
-      if (!existing) {
-        const category = await Category.create(categoryData);
-        categoryMap[category.name] = category._id;
-        console.log(`✅ Category created: ${category.name}`);
-      } else {
-        categoryMap[existing.name] = existing._id;
-        console.log(`⏭️  Category already exists: ${existing.name}`);
-      }
+    console.log('🔄 Connecting to MongoDB...');
+    const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI;
+    if (!mongoUri) {
+      throw new Error('MONGO_URI or MONGODB_URI is not set in environment variables.');
     }
 
-    // Create products
-    for (const productData of products) {
-      const categoryId = categoryMap[productData.categoryName];
-      if (!categoryId) continue;
+    await mongoose.connect(mongoUri, {
+      serverSelectionTimeoutMS: 15000,
+      family: 4,
+    });
+    console.log('✅ MongoDB Connected');
 
-      const existing = await Product.findOne({ slug: productData.slug });
-      if (existing) {
-        console.log(`⏭️  Product already exists: ${existing.name}`);
-        continue;
-      }
+    console.log('🗑️ Clearing existing data...');
+    await Category.deleteMany({});
+    await Product.deleteMany({});
+    await Slide.deleteMany({});
+    await ChatbotIntent.deleteMany({});
+    console.log('✅ Cleared existing data');
 
-      const { categoryName, ...productPayload } = productData;
-      const product = await Product.create({
-        ...productPayload,
-        category: categoryId,
-      });
-      console.log(`✅ Product created: ${product.name}`);
+    console.log('📦 Inserting categories...');
+    const insertedCategories = await Category.insertMany(categories);
+    console.log(`✅ Added ${insertedCategories.length} categories`);
+    for (const cat of insertedCategories) {
+      console.log(`   - ${cat.name}`);
     }
 
-    // Create slides
-    await seedSlides();
+    console.log('📦 Inserting products...');
+    const productsWithCategories = products.map((p) => {
+      const cat = insertedCategories.find((c) => c.name === p.categoryName);
+      const { categoryName, ...rest } = p;
+      return { ...rest, category: cat._id };
+    });
+    const insertedProducts = await Product.insertMany(productsWithCategories);
+    console.log(`✅ Added ${insertedProducts.length} products`);
+    for (const prod of insertedProducts) {
+      console.log(`   - ${prod.name}`);
+    }
 
-    // Create chatbot intents
+    console.log('📦 Inserting slides...');
+    const insertedSlides = await Slide.insertMany(slides);
+    console.log(`✅ Added ${insertedSlides.length} slides`);
+
+    console.log('📦 Inserting chatbot intents...');
     await seedChatbotIntents();
 
     console.log('🎉 Seed data completed successfully!');
     process.exit(0);
   } catch (error) {
-    console.error('❌ Seeding failed:', error);
+    console.error('❌ Seeding failed:', error.message);
+    if (process.env.NODE_ENV !== 'production') {
+      console.error(error.stack);
+    }
     process.exit(1);
   }
 }
