@@ -152,6 +152,33 @@ const slides = [
     order: 3,
     isActive: true,
   },
+  {
+    title: 'Ethnic Elegance',
+    subtitle: 'Traditional Nepali craftsmanship meets modern style',
+    imageUrl: 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?auto=format&fit=crop&w=1600&q=80',
+    buttonText: 'Explore Ethnic',
+    buttonLink: '/shop?category=Ethnic',
+    order: 4,
+    isActive: true,
+  },
+  {
+    title: 'Summer Collection',
+    subtitle: 'Light, breezy styles for the season',
+    imageUrl: 'https://images.unsplash.com/photo-1520367445006-738e7b93d7f9?auto=format&fit=crop&w=1600&q=80',
+    buttonText: 'Summer Shop',
+    buttonLink: '/shop?season=summer',
+    order: 5,
+    isActive: true,
+  },
+  {
+    title: 'Festival Special',
+    subtitle: 'Celebrate in style with our festive collection',
+    imageUrl: 'https://images.unsplash.com/photo-1511512578044-e9b8feb7d8d0?auto=format&fit=crop&w=1600&q=80',
+    buttonText: 'Shop Festive',
+    buttonLink: '/shop?festival=true',
+    order: 6,
+    isActive: true,
+  },
 ];
 
 const chatbotIntents = [
