@@ -1,9 +1,16 @@
 const app = require('./app');
 const http = require('http');
 const dotenv = require('dotenv');
+const connectDB = require('./config/database');
 
 // Load environment variables
 dotenv.config();
+
+// Connect to the database before starting the server
+connectDB().catch((err) => {
+  console.error('❌ Fatal: Database connection failed:', err.message);
+  process.exit(1);
+});
 
 const PORT = process.env.PORT || 5000;
 

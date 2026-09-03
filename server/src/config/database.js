@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-// const { MongoMemoryServer } = require('mongodb-memory-server');
+const { MongoMemoryServer } = require('mongodb-memory-server');
 
 const MAX_RETRIES = 5;
 const RETRY_DELAY_MS = 2000;

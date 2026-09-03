@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
@@ -12,6 +12,8 @@ const productRoutes = require('./Routes/productRoutes');
 const categoryRoutes = require('./Routes/categoryRoutes');
 const orderRoutes = require('./Routes/orderRoutes');
 const userRoutes = require('./Routes/userRoutes');
+const slideRoutes = require('./Routes/slideRoutes');
+const recommendationRoutes = require('./Routes/recommendationRoutes');
 
 const app = express();
 
@@ -20,13 +22,20 @@ const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    
+
+    // Build allowed origins from env var, falling back to defaults
+    const envOrigins = (process.env.FRONTEND_URL || '')
+      .split(',')
+      .map((o) => o.trim())
+      .filter(Boolean);
+
     const allowedOrigins = [
       'https://sunitacollection-frontend.vercel.app',
+      ...envOrigins,
       'http://localhost:5173',
       'http://localhost:3000'
     ];
-    
+
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
@@ -61,25 +70,29 @@ const limiter = rateLimit({
 });
 app.use('/api', limiter);
 
-// ✅ API Routes only - NO STATIC FILE SERVING!
+// Serve uploaded files (product images, avatars, etc.) as static assets.
+// This is distinct from serving the client build (which lives on Vercel).
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+
+// ✅ API Routes only - NO STATIC FILE SERVING for client/dist!
+// DO NOT add express.static for client/dist here
+// DO NOT add app.get('*') catch-all route
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/slides', slideRoutes);
+app.use('/api/recommendations', recommendationRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.status(200).json({ 
-    status: 'OK', 
+  res.status(200).json({
+    status: 'OK',
     message: 'Server is running',
     timestamp: new Date().toISOString()
   });
 });
-
-// ⚠️ IMPORTANT: NO STATIC FILE SERVING - FRONTEND ON VERCEL
-// DO NOT add express.static for client/dist here
-// DO NOT add app.get('*') catch-all route
 
 // Error handling middleware
 const errorHandler = require('./Middleware/errorHandler');
