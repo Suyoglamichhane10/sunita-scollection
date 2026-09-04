@@ -14,6 +14,20 @@ const orderRoutes = require('./Routes/orderRoutes');
 const userRoutes = require('./Routes/userRoutes');
 const slideRoutes = require('./Routes/slideRoutes');
 const recommendationRoutes = require('./Routes/recommendationRoutes');
+const messageRoutes = require('./Routes/messageRoutes');
+const dashboardRoutes = require('./Routes/dashboardRoutes');
+const uploadRoutes = require('./Routes/uploadRoutes');
+const paymentRoutes = require('./Routes/paymentRoutes');
+const socialRoutes = require('./Routes/socialRoutes');
+const webhookRoutes = require('./Routes/webhookRoutes');
+const chatbotRoutes = require('./Routes/chatbotRoutes');
+const analyticsRoutes = require('./Routes/analyticsRoutes');
+const deliveryRoutes = require('./Routes/deliveryRoutes');
+const marketingRoutes = require('./Routes/marketingRoutes');
+const loyaltyRoutes = require('./Routes/loyaltyRoutes');
+const wishlistRoutes = require('./Routes/wishlistRoutes');
+const reviewRoutes = require('./Routes/reviewRoutes');
+const conversationRoutes = require('./Routes/conversationRoutes');
 
 const app = express();
 
@@ -87,6 +101,22 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/slides', slideRoutes);
 app.use('/api/recommendations', recommendationRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/social', socialRoutes);
+app.use('/api/messages/webhook', webhookRoutes);
+app.use('/api/chatbot', chatbotRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/delivery', deliveryRoutes);
+app.use('/api/marketing', marketingRoutes);
+app.use('/api/loyalty', loyaltyRoutes);
+app.use('/api/wishlist', wishlistRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/conversations', conversationRoutes);
+
+app.use('/api/payments/stripe/webhook', express.raw({ type: 'application/json' }));
+app.use('/api/payments', paymentRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

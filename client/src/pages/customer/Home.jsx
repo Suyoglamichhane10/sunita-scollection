@@ -226,7 +226,6 @@ const Home = () => {
   const [recentlyViewed, setRecentlyViewed] = useState([]);
   const [recommended, setRecommended] = useState([]);
   const [quickViewProduct, setQuickViewProduct] = useState(null);
-  const [heroSlides, setHeroSlides] = useState([]);
   const { isAuthenticated } = useAuth();
 
   const openQuickView = (product) => {
@@ -294,44 +293,11 @@ const Home = () => {
       }
     };
     fetchRecentlyViewed();
-  }, []);
-
-   useEffect(() => {
-    const fetchHeroSlides = async () => {
-      try {
-        const { data } = await api.get('/slides');
-        if (data.success && Array.isArray(data.slides)) {
-          const activeSlides = data.slides
-            .filter((s) => s.isActive)
-            .sort((a, b) => (a.order || 0) - (b.order || 0))
-            .map((s) => ({
-              id: s._id,
-              image: s.imageUrl,
-              alt: s.title,
-              tagline: s.title,
-              description: s.subtitle || s.title,
-              cta: s.buttonText || 'Shop Now',
-              ctaLink: s.buttonLink || '/shop',
-            }));
-
-          if (activeSlides.length > 0) {
-            setHeroSlides(activeSlides);
-          } else {
-            setHeroSlides([]);
-          }
-        } else {
-          setHeroSlides([]);
-        }
-      } catch {
-        setHeroSlides([]);
-      }
-    };
-    fetchHeroSlides();
-  }, []);
+   }, []);
 
   return (
     <div className="bg-cream text-ink">
-      <FullPageHeroSlideshow slides={heroSlides} />
+      <FullPageHeroSlideshow />
 
       <section className="mx-auto max-w-7xl px-4 py-10 lg:px-8">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">

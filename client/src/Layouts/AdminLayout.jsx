@@ -1,14 +1,14 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate, Link } from 'react-router-dom';
-import { FaBoxOpen, FaChartLine, FaComments, FaLayerGroup, FaTruck, FaUsers, FaWarehouse, FaInbox, FaBullhorn, FaUserCircle, FaSignOutAlt, FaMapMarkerAlt, FaImages } from 'react-icons/fa';
+import { FaBoxOpen, FaChartLine, FaComments, FaLayerGroup, FaTruck, FaUsers, FaWarehouse, FaInbox, FaBullhorn, FaUserCircle, FaSignOutAlt, FaMapMarkerAlt, FaImages, FaBars, FaTimes } from 'react-icons/fa';
 import { useAuth } from '../Context/Authcontext';
 import NotificationCenter from '../components/chat/NotificationCenter';
 import Avatar from '../components/common/Avatar';
-import logo from '../assets/LOGO!.png';
 
 const AdminLayout = () => {
   const { isAuthenticated, isAdmin, loading, logout, user } = useAuth();
   const navigate = useNavigate();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (!loading) {
@@ -43,15 +43,50 @@ const AdminLayout = () => {
 
   return (
     <div className="min-h-screen bg-cream-light lg:grid lg:grid-cols-[280px_minmax(0,1fr)]">
-      <aside className="border-b border-gold/20 bg-cream px-5 py-6 lg:min-h-screen lg:border-b-0 lg:border-r">
+      {/* Mobile header */}
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-gold/20 bg-cream px-4 py-3 lg:hidden">
+        <button
+          type="button"
+          onClick={() => setSidebarOpen((v) => !v)}
+          className="rounded-full border border-gold/40 p-2.5 text-primary"
+          aria-label="Toggle sidebar"
+        >
+          {sidebarOpen ? <FaTimes /> : <FaBars />}
+        </button>
+        <p className="font-serif text-base font-bold text-primary">Store management</p>
+        <NotificationCenter />
+      </header>
+
+      {/* Overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/30 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside
+        className={[
+          'fixed inset-y-0 left-0 z-50 w-[280px] -translate-x-full border-r border-gold/20 bg-cream px-5 py-6 transition-transform duration-200 ease-in-out lg:static lg:z-auto lg:col-span-1 lg:translate-x-0 lg:min-h-screen',
+          sidebarOpen ? 'translate-x-0' : '',
+        ].join(' ')}
+      >
+        {/* Close button on mobile */}
+        <button
+          type="button"
+          onClick={() => setSidebarOpen(false)}
+          className="absolute right-3 top-3 rounded-full border border-gold/40 p-2 text-primary lg:hidden"
+          aria-label="Close sidebar"
+        >
+          <FaTimes />
+        </button>
+
         <div className="mb-6 flex flex-col items-center gap-3">
           <Link to="/" className="block">
             <img src="/admin-logo.png" alt="Sunita'z Collection" className="h-20 w-20 rounded-full object-contain bg-white shadow-md ring-2 ring-gold/30" />
           </Link>
-          <div className="flex w-full items-center justify-between">
-            <p className="text-center font-serif text-base font-bold text-primary">Store management</p>
-            <NotificationCenter />
-          </div>
+          <p className="font-serif text-base font-bold text-primary">Store management</p>
         </div>
         {user?.name && (
           <div className="mb-4 flex items-center gap-3 rounded-xl border border-gold/20 bg-white/60 px-3 py-2.5 text-sm">
@@ -62,7 +97,7 @@ const AdminLayout = () => {
             </div>
           </div>
         )}
-<nav className="flex gap-2 overflow-x-auto lg:flex-col lg:flex-1">
+        <nav className="flex flex-col gap-1">
           {[
              { to: '/admin', label: 'Overview', icon: FaChartLine, end: true },
              { to: '/admin/products', label: 'Products', icon: FaBoxOpen },
@@ -82,7 +117,8 @@ const AdminLayout = () => {
               key={to}
               to={to}
               end={end}
-              className={({ isActive }) => `flex shrink-0 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${isActive ? 'bg-blush text-primary' : 'text-ink-light hover:bg-gold/20 hover:text-primary'}`}
+              onClick={() => setSidebarOpen(false)}
+              className={({ isActive }) => `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${isActive ? 'bg-blush text-primary' : 'text-ink-light hover:bg-gold/20 hover:text-primary'}`}
             >
               <Icon className="text-base" />
               {label}
@@ -105,7 +141,7 @@ const AdminLayout = () => {
           </button>
         </div>
       </aside>
-      <main className="min-w-0">
+      <main className="min-w-0 lg:col-span-1">
         <Outlet />
       </main>
     </div>

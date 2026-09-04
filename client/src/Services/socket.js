@@ -5,9 +5,12 @@ import { io } from 'socket.io-client';
 // backend origin from VITE_API_URL, falling back to the local API server.
 const SOCKET_URL =
   import.meta.env.VITE_SOCKET_URL ||
-  (import.meta.env.VITE_API_URL || import.meta.env.API_URL
-    ? (import.meta.env.VITE_API_URL || import.meta.env.API_URL).replace(/\/api\/?$/, '')
-    : 'http://localhost:5000');
+  (() => {
+    const raw = import.meta.env.VITE_API_URL || import.meta.env.API_URL;
+    if (!raw) return 'http://localhost:5000';
+    if (raw.startsWith('http')) return raw.replace(/\/api\/?$/, '');
+    return 'http://localhost:5000';
+  })();
 
 // Singleton socket instance. Multiple contexts/components (ChatContext,
 // AdminMessages, etc.) share ONE socket connection.
