@@ -245,7 +245,14 @@ const AdminOrders = () => {
               <div className="mt-3 space-y-3">
                 {selectedOrder.items?.map((item, idx) => (
                   <div key={idx} className="flex items-center gap-4 rounded-xl bg-gray-50 p-3">
-                    <img src={item.image || ''} alt={item.name} className="h-14 w-14 rounded-lg object-cover" />
+                    <img
+                      src={item.image || ''}
+                      alt={item.name}
+                      className="h-14 w-14 rounded-lg object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = 'https://via.placeholder.com/200x200?text=No+Image';
+                      }}
+                    />
                     <div className="flex-1">
                       <p className="font-semibold text-gray-900">{item.name}</p>
                       {item.variantTitle && <p className="text-sm text-gray-500">{item.variantTitle}</p>}

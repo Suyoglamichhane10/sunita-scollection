@@ -128,9 +128,16 @@ const FeaturedCategoryManager = ({ products, setProducts, onEditProduct }) => {
             >
               <span className="cursor-grab select-none text-gray-400" title="Drag to reorder">⠿</span>
               <span className="w-6 text-center text-sm font-bold text-gray-400">{index + 1}</span>
-              {product.images?.[0]?.url && (
-                <img src={product.images[0].url} alt={product.name} className="h-12 w-12 rounded-lg object-cover" />
-              )}
+               {product.images?.[0]?.url && (
+                 <img
+                   src={product.images[0].url}
+                   alt={product.name}
+                   className="h-12 w-12 rounded-lg object-cover"
+                   onError={(e) => {
+                     e.currentTarget.src = 'https://via.placeholder.com/200x200?text=No+Image';
+                   }}
+                 />
+               )}
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium text-gray-900">{product.name}</p>
                 <p className="text-xs text-gray-500">Rs. {product.price}</p>
@@ -708,8 +715,15 @@ const AdminCatalog = () => {
               {images.length > 0 && (
                 <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-6">
                   {images.map((img, idx) => (
-                    <div key={idx} className="relative rounded-xl border border-gray-200 bg-white p-1 shadow-sm">
-                      <img src={img.url} alt={`product-${idx}`} className="h-24 w-full rounded-lg object-cover" />
+                     <div key={idx} className="relative rounded-xl border border-gray-200 bg-white p-1 shadow-sm">
+                      <img
+                        src={img.url}
+                        alt={`product-${idx}`}
+                        className="h-24 w-full rounded-lg object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = 'https://via.placeholder.com/200x200?text=No+Image';
+                        }}
+                      />
                       <button
                         type="button"
                         onClick={() => setImages((prev) => prev.filter((_, i) => i !== idx))}
@@ -831,7 +845,14 @@ const AdminCatalog = () => {
                         <div className="mt-2 flex flex-wrap gap-2">
                           {variant.images.map((img, imgIdx) => (
                             <div key={imgIdx} className="relative h-16 w-16 rounded-lg border border-gray-200 bg-white p-1 shadow-sm">
-                              <img src={img.url} alt={`color-${index}-${imgIdx}`} className="h-full w-full rounded object-cover" />
+                              <img
+                                src={img.url}
+                                alt={`color-${index}-${imgIdx}`}
+                                className="h-full w-full rounded object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.src = 'https://via.placeholder.com/200x200?text=No+Image';
+                                }}
+                              />
                               <button
                                 type="button"
                                 onClick={() => updateVariant(index, 'images', variant.images.filter((_, i) => i !== imgIdx))}
@@ -916,7 +937,14 @@ const AdminCatalog = () => {
                     <tr key={product._id} className={`border-b border-gray-100 ${totalStock === 0 ? 'bg-red-50' : (totalStock <= (product.lowStockThreshold || 5) ? 'bg-yellow-50' : '')}`}>
                       <td className="p-3">
                         {product.images?.[0]?.url && (
-                          <img src={product.images[0].url} alt={product.name} className="h-10 w-10 rounded object-cover" />
+                          <img
+                            src={product.images[0].url}
+                            alt={product.name}
+                            className="h-10 w-10 rounded object-cover"
+                            onError={(e) => {
+                              e.currentTarget.src = 'https://via.placeholder.com/200x200?text=No+Image';
+                            }}
+                          />
                         )}
                       </td>
                       <td className="p-3">
