@@ -3,6 +3,8 @@ const http = require('http');
 const dotenv = require('dotenv');
 const connectDB = require('./config/database');
 const { Server } = require('socket.io');
+const path = require('path');
+const fs = require('fs');
 
 // Load environment variables
 dotenv.config();
@@ -21,6 +23,11 @@ const allowedOrigins = (process.env.FRONTEND_URL || '')
   .split(',')
   .map((o) => o.trim())
   .filter(Boolean);
+
+const uploadsDir = path.join(__dirname, '..', 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
 
 const io = new Server(server, {
   cors: {

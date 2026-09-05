@@ -5,6 +5,7 @@ const compression = require('compression');
 const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
+const fs = require('fs');
 
 // Import routes
 const authRoutes = require('./Routes/authRoutes');
@@ -89,7 +90,11 @@ app.use('/api', limiter);
 
 // Serve uploaded files (product images, avatars, etc.) as static assets.
 // This is distinct from serving the client build (which lives on Vercel).
-app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+const uploadsDir = path.join(__dirname, '..', 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+app.use('/uploads', express.static(uploadsDir));
 
 // ✅ API Routes only - NO STATIC FILE SERVING for client/dist!
 // DO NOT add express.static for client/dist here
