@@ -279,8 +279,8 @@ const AdminCatalog = () => {
       const q = searchQuery.toLowerCase();
       result = result.filter(
         (p) =>
-          p.name?.toLowerCase().includes(q) ||
-          p.category?.name?.toLowerCase().includes(q)
+          (p.name || '').toLowerCase().includes(q) ||
+          (p.category?.name || '').toLowerCase().includes(q)
       );
     }
     if (selectedCategory) {

@@ -29,6 +29,25 @@ const AdminLayout = () => {
     };
   }, []);
 
+  useEffect(() => {
+    if (sidebarOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [sidebarOpen]);
+
+  useEffect(() => {
+    const handleKey = (e) => {
+      if (e.key === 'Escape') setSidebarOpen(false);
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, []);
+
   if (loading || !isAuthenticated || !isAdmin) {
     return (
       <div className="min-h-screen bg-gray-100 py-20">
@@ -60,7 +79,7 @@ const AdminLayout = () => {
       {/* Overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/30 lg:hidden"
+          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -68,7 +87,7 @@ const AdminLayout = () => {
       {/* Sidebar */}
       <aside
         className={[
-          'fixed inset-y-0 left-0 z-50 w-[280px] -translate-x-full border-r border-gold/20 bg-cream px-5 py-6 transition-transform duration-200 ease-in-out lg:static lg:z-auto lg:col-span-1 lg:translate-x-0 lg:min-h-screen',
+          'fixed inset-y-0 left-0 z-50 w-[280px] -translate-x-full overflow-y-auto border-r border-gold/20 bg-cream px-5 py-6 transition-transform duration-200 ease-in-out lg:static lg:z-auto lg:col-span-1 lg:translate-x-0 lg:min-h-screen',
           sidebarOpen ? 'translate-x-0' : '',
         ].join(' ')}
       >
