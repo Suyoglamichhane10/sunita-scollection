@@ -128,16 +128,31 @@ const FeaturedCategoryManager = ({ products, setProducts, onEditProduct }) => {
             >
               <span className="cursor-grab select-none text-gray-400" title="Drag to reorder">⠿</span>
               <span className="w-6 text-center text-sm font-bold text-gray-400">{index + 1}</span>
-               {product.images?.[0]?.url && (
-                 <img
-                   src={product.images[0].url}
-                   alt={product.name}
-                   className="h-12 w-12 rounded-lg object-cover"
-                   onError={(e) => {
-                     e.currentTarget.src = 'https://via.placeholder.com/200x200?text=No+Image';
-                   }}
-                 />
-               )}
+              <div className="h-12 w-12 overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
+                {(() => {
+                  const imgSrc = product.images?.[0]?.url || product.image;
+                  if (!imgSrc) {
+                    return (
+                      <div className="flex h-full w-full items-center justify-center text-gray-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.98-.51 2.32-.32 3.55.44 2.78 2.48 5.25 5.26 6.22.77.27 1.64.26 2.4-.03a2.45 2.45 0 011.51 1.51c.29.76.3 1.63-.03 2.4-.97 2.78-3.44 4.82-6.22 5.26a2.31 2.31 0 01-1.57.05c-.98-.38-1.96-1.1-2.78-2.05A9.87 9.87 0 013 16.5c0-2.64.96-5.18 2.7-7.12a9.87 9.87 0 011.13-2.53z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 13.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                      </div>
+                    );
+                  }
+                  return (
+                    <img
+                      src={imgSrc}
+                      alt={product.name}
+                      className="h-full w-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = 'https://via.placeholder.com/200x200?text=No+Image';
+                      }}
+                    />
+                  );
+                })()}
+              </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium text-gray-900">{product.name}</p>
                 <p className="text-xs text-gray-500">Rs. {product.price}</p>
@@ -936,16 +951,32 @@ const AdminCatalog = () => {
                   return (
                     <tr key={product._id} className={`border-b border-gray-100 ${totalStock === 0 ? 'bg-red-50' : (totalStock <= (product.lowStockThreshold || 5) ? 'bg-yellow-50' : '')}`}>
                       <td className="p-3">
-                        {product.images?.[0]?.url && (
-                          <img
-                            src={product.images[0].url}
-                            alt={product.name}
-                            className="h-10 w-10 rounded object-cover"
-                            onError={(e) => {
-                              e.currentTarget.src = 'https://via.placeholder.com/200x200?text=No+Image';
-                            }}
-                          />
-                        )}
+                        <div className="h-20 w-20 overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
+                          {(() => {
+                            const imgSrc = product.images?.[0]?.url || product.image;
+                            if (!imgSrc) {
+                              return (
+                                <div className="flex h-full w-full items-center justify-center text-gray-400">
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.98-.51 2.32-.32 3.55.44 2.78 2.48 5.25 5.26 6.22.77.27 1.64.26 2.4-.03a2.45 2.45 0 011.51 1.51c.29.76.3 1.63-.03 2.4-.97 2.78-3.44 4.82-6.22 5.26a2.31 2.31 0 01-1.57.05c-.98-.38-1.96-1.1-2.78-2.05A9.87 9.87 0 013 16.5c0-2.64.96-5.18 2.7-7.12a9.87 9.87 0 011.13-2.53z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 13.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                                  </svg>
+                                </div>
+                              );
+                            }
+                            return (
+                              <img
+                                src={imgSrc}
+                                alt={product.name}
+                                className="h-full w-full object-cover"
+                                onClick={() => onEditProduct && onEditProduct(product)}
+                                onError={(e) => {
+                                  e.currentTarget.src = 'https://via.placeholder.com/200x200?text=No+Image';
+                                }}
+                              />
+                            );
+                          })()}
+                        </div>
                       </td>
                       <td className="p-3">
                         <p className="font-medium text-gray-900">{product.name}</p>

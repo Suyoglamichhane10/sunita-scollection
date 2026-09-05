@@ -1,6 +1,7 @@
 const path = require('path');
 const cloudinary = require('../config/cloudinary');
 const User = require('../Models/User');
+const { getAbsoluteUrl } = require('../Utils/getAbsoluteUrl');
 
 // Determine whether Cloudinary is properly configured
 const isCloudinaryConfigured = () =>
@@ -26,7 +27,7 @@ exports.uploadImages = async (req, res, next) => {
     // product can still be saved and the image can be served from /uploads.
     if (!isCloudinaryConfigured()) {
       const images = req.files.map((file) => ({
-        url: `/uploads/${path.basename(file.path)}`,
+        url: getAbsoluteUrl(req, `/uploads/${path.basename(file.path)}`),
         publicId: null,
       }));
       return res.status(200).json({ success: true, images, local: true });
@@ -57,7 +58,7 @@ exports.uploadImages = async (req, res, next) => {
       console.warn('⚠️ Cloudinary upload failed, falling back to local storage:', cloudinaryError.message);
 
       const images = req.files.map((file) => ({
-        url: `/uploads/${path.basename(file.path)}`,
+        url: getAbsoluteUrl(req, `/uploads/${path.basename(file.path)}`),
         publicId: null,
       }));
 
@@ -114,7 +115,7 @@ exports.uploadAvatar = async (req, res, next) => {
     let publicId;
 
     if (!isCloudinaryConfigured()) {
-      avatarUrl = `/uploads/${path.basename(req.file.path)}`;
+      avatarUrl = getAbsoluteUrl(req, `/uploads/${path.basename(req.file.path)}`);
       publicId = null;
     } else {
       try {
@@ -128,7 +129,7 @@ exports.uploadAvatar = async (req, res, next) => {
         publicId = result.public_id;
       } catch (cloudinaryError) {
         console.warn('⚠️ Avatar Cloudinary upload failed, falling back to local storage:', cloudinaryError.message);
-        avatarUrl = `/uploads/${path.basename(req.file.path)}`;
+        avatarUrl = getAbsoluteUrl(req, `/uploads/${path.basename(req.file.path)}`);
         publicId = null;
       }
     }

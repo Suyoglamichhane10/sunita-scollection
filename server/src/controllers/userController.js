@@ -8,6 +8,7 @@ const Gamification = require('../Models/Gamification');
 const bcrypt = require('bcrypt');
 const path = require('path');
 const cloudinary = require('../config/cloudinary');
+const { getAbsoluteUrl } = require('../Utils/getAbsoluteUrl');
 
 // Helper: delete Cloudinary image by publicId (ignore local/null ids)
 const deleteCloudinaryImage = async (publicId) => {
@@ -428,7 +429,7 @@ exports.uploadAvatar = async (req, res, next) => {
     let publicId;
 
     if (!isConfigured) {
-      avatarUrl = `/uploads/${path.basename(req.file.path)}`;
+      avatarUrl = getAbsoluteUrl(req, `/uploads/${path.basename(req.file.path)}`);
       publicId = null;
     } else {
       try {
@@ -442,7 +443,7 @@ exports.uploadAvatar = async (req, res, next) => {
         publicId = result.public_id;
       } catch (cloudinaryError) {
         console.warn('⚠️ Avatar Cloudinary upload failed, falling back to local storage:', cloudinaryError.message);
-        avatarUrl = `/uploads/${path.basename(req.file.path)}`;
+        avatarUrl = getAbsoluteUrl(req, `/uploads/${path.basename(req.file.path)}`);
         publicId = null;
       }
     }
@@ -484,7 +485,7 @@ exports.uploadUserAvatar = async (req, res, next) => {
     let publicId;
 
     if (!isConfigured) {
-      avatarUrl = `/uploads/${path.basename(req.file.path)}`;
+      avatarUrl = getAbsoluteUrl(req, `/uploads/${path.basename(req.file.path)}`);
       publicId = null;
     } else {
       try {
@@ -498,7 +499,7 @@ exports.uploadUserAvatar = async (req, res, next) => {
         publicId = result.public_id;
       } catch (cloudinaryError) {
         console.warn('⚠️ Avatar Cloudinary upload failed, falling back to local storage:', cloudinaryError.message);
-        avatarUrl = `/uploads/${path.basename(req.file.path)}`;
+        avatarUrl = getAbsoluteUrl(req, `/uploads/${path.basename(req.file.path)}`);
         publicId = null;
       }
     }

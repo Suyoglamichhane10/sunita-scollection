@@ -1,6 +1,7 @@
 const Slide = require('../Models/Slide');
 const cloudinary = require('../config/cloudinary');
 const path = require('path');
+const { getAbsoluteUrl } = require('../Utils/getAbsoluteUrl');
 
 const isCloudinaryConfigured = () =>
   Boolean(
@@ -68,11 +69,11 @@ exports.createSlide = async (req, res, next) => {
           imagePublicId = result.public_id;
         } catch (cloudinaryError) {
           console.warn('Cloudinary upload failed, falling back to local:', cloudinaryError.message);
-          imageUrl = `/uploads/${path.basename(req.file.path)}`;
+          imageUrl = getAbsoluteUrl(req, `/uploads/${path.basename(req.file.path)}`);
           imagePublicId = null;
         }
       } else {
-        imageUrl = `/uploads/${path.basename(req.file.path)}`;
+        imageUrl = getAbsoluteUrl(req, `/uploads/${path.basename(req.file.path)}`);
         imagePublicId = null;
       }
     }
