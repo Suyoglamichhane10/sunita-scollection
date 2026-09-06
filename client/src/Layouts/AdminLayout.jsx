@@ -120,22 +120,21 @@ const AdminLayout = () => {
               </NavLink>
             </li>
           ))}
+          <li>
+            <button
+              type="button"
+              onClick={() => {
+                logout();
+                setTimeout(() => window.location.href = '/login', 50);
+              }}
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50"
+            >
+              <FaSignOutAlt className="text-base" />
+              Logout
+            </button>
+          </li>
         </ul>
       </nav>
-
-      <div className="mt-4 border-t border-gold/20 pt-4 flex-shrink-0">
-        <button
-          type="button"
-          onClick={() => {
-            logout();
-            setTimeout(() => window.location.href = '/login', 50);
-          }}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50"
-        >
-          <FaSignOutAlt className="text-base" />
-          Logout
-        </button>
-      </div>
     </div>
   );
 
