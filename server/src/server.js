@@ -42,6 +42,10 @@ app.set('io', io);
 io.on('connection', (socket) => {
   console.log(`✅ Socket connected: ${socket.id}`);
 
+  socket.on('join-room', (userId) => {
+    socket.join(`user_${userId}`);
+  });
+
   socket.on('join-admin-inbox', () => {
     socket.join('admins');
   });
