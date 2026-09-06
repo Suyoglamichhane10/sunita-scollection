@@ -5,6 +5,7 @@ import api from '../../Services/api';
 import wishlistApi from '../../Services/wishlistApi';
 import { useAuth } from '../../Context/Authcontext';
 import { FaHeart, FaShoppingCart, FaTimes, FaTrash } from 'react-icons/fa';
+import { getCloudinaryOptimizedUrl, getAbsoluteImageUrl, handleImageError, getFallbackImage } from '../../utils/imageOptimizer';
 
 const Wishlist = () => {
   const [items, setItems] = useState([]);
@@ -105,7 +106,7 @@ const Wishlist = () => {
               <div key={`${item.product?._id}-${item.variantSku || ''}`} className="card-luxury overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
                 <Link to={`/product/${item.product?._id}`} className="relative block">
                   {item.product?.images?.[0]?.url ? (
-                    <img src={item.product.images[0].url} alt={item.product.name} className="h-56 w-full object-cover" />
+                    <img src={getAbsoluteImageUrl(getCloudinaryOptimizedUrl(item.product.images[0].url))} alt={item.product.name} className="h-56 w-full object-cover" onError={handleImageError} />
                   ) : (
                     <div className="flex h-56 w-full items-center justify-center bg-gray-100 text-gray-400">No image</div>
                   )}

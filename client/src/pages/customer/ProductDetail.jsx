@@ -10,7 +10,7 @@ import ImageGallery from '../../components/products/ImageGallery';
 import Breadcrumb from '../../components/common/Breadcrumb';
 import SocialShare from '../../components/products/SocialShare';
 import SizeGuide from '../../components/products/SizeGuide';
-import { getCloudinaryOptimizedUrl, getMainImage } from '../../utils/imageOptimizer';
+import { getCloudinaryOptimizedUrl, getMainImage, handleImageError } from '../../utils/imageOptimizer';
 
 const StarRating = ({ value, onChange, readOnly }) => {
   return (
@@ -568,48 +568,48 @@ const ProductDetail = () => {
                 return (
                   <Link key={p._id} to={`/product/${p._id}`} className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:shadow-md">
                     {mainImage?.url ? (
-                      <img src={getCloudinaryOptimizedUrl(mainImage.url, 400)} alt={p.name} className="h-40 w-full object-cover" />
+                      <img src={getCloudinaryOptimizedUrl(mainImage.url, 400)} alt={p.name} className="h-40 w-full object-cover" onError={handleImageError} />
                     ) : (
                       <div className="flex h-40 w-full items-center justify-center bg-gray-100 text-3xl text-gray-300">👗</div>
                     )}
-                    <div className="p-3">
-                      <p className="line-clamp-1 text-sm font-semibold text-gray-900">{p.name}</p>
-                      <p className="text-sm font-bold text-pink-600">Rs. {p.price}</p>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {alsoBought.length > 0 && (
-          <div className="mt-12">
-            <h2 className="font-serif text-2xl font-bold text-gray-900">Customers Also Bought</h2>
-            <p className="mt-1 text-sm text-gray-500">Frequently purchased together with this item</p>
-            {alsoBoughtLoading ? (
-              <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="animate-pulse rounded-3xl border border-gray-200 bg-gray-50 p-4">
-                    <div className="h-40 w-full rounded-2xl bg-gray-200" />
-                    <div className="mt-4 space-y-3">
-                      <div className="h-4 w-3/4 rounded bg-gray-200" />
-                      <div className="h-4 w-1/2 rounded bg-gray-200" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
-                {alsoBought.slice(0, 4).map((p) => {
-                  const mainImage = getMainImage(p.images, p.name);
-                  return (
-                    <Link key={p._id} to={`/product/${p._id}`} className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:shadow-md">
-                      {mainImage?.url ? (
-                        <img src={getCloudinaryOptimizedUrl(mainImage.url, 400)} alt={p.name} className="h-40 w-full object-cover" />
-                      ) : (
-                        <div className="flex h-40 w-full items-center justify-center bg-gray-100 text-3xl text-gray-300">👗</div>
-                      )}
+                     <div className="p-3">
+                       <p className="line-clamp-1 text-sm font-semibold text-gray-900">{p.name}</p>
+                       <p className="text-sm font-bold text-pink-600">Rs. {p.price}</p>
+                     </div>
+                   </Link>
+                 );
+               })}
+             </div>
+           </div>
+         )}
+ 
+         {alsoBought.length > 0 && (
+           <div className="mt-12">
+             <h2 className="font-serif text-2xl font-bold text-gray-900">Customers Also Bought</h2>
+             <p className="mt-1 text-sm text-gray-500">Frequently purchased together with this item</p>
+             {alsoBoughtLoading ? (
+               <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
+                 {Array.from({ length: 4 }).map((_, i) => (
+                   <div key={i} className="animate-pulse rounded-3xl border border-gray-200 bg-gray-50 p-4">
+                     <div className="h-40 w-full rounded-2xl bg-gray-200" />
+                     <div className="mt-4 space-y-3">
+                       <div className="h-4 w-3/4 rounded bg-gray-200" />
+                       <div className="h-4 w-1/2 rounded bg-gray-200" />
+                     </div>
+                   </div>
+                 ))}
+               </div>
+             ) : (
+               <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
+                 {alsoBought.slice(0, 4).map((p) => {
+                   const mainImage = getMainImage(p.images, p.name);
+                   return (
+                     <Link key={p._id} to={`/product/${p._id}`} className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:shadow-md">
+                       {mainImage?.url ? (
+                         <img src={getCloudinaryOptimizedUrl(mainImage.url, 400)} alt={p.name} className="h-40 w-full object-cover" onError={handleImageError} />
+                       ) : (
+                         <div className="flex h-40 w-full items-center justify-center bg-gray-100 text-3xl text-gray-300">👗</div>
+                       )}
                       <div className="p-3">
                         <p className="line-clamp-1 text-sm font-semibold text-gray-900">{p.name}</p>
                         <p className="text-sm font-bold text-pink-600">Rs. {p.price}</p>

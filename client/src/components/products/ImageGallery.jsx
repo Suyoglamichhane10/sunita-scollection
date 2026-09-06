@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { getCloudinaryOptimizedUrl, getMainImage } from '../../utils/imageOptimizer';
+import { getCloudinaryOptimizedUrl, getMainImage, handleImageError } from '../../utils/imageOptimizer';
 
 const Lightbox = ({ images, currentIndex, onClose, onNavigate }) => {
   useEffect(() => {
@@ -35,6 +35,7 @@ const Lightbox = ({ images, currentIndex, onClose, onNavigate }) => {
           src={getCloudinaryOptimizedUrl(images[currentIndex]?.url, 1400)}
           alt={`Product image ${currentIndex + 1}`}
           className="max-h-[85vh] max-w-full rounded-2xl object-contain"
+          onError={handleImageError}
         />
 
         {images.length > 1 && (
@@ -143,6 +144,7 @@ const ImageGallery = ({ images, fallbackImage, productName, selectedVariant }) =
                 : undefined
             }
             onClick={() => openLightbox(displayImages.findIndex((img) => img.url === mainImage?.url))}
+            onError={handleImageError}
           />
         </div>
 
@@ -175,6 +177,7 @@ const ImageGallery = ({ images, fallbackImage, productName, selectedVariant }) =
                 alt={`${productName || 'Product'} thumbnail ${index + 1}`}
                 loading="lazy"
                 className="h-full w-full object-cover"
+                onError={handleImageError}
               />
             </button>
           ))}

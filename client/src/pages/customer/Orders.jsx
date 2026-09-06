@@ -4,6 +4,7 @@ import api from '../../Services/api';
 import { useCart } from '../../Context/CartContext';
 import { useAuth } from '../../Context/Authcontext';
 import { FaCheck, FaTruck, FaTimes, FaMapMarkerAlt, FaFileInvoice, FaRedo } from 'react-icons/fa';
+import { handleImageError } from '../../utils/imageOptimizer';
 
 const ORDER_FLOW = ['pending', 'confirmed', 'processing', 'packed', 'shipped', 'delivered'];
 const ORDER_COLORS = {
@@ -201,7 +202,7 @@ const Orders = () => {
                     {order.items.map((item, idx) => (
                       <div key={idx} className="flex items-center gap-4 rounded-3xl bg-gray-50 p-4">
                         {item.image ? (
-                          <img src={item.image} alt={item.name} className="h-16 w-16 rounded-2xl object-cover" />
+                          <img src={item.image} alt={item.name} className="h-16 w-16 rounded-2xl object-cover" onError={handleImageError} />
                         ) : (
                           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gray-200 text-gray-400">No img</div>
                         )}

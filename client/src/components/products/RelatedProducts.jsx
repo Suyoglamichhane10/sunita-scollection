@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import api from '../../Services/api';
 import { useCart } from '../../Context/CartContext';
 import { useAuth } from '../../Context/Authcontext';
-import { getCloudinaryOptimizedUrl } from '../../utils/imageOptimizer';
+import { getCloudinaryOptimizedUrl, handleImageError } from '../../utils/imageOptimizer';
 
 const RelatedProducts = ({ productId }) => {
   const [products, setProducts] = useState([]);
@@ -76,7 +76,7 @@ const RelatedProducts = ({ productId }) => {
             <div key={product._id} className="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm transition hover:shadow-lg">
               <Link to={`/product/${product._id}`} className="relative block">
                 {mainImage?.url ? (
-                  <img src={getCloudinaryOptimizedUrl(mainImage.url, 600)} alt={product.name} className="h-48 w-full object-cover" />
+                  <img src={getCloudinaryOptimizedUrl(mainImage.url, 600)} alt={product.name} className="h-48 w-full object-cover" onError={handleImageError} />
                 ) : (
                   <div className="flex h-48 w-full items-center justify-center bg-gray-100 text-4xl text-gray-300">👗</div>
                 )}

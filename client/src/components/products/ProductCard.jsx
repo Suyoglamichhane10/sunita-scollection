@@ -5,7 +5,7 @@ import { useCart } from '../../Context/CartContext';
 import { useAuth } from '../../Context/Authcontext';
 import { useWishlist } from '../../Context/WishlistContext';
 import { useCompare } from '../../Context/CompareContext';
-import { getCloudinaryOptimizedUrl, getMainImage, getVariantImage } from '../../utils/imageOptimizer';
+import { getCloudinaryOptimizedUrl, getMainImage, getVariantImage, handleImageError } from '../../utils/imageOptimizer';
 
 const ProductCard = ({ product, onQuickView, compact = false }) => {
   const threshold = product.lowStockThreshold || 5;
@@ -139,6 +139,7 @@ const ProductCard = ({ product, onQuickView, compact = false }) => {
               alt={product.name}
               className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
               loading="lazy"
+              onError={handleImageError}
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300">
@@ -282,6 +283,7 @@ const ProductCard = ({ product, onQuickView, compact = false }) => {
             src={getCloudinaryOptimizedUrl(displayImage.url, 600)}
             alt={product.name}
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+            onError={handleImageError}
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300">

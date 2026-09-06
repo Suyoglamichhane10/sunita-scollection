@@ -4,7 +4,7 @@ import { FaShoppingCart, FaEye, FaArrowRight } from 'react-icons/fa';
 import { useCart } from '../../Context/CartContext';
 import { useAuth } from '../../Context/Authcontext';
 import api from '../../Services/api';
-import { getCloudinaryOptimizedUrl } from '../../utils/imageOptimizer';
+import { getCloudinaryOptimizedUrl, handleImageError } from '../../utils/imageOptimizer';
 
 const SkeletonCard = () => (
   <div className="h-56 w-36 shrink-0 animate-pulse rounded-xl bg-gray-200 sm:w-44" />
@@ -29,6 +29,7 @@ const MarqueeCard = React.memo(({ product, onAddToCart }) => {
             alt={product.name}
             className="h-full w-full object-cover"
             loading="lazy"
+            onError={handleImageError}
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary-100 to-gold-100">

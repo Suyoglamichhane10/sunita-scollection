@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { FaBoxOpen, FaChartLine, FaComments, FaLayerGroup, FaTruck, FaUsers, FaWarehouse, FaInbox, FaBullhorn, FaUserCircle, FaSignOutAlt, FaMapMarkerAlt, FaImages, FaBars, FaTimes } from 'react-icons/fa';
 import { useAuth } from '../Context/Authcontext';
 import NotificationCenter from '../components/chat/NotificationCenter';
@@ -48,6 +48,10 @@ const AdminLayout = () => {
     return () => document.removeEventListener('keydown', handleKey);
   }, []);
 
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location.pathname]);
+
   if (loading || !isAuthenticated || !isAdmin) {
     return (
       <div className="min-h-screen bg-gray-100 py-20">
@@ -77,8 +81,8 @@ const AdminLayout = () => {
   ];
 
   const sidebarContent = (
-    <>
-      <div className="mb-6 flex flex-col items-center gap-3">
+    <div className="flex h-full flex-col">
+      <div className="mb-6 flex flex-col items-center gap-3 flex-shrink-0">
         <div className="block">
           <img
             src="/admin-logo.png"
@@ -89,7 +93,7 @@ const AdminLayout = () => {
         <p className="font-serif text-base font-bold text-primary">Store management</p>
       </div>
       {user?.name && (
-        <div className="mb-4 flex items-center gap-3 rounded-xl border border-gold/20 bg-white/60 px-3 py-2.5 text-sm">
+        <div className="mb-4 flex items-center gap-3 rounded-xl border border-gold/20 bg-white/60 px-3 py-2.5 text-sm flex-shrink-0">
           <Avatar src={user?.avatar} name={user?.name} size="sm" showBorder={true} borderColor="border-white" />
           <div className="min-w-0">
             <p className="text-xs font-medium uppercase tracking-wider text-ink-light">Logged in as</p>
@@ -97,26 +101,29 @@ const AdminLayout = () => {
           </div>
         </div>
       )}
-      <nav className="flex flex-col gap-1">
-        {navItems.map(({ to, label, icon: Icon, end }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={end}
-            onClick={() => setSidebarOpen(false)}
-            className={({ isActive }) =>
-              `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
-                isActive ? 'bg-blush text-primary' : 'text-ink-light hover:bg-gold/20 hover:text-primary'
-              }`
-            }
-          >
-            <Icon className="text-base" />
-            {label}
-          </NavLink>
-        ))}
+      <nav className="flex-1 overflow-y-auto">
+        <ul className="space-y-1">
+          {navItems.map(({ to, label, icon: Icon, end }) => (
+            <li key={to}>
+              <NavLink
+                to={to}
+                end={end}
+                onClick={() => setSidebarOpen(false)}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
+                    isActive ? 'bg-blush text-primary' : 'text-ink-light hover:bg-gold/20 hover:text-primary'
+                  }`
+                }
+              >
+                <Icon className="text-base" />
+                {label}
+              </NavLink>
+            </li>
+          ))}
+        </ul>
       </nav>
 
-      <div className="mt-auto border-t border-gold/20 pt-4">
+      <div className="mt-4 border-t border-gold/20 pt-4 flex-shrink-0">
         <button
           type="button"
           onClick={() => {
@@ -129,26 +136,12 @@ const AdminLayout = () => {
           Logout
         </button>
       </div>
-    </>
+    </div>
   );
 
   return (
     <div className="min-h-screen bg-cream-light lg:grid lg:grid-cols-[280px_minmax(0,1fr)]">
-      {/* Mobile header with hamburger */}
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-gold/20 bg-cream px-4 py-3 lg:hidden">
-        <button
-          type="button"
-          onClick={() => setSidebarOpen((v) => !v)}
-          className="rounded-full border border-gold/40 p-2.5 text-primary"
-          aria-label="Toggle sidebar"
-        >
-          {sidebarOpen ? <FaTimes /> : <FaBars />}
-        </button>
-        <p className="font-serif text-base font-bold text-primary">Store management</p>
-        <NotificationCenter />
-      </header>
-
-      {/* Overlay */}
+      {/* Mobile overlay */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden"
@@ -159,8 +152,8 @@ const AdminLayout = () => {
       {/* Sidebar drawer on mobile, static sidebar on desktop */}
       <aside
         className={[
-          'fixed inset-y-0 left-0 z-50 w-[280px] -translate-x-full overflow-y-auto border-r border-gold/20 bg-cream px-5 py-6 transition-transform duration-300 ease-in-out lg:static lg:z-auto lg:col-span-1 lg:translate-x-0 lg:min-h-screen',
-          sidebarOpen ? 'translate-x-0' : '',
+          'fixed inset-y-0 left-0 z-50 w-[280px] border-r border-gold/20 bg-cream px-5 py-6 transition-transform duration-300 ease-in-out lg:static lg:z-auto lg:translate-x-0 lg:min-h-screen',
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full',
         ].join(' ')}
       >
         {/* Close button on mobile */}
@@ -176,14 +169,26 @@ const AdminLayout = () => {
         {sidebarContent}
       </aside>
 
-      {/* Desktop-only static sidebar */}
-      <aside className="hidden lg:block border-b border-gold/20 bg-cream px-5 py-6 lg:min-h-screen lg:border-b-0 lg:border-r">
-        {sidebarContent}
-      </aside>
+      {/* Main content area */}
+      <div className="min-w-0 flex flex-col">
+        {/* Mobile header */}
+        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-gold/20 bg-cream px-4 py-3 lg:hidden">
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(true)}
+            className="rounded-full border border-gold/40 p-2.5 text-primary"
+            aria-label="Open sidebar"
+          >
+            <FaBars />
+          </button>
+          <p className="font-serif text-base font-bold text-primary">Store management</p>
+          <NotificationCenter />
+        </header>
 
-      <main className="min-w-0 lg:col-span-1">
-        <Outlet />
-      </main>
+        <main className="flex-1 p-4">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 };

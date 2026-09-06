@@ -15,7 +15,7 @@ import ProductCard from '../../components/products/ProductCard';
 import ProductMarquee from '../../components/home/ProductMarquee';
 import QuickViewModal from '../../components/products/QuickViewModal';
 import TypewriterTitle from '../../components/common/TypewriterTitle';
-import { getCloudinaryOptimizedUrl } from '../../utils/imageOptimizer';
+import { getCloudinaryOptimizedUrl, handleImageError } from '../../utils/imageOptimizer';
 import EsewaLogo from '../../assets/Esewa_logo.webp';
 import KhaltiLogo from '../../assets/khalti.png';
 import FonepayLogo from '../../assets/fonepay.png';
@@ -154,6 +154,7 @@ const BrandSection = ({ title, brands, onQuickView }) => {
                         alt={product.name}
                         className="aspect-square rounded-md object-cover"
                         loading="lazy"
+                        onError={handleImageError}
                       />
                     </Link>
                   ))}
@@ -200,6 +201,7 @@ const ColorSection = ({ title, groups }) => {
                       src={getCloudinaryOptimizedUrl(product.images?.[0]?.url, 300)}
                       alt={product.name}
                       className="h-24 w-full rounded-lg object-cover"
+                      onError={handleImageError}
                     />
                     <p className="mt-2 truncate text-xs font-semibold text-primary-800">{product.name}</p>
                     <p className="text-xs font-bold text-gold-600">Rs. {product.price}</p>

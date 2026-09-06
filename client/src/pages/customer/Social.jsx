@@ -7,6 +7,7 @@ import api from '../../Services/api';
 import { useAuth } from '../../Context/Authcontext';
 import { useCart } from '../../Context/CartContext';
 import toast from 'react-hot-toast';
+import { handleImageError } from '../../utils/imageOptimizer';
 
 const Social = () => {
   const { isAuthenticated, loading: authLoading, user } = useAuth();
@@ -198,7 +199,7 @@ const Social = () => {
 
                   {/* Images */}
                   {post.images?.map((img) => (
-                    <img key={img._id || img.url} src={img.url} alt={post.caption} className="w-full object-cover" />
+                    <img key={img._id || img.url} src={img.url} alt={post.caption} className="w-full object-cover" onError={handleImageError} />
                   ))}
 
                   {/* Caption + hashtags */}
@@ -224,7 +225,7 @@ const Social = () => {
                       <div className="mt-3 flex flex-wrap gap-2">
                         {post.tags.map((t) => (
                           <div key={t.product} className="flex items-center gap-2 rounded-full bg-gray-100 px-3 py-1.5">
-                            <img src={t.image} alt={t.name} className="h-6 w-6 rounded-full object-cover" />
+                            <img src={t.image} alt={t.name} className="h-6 w-6 rounded-full object-cover" onError={handleImageError} />
                             <span className="text-xs font-semibold text-gray-700">{t.name}</span>
                             <button
                               type="button"

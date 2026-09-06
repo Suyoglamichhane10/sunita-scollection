@@ -5,7 +5,7 @@ import { useCart } from '../../Context/CartContext';
 import { useAuth } from '../../Context/Authcontext';
 import toast from 'react-hot-toast';
 import wishlistApi from '../../Services/wishlistApi';
-import { getMainImage, getCloudinaryOptimizedUrl } from '../../utils/imageOptimizer';
+import { getMainImage, getCloudinaryOptimizedUrl, handleImageError } from '../../utils/imageOptimizer';
 
 const getAttr = (variant, key) => {
   if (!variant || !variant.attributes) return undefined;
@@ -190,6 +190,7 @@ const QuickViewModal = ({ product, isOpen, onClose }) => {
                       ? { transformOrigin: `${mousePosition.x}% ${mousePosition.y}%` }
                       : undefined
                   }
+                  onError={handleImageError}
                 />
               </div>
             </div>
@@ -209,6 +210,7 @@ const QuickViewModal = ({ product, isOpen, onClose }) => {
                       alt={`${product.name} thumbnail ${idx + 1}`}
                       loading="lazy"
                       className="h-full w-full object-cover"
+                      onError={handleImageError}
                     />
                   </button>
                 ))}
@@ -402,7 +404,7 @@ const QuickViewModal = ({ product, isOpen, onClose }) => {
                     className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:shadow-lg"
                   >
                     {main?.url ? (
-                      <img src={getCloudinaryOptimizedUrl(main.url, 400)} alt={rel.name} className="h-32 w-full object-cover" />
+                      <img src={getCloudinaryOptimizedUrl(main.url, 400)} alt={rel.name} className="h-32 w-full object-cover" onError={handleImageError} />
                     ) : (
                       <div className="flex h-32 w-full items-center justify-center bg-gray-100 text-3xl text-gray-300">👗</div>
                     )}

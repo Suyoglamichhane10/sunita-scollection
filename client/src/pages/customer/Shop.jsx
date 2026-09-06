@@ -5,6 +5,7 @@ import api from '../../Services/api';
 import wishlistApi from '../../Services/wishlistApi';
 import { useCart } from '../../Context/CartContext';
 import { useAuth } from '../../Context/Authcontext';
+import { getCloudinaryOptimizedUrl, getAbsoluteImageUrl, handleImageError, getFallbackImage } from '../../utils/imageOptimizer';
 import SearchBar from '../../components/shop/SearchBar';
 import CategoryFilter from '../../components/shop/CategoryFilter';
 import PriceFilter from '../../components/shop/PriceFilter';
@@ -51,9 +52,10 @@ const ShopProductCard = React.memo(({ product, addToCart, isAuthenticated, navig
     <div className="card-luxury relative overflow-hidden rounded-3xl border border-gold/20 bg-white shadow-card">
       <Link to={`/product/${product._id}`} className="block overflow-hidden">
         <img
-          src={variant?.images?.[0]?.url || product.images?.[0]?.url || 'https://via.placeholder.com/400x400?text=Product'}
+          src={getAbsoluteImageUrl(getCloudinaryOptimizedUrl(variant?.images?.[0]?.url || product.images?.[0]?.url)) || getFallbackImage()}
           alt={product.name}
           className="h-64 w-full object-cover transition duration-300 hover:scale-105"
+          onError={handleImageError}
         />
       </Link>
       <button

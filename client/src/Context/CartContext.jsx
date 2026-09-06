@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import toast from 'react-hot-toast';
 import api from '../Services/api';
 import { useAuth } from './Authcontext';
+import { getFallbackImage } from '../utils/imageOptimizer';
 
 const CartContext = createContext();
 
@@ -18,7 +19,7 @@ const normalizeServerItem = (cartItem) => {
   ) || null;
 
   const price = variant?.price ?? product.price;
-  const image = variant?.images?.[0]?.url || product.images?.[0]?.url || '/placeholder.jpg';
+      const image = variant?.images?.[0]?.url || product.images?.[0]?.url || getFallbackImage();
   const stock = variant?.stock ?? product.stock;
 
   return {
@@ -197,7 +198,7 @@ const addToCart = useCallback(
       const variantSku = variant?.sku || variant?._id || null;
       const key = variantSku ? `${product._id}:${variantSku}` : `${product._id}`;
       const price = variant?.price ?? product.price;
-      const image = variant?.images?.[0]?.url || product.images?.[0]?.url || '/placeholder.jpg';
+  const image = variant?.images?.[0]?.url || product.images?.[0]?.url || getFallbackImage();
       const stock = variant?.stock ?? product.stock;
 
       const sanitizedQty = Math.max(1, Math.floor(Number(quantity) || 1));

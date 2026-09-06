@@ -72,7 +72,9 @@ const Login = () => {
         <div className="glow-panel hidden md:flex md:w-1/2 flex-col justify-center px-10 py-12 bg-gradient-to-b from-primary-800 to-primary-950 text-white relative">
           <div className="relative">
             <div className="mb-6 flex justify-center">
-              <img src={logo} alt="Brand logo" className="h-28 w-auto object-contain" />
+              <Link to="/">
+                <img src={logo} alt="Brand logo" className="h-28 w-auto object-contain" />
+              </Link>
             </div>
             <h2 className="font-serif text-3xl font-bold text-gold-200 text-center">Welcome Back</h2>
             <p className="mt-3 leading-7 text-white/80 text-center">
@@ -90,7 +92,9 @@ const Login = () => {
         <div className="w-full md:w-1/2 p-8 bg-white">
           <div className="max-w-md mx-auto">
             <div className="text-center mb-6 md:hidden">
-              <img src={logo} alt="Brand logo" className="mx-auto mb-3 h-20 w-auto object-contain" />
+              <Link to="/">
+                <img src={logo} alt="Brand logo" className="mx-auto mb-3 h-20 w-auto object-contain" />
+              </Link>
             </div>
 
             <h2 className="font-serif text-center text-2xl font-bold text-primary-800 mb-1">Sign in</h2>

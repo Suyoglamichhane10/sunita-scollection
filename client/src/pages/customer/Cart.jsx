@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../../Context/CartContext';
+import { handleImageError } from '../../utils/imageOptimizer';
 
 const Cart = () => {
   const { cartItems, totalItems, totalPrice, updateQuantity, removeFromCart, clearCart } = useCart();
@@ -42,6 +43,7 @@ const Cart = () => {
                   src={item.image}
                   alt={item.name}
                   className="h-36 w-full rounded-3xl object-cover sm:h-full"
+                  onError={handleImageError}
                 />
                 <div>
                   <h2 className="text-lg font-semibold text-gray-900">{item.name}</h2>
