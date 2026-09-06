@@ -6,6 +6,8 @@ const { sendPasswordReset } = require('../services/emailService');
 const https = require('https');
 
 const FACEBOOK_GRAPH_URL = 'https://graph.facebook.com/v18.0';
+const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
+const GOOGLE_USERINFO_URL = 'https://www.googleapis.com/oauth2/v3/userinfo';
 
 const generateToken = (user) => {
   return jwt.sign(
@@ -81,6 +83,56 @@ const exchangeCodeForToken = async (code) => {
               return reject(new Error(parsed.error.message || 'Facebook token exchange failed'));
             }
             resolve(parsed.access_token);
+          } catch (err) {
+            reject(err);
+          }
+        });
+      }
+    ).on('error', reject);
+  });
+};
+
+const postForm = (url, formParams) =>
+  new Promise((resolve, reject) => {
+    const payload = new URLSearchParams(formParams).toString();
+    const req = https.request(
+      url,
+      { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' } },
+      (res) => {
+        let data = '';
+        res.on('data', (chunk) => (data += chunk));
+        res.on('end', () => {
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.error) {
+              return reject(new Error(parsed.error.error_description || parsed.error.message || 'Token exchange failed'));
+            }
+            resolve(parsed);
+          } catch (err) {
+            reject(err);
+          }
+        });
+      }
+    );
+    req.on('error', reject);
+    req.write(payload);
+    req.end();
+  });
+
+const fetchGoogleUser = async (accessToken) => {
+  return new Promise((resolve, reject) => {
+    https.get(
+      `${GOOGLE_USERINFO_URL}?access_token=${accessToken}`,
+      (res) => {
+        let data = '';
+        res.on('data', (chunk) => (data += chunk));
+        res.on('end', () => {
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.error) {
+              return reject(new Error(parsed.error.message || 'Google fetch failed'));
+            }
+            resolve(parsed);
           } catch (err) {
             reject(err);
           }
@@ -211,6 +263,71 @@ exports.facebookCallback = async (req, res, next) => {
   } catch (error) {
     console.error('Facebook callback error:', error);
     res.redirect(`${process.env.FRONTEND_URL}/login?error=facebook_auth_failed`);
+  }
+};
+
+exports.googleLogin = async (req, res, next) => {
+  try {
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const callbackUrl = process.env.GOOGLE_CALLBACK_URL || `${process.env.FRONTEND_URL}/api/auth/google/callback`;
+    const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(callbackUrl)}&response_type=code&scope=openid%20profile%20email&access_type=offline&prompt=consent`;
+    res.redirect(googleAuthUrl);
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.googleCallback = async (req, res, next) => {
+  try {
+    const code = req.query.code;
+    if (!code) {
+      return res.redirect(`${process.env.FRONTEND_URL}/login?error=google_auth_denied`);
+    }
+
+    const callbackUrl = process.env.GOOGLE_CALLBACK_URL || `${process.env.FRONTEND_URL}/api/auth/google/callback`;
+    const tokenResponse = await postForm(GOOGLE_TOKEN_URL, {
+      code,
+      client_id: process.env.GOOGLE_CLIENT_ID,
+      client_secret: process.env.GOOGLE_CLIENT_SECRET,
+      redirect_uri: callbackUrl,
+      grant_type: 'authorization_code',
+    });
+
+    const googleUser = await fetchGoogleUser(tokenResponse.access_token);
+
+    if (!googleUser.email) {
+      return res.redirect(`${process.env.FRONTEND_URL}/login?error=google_email_required`);
+    }
+
+    let user = await User.findOne({ email: googleUser.email });
+
+    if (!user) {
+      user = await User.create({
+        name: googleUser.name,
+        email: googleUser.email,
+        password: crypto.randomBytes(20).toString('hex'),
+        socialProvider: 'google',
+        socialId: googleUser.sub,
+        avatar: googleUser.picture || null,
+      });
+    } else if (!user.socialProvider) {
+      user.socialProvider = 'google';
+      user.socialId = googleUser.sub;
+      if (!user.avatar && googleUser.picture) {
+        user.avatar = googleUser.picture;
+      }
+      await user.save();
+    }
+
+    user.lastLogin = Date.now();
+    await user.save();
+
+    const token = generateToken(user);
+
+    res.redirect(`${process.env.FRONTEND_URL}/login?token=${token}`);
+  } catch (error) {
+    console.error('Google callback error:', error);
+    res.redirect(`${process.env.FRONTEND_URL}/login?error=google_auth_failed`);
   }
 };
 

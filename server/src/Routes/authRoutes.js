@@ -9,6 +9,8 @@ const {
   resetPassword,
   facebookLogin,
   facebookCallback,
+  googleLogin,
+  googleCallback,
 } = require('../controllers/authController');
 const { protect } = require('../Middleware/auth');
 const { validateRegister, validateLogin, validate } = require('../Middleware/validator');
@@ -20,6 +22,9 @@ router.post('/forgot-password', forgotPassword);
 router.put('/reset-password/:resetToken', resetPassword);
 router.get('/facebook', facebookLogin);
 router.get('/facebook/callback', facebookCallback);
+
+router.get('/google', googleLogin);
+router.get('/google/callback', googleCallback);
 
 // Protected routes
 router.get('/logout', protect, logout);
