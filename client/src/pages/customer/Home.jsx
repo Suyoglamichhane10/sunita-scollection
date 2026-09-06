@@ -320,25 +320,6 @@ const Home = () => {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-8 lg:px-8">
-        <div className="mb-6 flex items-end justify-between gap-4">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-gold-600">Shop by vibe</p>
-            <h2 className="font-serif mt-2 text-3xl font-bold text-primary-800">Explore Categories</h2>
-          </div>
-          <Link to="/shop" className="shrink-0 font-semibold text-gold-600 hover:text-gold-700">View all <FaArrowRight className="ml-1 inline" /></Link>
-        </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {categories.length ? categories.map((category) => (
-            <Link key={category._id} to="/shop" className="group rounded-2xl border border-gold/20 bg-white p-6 shadow-card transition hover:-translate-y-1 hover:border-gold-400 hover:shadow-elegant">
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-gold-500">Collection</p>
-              <h3 className="font-serif mt-3 text-xl font-bold text-primary-800 group-hover:text-primary-600">{category.name}</h3>
-              <p className="mt-2 line-clamp-2 text-sm leading-6 text-ink-light">{category.description || 'Explore pieces chosen to complement your personal style.'}</p>
-              <span className="mt-5 inline-block text-sm font-semibold text-gold-600">Explore <FaArrowRight className="ml-1 inline" /></span>
-            </Link>
-          )) : <div className="col-span-full rounded-2xl bg-white p-6 text-ink-light shadow-card">Categories will appear here as soon as they are added.</div>}
-        </div>
-      </section>
 
       {recentlyViewed.length > 0 && (
         <section className="mx-auto max-w-7xl px-4 py-6 lg:px-8">
