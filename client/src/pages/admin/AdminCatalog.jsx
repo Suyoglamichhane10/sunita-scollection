@@ -931,27 +931,28 @@ const AdminCatalog = () => {
             </div>
           </div>
 
-          <div className="mt-5 overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
-              <thead className="border-b border-gray-200 text-gray-500">
-                <tr>
-                  <th className="p-3">Photo</th>
-                  <th className="p-3">Product</th>
-                  <th className="p-3">Category</th>
-                  <th className="p-3">Colors</th>
-                  <th className="p-3">Stock</th>
-                  <th className="p-3">Status</th>
-                  <th className="p-3">Actions</th>
-                </tr>
-              </thead>
+          <div className="mt-5 overflow-x-auto -mx-4 sm:mx-0">
+            <div className="inline-block min-w-full align-middle">
+              <table className="min-w-full text-left text-sm">
+                <thead className="border-b border-gray-200 text-gray-500">
+                  <tr>
+                    <th className="p-2 sm:p-3">Photo</th>
+                    <th className="p-2 sm:p-3">Product</th>
+                    <th className="hidden sm:table-cell p-2 sm:p-3">Category</th>
+                    <th className="hidden md:table-cell p-2 sm:p-3">Colors</th>
+                    <th className="p-2 sm:p-3">Stock</th>
+                    <th className="hidden sm:table-cell p-2 sm:p-3">Status</th>
+                    <th className="p-2 sm:p-3 sticky right-0 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Actions</th>
+                  </tr>
+                </thead>
               <tbody>
                 {filteredProducts.map((product) => {
                   const stockStatus = getStockStatus(product);
                   const totalStock = (product.variants || []).reduce((acc, v) => acc + (v.stock || 0), 0) + (product.stock || 0);
                   return (
                     <tr key={product._id} className={`border-b border-gray-100 ${totalStock === 0 ? 'bg-red-50' : (totalStock <= (product.lowStockThreshold || 5) ? 'bg-yellow-50' : '')}`}>
-                      <td className="p-3">
-                        <div className="h-20 w-20 overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
+                      <td className="p-2 sm:p-3">
+                        <div className="h-12 w-12 sm:h-20 sm:w-20 overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
                           {(() => {
                             const imgSrc = product.images?.[0]?.url || product.image;
                             if (!imgSrc) {
@@ -978,12 +979,12 @@ const AdminCatalog = () => {
                           })()}
                         </div>
                       </td>
-                      <td className="p-3">
-                        <p className="font-medium text-gray-900">{product.name}</p>
+                      <td className="p-2 sm:p-3">
+                        <p className="font-medium text-gray-900 line-clamp-2">{product.name}</p>
                         <p className="text-xs text-gray-500">Rs. {product.price}</p>
                       </td>
-                      <td className="p-3">{product.category?.name || '-'}</td>
-                      <td className="p-3">
+                      <td className="hidden sm:table-cell p-2 sm:p-3 whitespace-nowrap">{product.category?.name || '-'}</td>
+                      <td className="hidden md:table-cell p-2 sm:p-3">
                         <div className="flex flex-wrap gap-1">
                           {(product.variants || []).slice(0, 3).map((v, i) => (
                             <span key={i} className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
@@ -997,18 +998,18 @@ const AdminCatalog = () => {
                           )}
                         </div>
                       </td>
-                      <td className="p-3 font-semibold">{totalStock}</td>
-                      <td className="p-3">
+                      <td className="p-2 sm:p-3 font-semibold whitespace-nowrap">{totalStock}</td>
+                      <td className="hidden sm:table-cell p-2 sm:p-3">
                         <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${stockStatus.color}`}>
                           <span className={`h-1.5 w-1.5 rounded-full ${stockStatus.dot}`}></span>
                           {stockStatus.label}
                         </span>
                       </td>
-                      <td className="p-3">
-                        <div className="flex items-center gap-2">
+                      <td className="p-2 sm:p-3 sticky right-0 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
+                        <div className="flex items-center gap-1 sm:gap-2">
                           <button
                             onClick={() => edit(product)}
-                            className="rounded-lg bg-blue-100 p-2 text-blue-600 transition hover:bg-blue-200"
+                            className="rounded-lg bg-blue-100 p-1.5 sm:p-2 text-blue-600 transition hover:bg-blue-200"
                             title="Edit"
                           >
                             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1017,7 +1018,7 @@ const AdminCatalog = () => {
                           </button>
                           <button
                             onClick={() => setDeleteProduct(product)}
-                            className="rounded-lg bg-red-100 p-2 text-red-600 transition hover:bg-red-200"
+                            className="rounded-lg bg-red-100 p-1.5 sm:p-2 text-red-600 transition hover:bg-red-200"
                             title="Delete"
                           >
                             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1034,6 +1035,7 @@ const AdminCatalog = () => {
             {filteredProducts.length === 0 && (
               <p className="mt-4 text-center text-sm text-gray-500">No products found.</p>
             )}
+            </div>
           </div>
         </section>
       </div>
