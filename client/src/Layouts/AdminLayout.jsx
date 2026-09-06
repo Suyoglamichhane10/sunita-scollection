@@ -151,7 +151,7 @@ const AdminLayout = () => {
       {/* Sidebar drawer on mobile, static sidebar on desktop */}
       <aside
         className={[
-          'fixed inset-y-0 left-0 z-40 w-80 transform bg-white shadow-xl transition-transform duration-300 ease-in-out lg:static lg:z-auto lg:translate-x-0 lg:w-[280px] lg:shadow-none',
+          'fixed inset-y-0 left-0 z-40 w-80 transform bg-cream shadow-xl transition-transform duration-300 ease-in-out lg:static lg:z-auto lg:translate-x-0 lg:w-[280px] lg:shadow-none',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full',
         ].join(' ')}
       >
