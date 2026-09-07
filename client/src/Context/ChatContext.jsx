@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect, useRef, useCallback } from 'react';
 import { createSocket, releaseSocket, disconnectSocket } from '../Services/socket';
 import { useAuth } from './Authcontext';
+import api from '../Services/api';
 
 const ChatContext = createContext();
 
@@ -94,6 +95,29 @@ export const ChatProvider = ({ children }) => {
       setDeliveryLocation(null);
     };
   }, [isAuthenticated, user?._id, user?.role]);
+
+  // Initialize unread count from stored notifications on login
+  useEffect(() => {
+    if (!isAuthenticated || !user?._id) return;
+    let active = true;
+    const initUnread = async () => {
+      try {
+        const { data } = await api.get('/dashboard/notifications');
+        const items = data.notifications || [];
+        const unread = items.filter((n) => !n.read).length;
+        if (active) {
+          setNotifications(items);
+          setUnreadCount(unread);
+        }
+      } catch {
+        // ignore init errors
+      }
+    };
+    initUnread();
+    return () => {
+      active = false;
+    };
+  }, [isAuthenticated, user?._id]);
 
   const joinConversation = useCallback((conversationId) => {
     if (socketRef.current && conversationId) {

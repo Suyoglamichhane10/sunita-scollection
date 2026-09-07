@@ -101,6 +101,9 @@ const AdminLayout = () => {
           </div>
         </div>
       )}
+      <div className="mb-4 flex-shrink-0">
+        <NotificationCenter />
+      </div>
       <nav className="flex-1 overflow-y-auto">
         <ul className="space-y-1">
           {navItems.map(({ to, label, icon: Icon, end }) => (
