@@ -7,6 +7,7 @@ const Login = lazy(() => import('../pages/Auth/Login'));
 const Register = lazy(() => import('../pages/Auth/Register'));
 const ForgotPassword = lazy(() => import('../pages/Auth/ForgotPassword'));
 const ResetPassword = lazy(() => import('../pages/Auth/ResetPassword'));
+const GoogleSuccess = lazy(() => import('../pages/Auth/GoogleSuccess'));
 
 // Customer Pages
 const Home = lazy(() => import('../pages/customer/Home'));
@@ -54,6 +55,7 @@ const AppRoutes = () => {
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password/:resetToken" element={<ResetPassword />} />
+      <Route path="/auth/google/success" element={<GoogleSuccess />} />
 
       {/* Public Customer Routes */}
       <Route element={<CustomerLayout />}>

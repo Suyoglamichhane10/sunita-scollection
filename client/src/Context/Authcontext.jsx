@@ -113,7 +113,7 @@ export const AuthProvider = ({ children }) => {
     return result;
   };
 
-  const googleLogin = async (token) => {
+  const loginWithToken = async (token) => {
     try {
       setToken(token);
       localStorage.setItem('token', token);
@@ -121,12 +121,16 @@ export const AuthProvider = ({ children }) => {
 
       const freshUser = await fetchCurrentUser();
       setUser(freshUser);
-      toast.success('Welcome! You are now logged in with Google.');
+      toast.success('Welcome! You are now logged in.');
       return { success: true, user: freshUser };
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Google login failed');
+      toast.error(error.response?.data?.message || 'Login failed');
       return { success: false, error: error.response?.data?.message };
     }
+  };
+
+  const googleLogin = async (token) => {
+    return loginWithToken(token);
   };
 
   const logout = () => {
@@ -158,6 +162,7 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     refreshUser,
+    loginWithToken,
     googleLogin,
     isAuthenticated: !!user,
     isAdmin: user?.role === 'admin',

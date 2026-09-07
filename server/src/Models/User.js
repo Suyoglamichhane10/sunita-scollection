@@ -36,7 +36,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-address: {
+    address: {
       street: String,
       city: String,
       state: String,
@@ -112,13 +112,12 @@ address: {
         },
       },
     ],
-orderHistory: [
+    orderHistory: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Order',
       },
     ],
-    // === Personalized shopping profile ===
     styleProfile: {
       sizes: {
         top: String,

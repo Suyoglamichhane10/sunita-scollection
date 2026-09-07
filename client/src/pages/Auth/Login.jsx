@@ -62,7 +62,8 @@ const Login = () => {
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = '/api/auth/google';
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://sunitacollection-backend.onrender.com';
+    window.location.href = `${backendUrl}/api/auth/google`;
   };
 
   return (

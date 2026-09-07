@@ -6,6 +6,9 @@ const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 const fs = require('fs');
+const session = require('express-session');
+const passport = require('passport');
+require('./config/passport');
 
 // Import routes
 const authRoutes = require('./Routes/authRoutes');
@@ -29,6 +32,7 @@ const loyaltyRoutes = require('./Routes/loyaltyRoutes');
 const wishlistRoutes = require('./Routes/wishlistRoutes');
 const reviewRoutes = require('./Routes/reviewRoutes');
 const conversationRoutes = require('./Routes/conversationRoutes');
+const googleRoutes = require('./Routes/googleRoutes');
 
 const app = express();
 
@@ -81,6 +85,21 @@ app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+app.use(
+  session({
+    secret: process.env.JWT_SECRET || 'your_super_secret_jwt_key',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000,
+    },
+  })
+);
+
+app.use(passport.initialize());
+
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -104,6 +123,7 @@ app.use('/uploads', express.static(uploadsDir));
 // DO NOT add express.static for client/dist here
 // DO NOT add app.get('*') catch-all route
 app.use('/api/auth', authRoutes);
+app.use('/api/auth', googleRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/orders', orderRoutes);
