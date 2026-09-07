@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: sunitas-collection-backend
+    name: sunitaz-backend
     runtime: node
     buildCommand: "npm install --omit=dev"
     startCommand: "node src/server.js"
@@ -38,3 +38,9 @@ services:
         sync: false
       - key: STRIPE_WEBHOOK_SECRET
         sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_CALLBACK_URL
+        value: "https://sunitaz-backend.onrender.com/api/auth/google/callback"

@@ -62,7 +62,7 @@ const Login = () => {
   };
 
   const handleGoogleLogin = () => {
-    const backendUrl = 'https://sunitacollection-backend.onrender.com';
+    const backendUrl = 'https://sunitaz-backend.onrender.com';
     const target = `${backendUrl}/api/auth/google`;
     console.log('[GoogleLogin] Redirecting to:', target);
     window.location.href = target;
