@@ -62,8 +62,10 @@ const Login = () => {
   };
 
   const handleGoogleLogin = () => {
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://sunitacollection-backend.onrender.com';
-    window.location.href = `${backendUrl}/api/auth/google`;
+    const backendUrl = 'https://sunitacollection-backend.onrender.com';
+    const target = `${backendUrl}/api/auth/google`;
+    console.log('[GoogleLogin] Redirecting to:', target);
+    window.location.href = target;
   };
 
   return (
@@ -152,14 +154,15 @@ const Login = () => {
               </div>
 
                <button
-                type="submit"
-                disabled={submitting}
-                className="btn-elegant w-full rounded-xl py-3 font-semibold disabled:opacity-60"
-              >
-                {submitting ? 'Signing in...' : 'Sign In'}
-              </button>
+                 type="submit"
+                 disabled={submitting}
+                 className="btn-elegant w-full rounded-xl py-3 font-semibold disabled:opacity-60"
+               >
+                 {submitting ? 'Signing in...' : 'Sign In'}
+               </button>
+             </form>
 
-              <div className="relative py-2">
+             <div className="relative py-2">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-gold/20"></div>
                 </div>
