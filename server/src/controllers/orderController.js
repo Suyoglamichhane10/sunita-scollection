@@ -117,7 +117,7 @@ const products = await Product.find({ _id: { $in: consolidatedItems.map((item) =
     const io = req.app.get('io');
     if (io) {
       io.to('admins').emit('notification:new', {
-        message: `New order #${order._id.toString().slice(-6)} from ${customerName} — Rs. ${totals.totalAmount}`,
+        message: `New order #${order.orderNumber} from ${customerName} — Rs. ${totals.totalAmount}`,
         type: 'order',
         createdAt: Date.now(),
       });
@@ -290,7 +290,7 @@ await order.save();
     const ioAdmin = req.app.get('io');
     if (ioAdmin && orderStatus) {
       ioAdmin.to('admins').emit('notification:new', {
-        message: `Order #${order._id.toString().slice(-6)} status updated to ${orderStatus}`,
+        message: `Order #${order.orderNumber} status updated to ${orderStatus}`,
         type: 'order',
         createdAt: Date.now(),
       });

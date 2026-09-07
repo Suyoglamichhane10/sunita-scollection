@@ -60,7 +60,7 @@ const finalizePaidOrder = async (order, paymentDetails, userId) => {
     const io = app.get('io');
     if (io) {
       io.to('admins').emit('notification:new', {
-        message: `Payment verified for order #${order._id.toString().slice(-6)} — Rs. ${order.totalAmount}`,
+        message: `Payment verified for order #${order.orderNumber} — Rs. ${order.totalAmount}`,
         type: 'payment',
         createdAt: Date.now(),
       });
