@@ -25,7 +25,7 @@ self.addEventListener('activate', (event) => {
       )
       .then(() => self.clients.claim())
       .then(() => self.clients.matchAll().then((clients) => {
-        clients.forEach((client) => client.postMessage({ type: 'SW_UPDATED' });
+        clients.forEach((client) => client.postMessage({ type: 'SW_UPDATED' }));
       }))
   );
 });
