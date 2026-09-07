@@ -191,7 +191,6 @@ const Login = () => {
                   Register
                 </Link>
               </div>
-            </form>
           </div>
         </div>
       </div>
