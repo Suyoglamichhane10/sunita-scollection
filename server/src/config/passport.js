@@ -3,15 +3,18 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const User = require('../Models/User');
 const bcrypt = require('bcrypt');
 
-passport.use(
-  new GoogleStrategy(
-    {
-      clientID: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: process.env.GOOGLE_CALLBACK_URL,
-      passReqToCallback: true,
-    },
-    async (req, accessToken, refreshToken, profile, done) => {
+// Only register the Google strategy if credentials are present.
+// This prevents a crash when env vars are not yet configured.
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  passport.use(
+    new GoogleStrategy(
+      {
+        clientID: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        callbackURL: process.env.GOOGLE_CALLBACK_URL,
+        passReqToCallback: true,
+      },
+      async (req, accessToken, refreshToken, profile, done) => {
       try {
         let user = await User.findOne({ socialId: profile.id, socialProvider: 'google' });
 
@@ -47,8 +50,13 @@ passport.use(
         return done(error, null);
       }
     }
-  )
-);
+    )
+  );
+
+  console.log('✅ Google OAuth strategy registered');
+} else {
+  console.warn('⚠️ Google OAuth credentials not set — Google login will return 401');
+}
 
 passport.serializeUser((user, done) => done(null, user.id));
 passport.deserializeUser(async (id, done) => {

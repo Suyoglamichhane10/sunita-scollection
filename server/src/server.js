@@ -1,13 +1,13 @@
+// Load environment variables FIRST, before any module that depends on them
+const dotenv = require('dotenv');
+dotenv.config();
+
 const app = require('./app');
 const http = require('http');
-const dotenv = require('dotenv');
 const connectDB = require('./config/database');
 const { Server } = require('socket.io');
 const path = require('path');
 const fs = require('fs');
-
-// Load environment variables
-dotenv.config();
 
 // Connect to the database. Do NOT crash if DB is unavailable —
 // server should still serve endpoints that don't require DB
