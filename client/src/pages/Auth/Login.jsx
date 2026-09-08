@@ -37,6 +37,7 @@ const Login = () => {
 
   // ✅ Google Login - Hardcoded redirect URL (no env vars needed)
   const handleGoogleLogin = () => {
+    alert('🔵 Google Login button clicked!');
     const redirectUrl = 'https://sunitaz-backend.onrender.com/api/auth/google';
     console.log('🔵 Google Login clicked! Redirecting to:', redirectUrl);
     window.location.href = redirectUrl;
