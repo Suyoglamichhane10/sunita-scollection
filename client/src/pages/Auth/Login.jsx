@@ -37,7 +37,8 @@ const Login = () => {
 
   // ✅ HARDCODED Google Login Handler - No environment variables!
   const handleGoogleLogin = () => {
-    const redirectUrl = 'https://sunitaz-backend.onrender.com/api/auth/google';
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://sunitaz-backend.onrender.com';
+    const redirectUrl = `${backendUrl}/api/auth/google`;
     console.log('🔵 Google Login clicked! Redirecting to:', redirectUrl);
     window.location.href = redirectUrl;
   };
