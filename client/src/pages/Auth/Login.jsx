@@ -35,10 +35,9 @@ const Login = () => {
     toast.error(result.error || 'Login failed');
   };
 
-  // ✅ HARDCODED Google Login Handler - No environment variables!
+  // ✅ Google Login - Hardcoded redirect URL (no env vars needed)
   const handleGoogleLogin = () => {
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://sunitaz-backend.onrender.com';
-    const redirectUrl = `${backendUrl}/api/auth/google`;
+    const redirectUrl = 'https://sunitaz-backend.onrender.com/api/auth/google';
     console.log('🔵 Google Login clicked! Redirecting to:', redirectUrl);
     window.location.href = redirectUrl;
   };

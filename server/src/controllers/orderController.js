@@ -115,6 +115,32 @@ const products = await Product.find({ _id: { $in: consolidatedItems.map((item) =
 
     const customerName = req.user.name || 'A customer';
     const io = req.app.get('io');
+
+    const notifyAdmins = async () => {
+      try {
+        const admins = await User.find({ role: 'admin' }).select('_id');
+        const adminNotifications = admins.map((admin) => ({
+          user: admin._id,
+          message: `New order #${order.orderNumber} from ${customerName} — Rs. ${totals.totalAmount}`,
+          type: 'order',
+          read: false,
+          createdAt: Date.now(),
+        }));
+        if (adminNotifications.length) {
+          await User.bulkWrite(
+            adminNotifications.map((n) => ({
+              updateOne: {
+                filter: { _id: n.user },
+                update: { $push: { notifications: n } },
+              },
+            }))
+          );
+        }
+      } catch (err) {
+        console.error('Admin notification persistence failed:', err.message);
+      }
+    };
+
     if (io) {
       io.to('admins').emit('notification:new', {
         message: `New order #${order.orderNumber} from ${customerName} — Rs. ${totals.totalAmount}`,
@@ -122,6 +148,8 @@ const products = await Product.find({ _id: { $in: consolidatedItems.map((item) =
         createdAt: Date.now(),
       });
     }
+
+    await notifyAdmins();
 
     await User.findByIdAndUpdate(req.user.id, { $push: { orderHistory: order._id } });
 
