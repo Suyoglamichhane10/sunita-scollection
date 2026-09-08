@@ -120,11 +120,9 @@ app.use('/uploads', (req, res, next) => {
 });
 app.use('/uploads', express.static(uploadsDir));
 
-// ✅ API Routes only - NO STATIC FILE SERVING for client/dist!
-// DO NOT add express.static for client/dist here
-// DO NOT add app.get('*') catch-all route
-app.use('/api/auth', authRoutes);
+// ✅ API Routes - Google mounted BEFORE authRoutes to prevent any path conflicts
 app.use('/api/auth', googleRoutes);
+app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/orders', orderRoutes);

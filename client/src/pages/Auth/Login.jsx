@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { FaEye, FaEyeSlash, FaLock, FaEnvelope } from 'react-icons/fa';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../Context/Authcontext';
 import toast from 'react-hot-toast';
 import logo from '../../assets/LOGO!.png';
@@ -10,34 +10,8 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const { login, loading, googleLogin } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-
-  useEffect(() => {
-    const savedEmail = localStorage.getItem('rememberedEmail');
-    if (savedEmail) {
-      setFormData((prev) => ({ ...prev, email: savedEmail }));
-      setRememberMe(true);
-    }
-
-    const token = searchParams.get('token');
-    const error = searchParams.get('error');
-    if (error) {
-      toast.error(decodeURIComponent(error).replace(/_/g, ' '));
-    }
-    if (token) {
-      googleLogin(token);
-    }
-  }, [searchParams, googleLogin]);
-
-  if (loading) {
-    return (
-      <div className="mesh-rose min-h-screen flex items-center justify-center">
-        <p className="text-sm text-ink-light">Loading...</p>
-      </div>
-    );
-  }
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -61,11 +35,11 @@ const Login = () => {
     toast.error(result.error || 'Login failed');
   };
 
+  // ✅ HARDCODED Google Login Handler - No environment variables!
   const handleGoogleLogin = () => {
-    const backendUrl = 'https://sunitaz-backend.onrender.com';
-    const target = `${backendUrl}/api/auth/google`;
-    console.log('[GoogleLogin] Redirecting to:', target);
-    window.location.href = target;
+    const redirectUrl = 'https://sunitaz-backend.onrender.com/api/auth/google';
+    console.log('🔵 Google Login clicked! Redirecting to:', redirectUrl);
+    window.location.href = redirectUrl;
   };
 
   return (
@@ -103,6 +77,7 @@ const Login = () => {
             <h2 className="font-serif text-center text-2xl font-bold text-primary-800 mb-1">Sign in</h2>
             <p className="text-center text-sm text-ink-light mb-7">Welcome back to trendy fashion</p>
 
+            {/* ✅ FORM - contains only email, password, remember me, submit */}
             <form className="space-y-5" onSubmit={handleSubmit}>
               <div className="relative">
                 <FaEnvelope className="absolute left-4 top-1/2 -translate-y-1/2 text-gold-500" />
@@ -153,16 +128,18 @@ const Login = () => {
                 </Link>
               </div>
 
-               <button
-                 type="submit"
-                 disabled={submitting}
-                 className="btn-elegant w-full rounded-xl py-3 font-semibold disabled:opacity-60"
-               >
-                 {submitting ? 'Signing in...' : 'Sign In'}
-               </button>
-             </form>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="btn-elegant w-full rounded-xl py-3 font-semibold disabled:opacity-60"
+              >
+                {submitting ? 'Signing in...' : 'Sign In'}
+              </button>
+            </form>
 
-             <div className="relative py-2">
+            {/* ✅ Google Button - OUTSIDE the form, type="button" */}
+            <div className="mt-6">
+              <div className="relative py-2">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-gold/20"></div>
                 </div>
@@ -184,13 +161,14 @@ const Login = () => {
                 </svg>
                 Continue with Google
               </button>
+            </div>
 
-              <div className="text-center text-sm text-ink-light">
-                Don't have an account?{' '}
-                <Link to="/register" className="font-semibold text-gold-600 hover:text-gold-700">
-                  Register
-                </Link>
-              </div>
+            <div className="text-center text-sm text-ink-light">
+              Don't have an account?{' '}
+              <Link to="/register" className="font-semibold text-gold-600 hover:text-gold-700">
+                Register
+              </Link>
+            </div>
           </div>
         </div>
       </div>
