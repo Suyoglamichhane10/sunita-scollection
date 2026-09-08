@@ -9,14 +9,6 @@ const { Server } = require('socket.io');
 const path = require('path');
 const fs = require('fs');
 
-// Connect to the database. Do NOT crash if DB is unavailable —
-// server should still serve endpoints that don't require DB
-// (e.g. Google OAuth /auth/google redirect).
-connectDB().catch((err) => {
-  console.error('❌ Database connection failed:', err.message);
-  console.error('⚠️  Server continuing without database. DB-dependent routes will return errors.');
-});
-
 const PORT = process.env.PORT || 5000;
 
 const server = http.createServer(app);
@@ -57,13 +49,17 @@ io.on('connection', (socket) => {
   });
 });
 
-// ✅ NO STATIC FILE SERVING - FRONTEND ON VERCEL
-// DO NOT add any express.static for client/dist here
-
+// ✅ Start listening BEFORE DB connection so the port is open immediately
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Server running on port ${PORT}`);
   console.log(`📡 Environment: ${process.env.NODE_ENV}`);
   console.log(`✅ Frontend served from Vercel: https://sunitacollection-frontend.vercel.app`);
+
+  // Connect to DB after server is listening
+  connectDB().catch((err) => {
+    console.error('❌ Database connection failed:', err.message);
+    console.error('⚠️  Server continuing without database. DB-dependent routes will return errors.');
+  });
 });
 
 // Handle unhandled promise rejections

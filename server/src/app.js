@@ -157,6 +157,15 @@ app.use('/api/payments', paymentRoutes);
     });
   });
 
+  // Root health check for Render's default health check path
+  app.get('/', (req, res) => {
+    res.status(200).json({
+      status: 'OK',
+      message: 'ShopSync Server is running',
+      timestamp: new Date().toISOString(),
+    });
+  });
+
 // Error handling middleware
 const errorHandler = require('./Middleware/errorHandler');
 app.use(errorHandler);
