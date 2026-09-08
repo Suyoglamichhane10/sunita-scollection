@@ -9,10 +9,12 @@ const fs = require('fs');
 // Load environment variables
 dotenv.config();
 
-// Connect to the database before starting the server
+// Connect to the database. Do NOT crash if DB is unavailable —
+// server should still serve endpoints that don't require DB
+// (e.g. Google OAuth /auth/google redirect).
 connectDB().catch((err) => {
-  console.error('❌ Fatal: Database connection failed:', err.message);
-  process.exit(1);
+  console.error('❌ Database connection failed:', err.message);
+  console.error('⚠️  Server continuing without database. DB-dependent routes will return errors.');
 });
 
 const PORT = process.env.PORT || 5000;

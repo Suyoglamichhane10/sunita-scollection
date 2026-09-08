@@ -9,6 +9,7 @@ const fs = require('fs');
 const session = require('express-session');
 const passport = require('passport');
 require('./config/passport');
+const { isDbConnected } = require('./config/database');
 
 // Import routes
 const authRoutes = require('./Routes/authRoutes');
@@ -147,14 +148,16 @@ app.use('/api/conversations', conversationRoutes);
 app.use('/api/payments/stripe/webhook', express.raw({ type: 'application/json' }));
 app.use('/api/payments', paymentRoutes);
 
-// Health check
-app.get('/api/health', (req, res) => {
-  res.status(200).json({
-    status: 'OK',
-    message: 'Server is running',
-    timestamp: new Date().toISOString()
+  // Health check
+  app.get('/api/health', (req, res) => {
+    const dbConnected = isDbConnected();
+    res.status(dbConnected ? 200 : 503).json({
+      status: dbConnected ? 'OK' : 'DEGRADED',
+      message: 'Server is running',
+      database: dbConnected ? 'connected' : 'disconnected',
+      timestamp: new Date().toISOString(),
+    });
   });
-});
 
 // Error handling middleware
 const errorHandler = require('./Middleware/errorHandler');

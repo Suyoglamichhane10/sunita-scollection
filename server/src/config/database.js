@@ -8,12 +8,14 @@ let isConnected = false;
 /**
  * Connect to MongoDB with a stable, resilient configuration.
  *
- * - Uses connection pooling (poolSize) + serverSelectionTimeout so transient
+ * - Uses connection pooling + serverSelectionTimeout so transient
  *   network blips do not crash the process.
  * - Implements retry/backoff for the initial connection.
- * - Falls back to an in-memory MongoDB ONLY in development when no URI is set
- *   or the configured DB is unreachable. In production a DB failure throws so
- *   the operator knows immediately.
+ * - Falls back to an in-memory MongoDB ONLY in development when no URI
+ *   is set or the configured DB is unreachable.
+ * - In production, DB failure logs an error but does NOT crash the server
+ *   (DB-dependent routes will return errors; non-DB routes like the
+ *   Google OAuth redirect still work).
  */
 const connectDB = async () => {
   // If we already have a live native connection, reuse it.
@@ -23,8 +25,10 @@ const connectDB = async () => {
 
   const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI;
 
-  if (process.env.NODE_ENV === 'production' && !mongoUri) {
-    throw new Error('MONGO_URI is required in production. Refusing to start with an in-memory database.');
+  if (!mongoUri) {
+    console.warn('⚠️ No MONGO_URI set. Server will start but DB-dependent routes will fail.');
+    isConnected = false;
+    return null;
   }
 
   // Configure stable connection options (pooling + sensible timeouts).
@@ -52,10 +56,9 @@ const connectDB = async () => {
         );
         if (attempt < MAX_RETRIES) {
           await sleep(RETRY_DELAY_MS * attempt); // exponential-ish backoff
-        } else if (process.env.NODE_ENV === 'production') {
-          throw err;
         } else {
-          console.warn('Attempting to start an in-memory MongoDB for development fallback...');
+          console.error('❌ MongoDB connection failed after all retries. Server will continue without DB.');
+          isConnected = false;
         }
       }
     }
@@ -74,7 +77,12 @@ const connectDB = async () => {
     console.log('✅ Connected to in-memory MongoDB for development');
     return conn;
   }
+
+  isConnected = false;
+  return null;
 };
+
+const isDbConnected = () => isConnected || mongoose.connection.readyState === 1;
 
 const setupConnectionEvents = (name) => {
   const db = mongoose.connection;
@@ -110,3 +118,4 @@ const setupConnectionEvents = (name) => {
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 module.exports = connectDB;
+module.exports.isDbConnected = isDbConnected;
