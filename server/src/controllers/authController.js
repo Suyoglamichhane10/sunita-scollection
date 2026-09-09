@@ -234,78 +234,124 @@ exports.facebookCallback = async (req, res, next) => {
 
 exports.googleLogin = async (req, res, next) => {
   try {
+    const redirectUri = `${req.protocol}://${req.get('host')}/api/auth/google/callback`;
     const clientId = process.env.GOOGLE_CLIENT_ID;
-    const callbackUrl =
-      process.env.GOOGLE_CALLBACK_URL ||
-      `${req.protocol}://${req.get('host')}/api/auth/google/callback`;
-    console.log('🔵 Google OAuth initiated, callback URL:', callbackUrl);
-    const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(callbackUrl)}&response_type=code&scope=openid%20profile%20email&access_type=offline&prompt=consent`;
+    
+    if (!clientId) {
+      console.error('❌ GOOGLE_CLIENT_ID not set in environment');
+      return res.redirect(`${getFrontendUrl()}/login?error=google_config_error`);
+    }
+
+    const googleAuthUrl = 
+      `https://accounts.google.com/o/oauth2/v2/auth?` +
+      `client_id=${clientId}&` +
+      `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+      `response_type=code&` +
+      `scope=profile%20email&` +
+      `access_type=offline&` +
+      `prompt=consent`;
+
+    console.log('🔵 Google Login initiated');
+    console.log('🔵 Redirect URI:', redirectUri);
     res.redirect(googleAuthUrl);
   } catch (error) {
-    next(error);
+    console.error('❌ Google login error:', error);
+    res.redirect(`${getFrontendUrl()}/login?error=google_login_failed`);
   }
 };
 
 exports.googleCallback = async (req, res, next) => {
   try {
-    const code = req.query.code;
+    const { code } = req.query;
+    
     if (!code) {
-      console.log('❌ No authorization code received from Google');
-      return res.redirect(`${getFrontendUrl()}/login?error=google_auth_denied`);
+      console.error('❌ No authorization code received');
+      return res.redirect(`${getFrontendUrl()}/login?error=no_code`);
     }
-    console.log('✅ Authorization code received');
 
-    // Exchange code for tokens
-    const accessToken = await exchangeCodeForToken(code, 'google');
-    console.log('✅ Access token received from Google');
+    console.log('🔵 Google callback received with code');
+
+    const redirectUri = `${req.protocol}://${req.get('host')}/api/auth/google/callback`;
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+    if (!clientId || !clientSecret) {
+      console.error('❌ Google credentials not configured');
+      return res.redirect(`${getFrontendUrl()}/login?error=google_config_error`);
+    }
+
+    // Exchange code for access token using axios
+    const tokenResponse = await axios.post('https://oauth2.googleapis.com/token', {
+      code,
+      client_id: clientId,
+      client_secret: clientSecret,
+      redirect_uri: redirectUri,
+      grant_type: 'authorization_code'
+    });
+
+    console.log('✅ Access token received');
+
+    const { access_token } = tokenResponse.data;
 
     // Get user info from Google
-    const googleUser = await fetchSocialUser(accessToken, 'google');
-    console.log('✅ Google user info received:', { id: googleUser.id, email: googleUser.email, name: googleUser.name });
+    const userInfoResponse = await axios.get('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: { 
+        Authorization: `Bearer ${access_token}` 
+      }
+    });
 
-    if (!googleUser.email) {
-      console.log('❌ No email in Google user response');
-      return res.redirect(`${getFrontendUrl()}/login?error=google_email_required`);
-    }
+    const { id, name, email, picture } = userInfoResponse.data;
+    console.log('✅ Google user info received:', { id, name, email });
 
-    // Use 'id' from v2 endpoint (or 'sub' if using v3)
-    const googleId = googleUser.id || googleUser.sub;
-    
-    let user = await User.findOne({ email: googleUser.email });
+    // Find or create user - check socialId first
+    let user = await User.findOne({ socialId: id, socialProvider: 'google' });
 
     if (!user) {
-      console.log('👤 Creating new user from Google account');
-      user = await User.create({
-        name: googleUser.name,
-        email: googleUser.email,
-        password: crypto.randomBytes(20).toString('hex'),
-        socialProvider: 'google',
-        socialId: googleId,
-        avatar: googleUser.picture || null,
-      });
-    } else if (!user.socialProvider) {
-      console.log('🔗 Linking existing local account to Google');
-      user.socialProvider = 'google';
-      user.socialId = googleId;
-      if (!user.avatar && googleUser.picture) {
-        user.avatar = googleUser.picture;
+      // Check if user exists by email
+      const existingUser = await User.findOne({ email });
+      if (existingUser) {
+        // Link Google account to existing user
+        existingUser.socialId = id;
+        existingUser.socialProvider = 'google';
+        existingUser.avatar = picture || existingUser.avatar;
+        existingUser.isEmailVerified = true;
+        await existingUser.save();
+        user = existingUser;
+        console.log('✅ Google account linked to existing user');
+      } else {
+        // Create new user
+        user = new User({
+          name: name || email.split('@')[0],
+          email,
+          socialId: id,
+          socialProvider: 'google',
+          avatar: picture || '',
+          isEmailVerified: true,
+          role: 'customer',
+          password: Math.random().toString(36).slice(-8)
+        });
+        await user.save();
+        console.log('✅ New user created from Google');
       }
-      await user.save();
     }
 
-    user.lastLogin = Date.now();
-    await user.save();
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
 
-    const token = generateToken(user);
-    console.log('✅ User authenticated, redirecting to success page');
+    console.log('✅ JWT token generated successfully');
 
-    res.redirect(`${getFrontendUrl()}/auth/google/success?token=${token}`);
+    // Redirect to frontend with token
+    const redirectUrl = `${getFrontendUrl()}/auth/google/success?token=${token}`;
+    console.log('🔵 Redirecting to:', redirectUrl);
+    res.redirect(redirectUrl);
+
   } catch (error) {
     console.error('❌ Google callback error:', error.message);
-    if (error.response) {
-      console.error('   Response status:', error.response.status);
-      console.error('   Response data:', error.response.data);
-    }
+    console.error('❌ Error details:', error.response?.data || error);
     res.redirect(`${getFrontendUrl()}/login?error=google_auth_failed`);
   }
 };
