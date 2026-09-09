@@ -2,6 +2,7 @@ const User = require('../Models/User');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { sendPasswordReset } = require('../services/emailService');
+const { getFrontendUrl } = require('../Utils/frontendUrl');
 
 const https = require('https');
 
@@ -236,14 +237,14 @@ exports.facebookCallback = async (req, res, next) => {
   try {
     const code = req.query.code;
     if (!code) {
-      return res.redirect(`${process.env.FRONTEND_URL}/login?error=facebook_auth_denied`);
+      return res.redirect(`${getFrontendUrl()}/login?error=facebook_auth_denied`);
     }
 
     const accessToken = await exchangeCodeForToken(code);
     const fbUser = await fetchFacebookUser(accessToken);
 
     if (!fbUser.email) {
-      return res.redirect(`${process.env.FRONTEND_URL}/login?error=facebook_email_required`);
+      return res.redirect(`${getFrontendUrl()}/login?error=facebook_email_required`);
     }
 
     let user = await User.findOne({ email: fbUser.email });
@@ -271,10 +272,10 @@ exports.facebookCallback = async (req, res, next) => {
 
     const token = generateToken(user);
 
-    res.redirect(`${process.env.FRONTEND_URL}/login?token=${token}`);
+    res.redirect(`${getFrontendUrl()}/login?token=${token}`);
   } catch (error) {
     console.error('Facebook callback error:', error);
-    res.redirect(`${process.env.FRONTEND_URL}/login?error=facebook_auth_failed`);
+    res.redirect(`${getFrontendUrl()}/login?error=facebook_auth_failed`);
   }
 };
 
@@ -295,7 +296,7 @@ exports.googleCallback = async (req, res, next) => {
   try {
     const code = req.query.code;
     if (!code) {
-      return res.redirect(`${process.env.FRONTEND_URL}/login?error=google_auth_denied`);
+      return res.redirect(`${getFrontendUrl()}/login?error=google_auth_denied`);
     }
 
     const callbackUrl =
@@ -312,7 +313,7 @@ exports.googleCallback = async (req, res, next) => {
     const googleUser = await fetchGoogleUser(tokenResponse.access_token);
 
     if (!googleUser.email) {
-      return res.redirect(`${process.env.FRONTEND_URL}/login?error=google_email_required`);
+      return res.redirect(`${getFrontendUrl()}/login?error=google_email_required`);
     }
 
     let user = await User.findOne({ email: googleUser.email });
@@ -340,10 +341,10 @@ exports.googleCallback = async (req, res, next) => {
 
     const token = generateToken(user);
 
-    res.redirect(`${process.env.FRONTEND_URL}/auth/google/success?token=${token}`);
+    res.redirect(`${getFrontendUrl()}/auth/google/success?token=${token}`);
   } catch (error) {
     console.error('Google callback error:', error);
-    res.redirect(`${process.env.FRONTEND_URL}/login?error=google_auth_failed`);
+    res.redirect(`${getFrontendUrl()}/login?error=google_auth_failed`);
   }
 };
 
@@ -405,7 +406,7 @@ exports.forgotPassword = async (req, res, next) => {
 
     await user.save({ validateBeforeSave: false });
 
-const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+const resetUrl = `${getFrontendUrl()}/reset-password/${resetToken}`;
 
     // Send password reset email (non-blocking)
     try {

@@ -5,6 +5,7 @@ const Stripe = require('stripe');
 const { finalizePaidOrder, failOrder } = require('../services/orderFinalizeService');
 const { getEsewaConfig } = require('../config/esewa');
 const { getFonepayConfig } = require('../config/fonepay');
+const { getFrontendUrl } = require('../Utils/frontendUrl');
 
 const stripe = process.env.STRIPE_SECRET_KEY ? Stripe(process.env.STRIPE_SECRET_KEY) : null;
 
@@ -90,7 +91,7 @@ exports.initiateEsewa = async (req, res, next) => {
     const signatureMessage = `total_amount=${totalAmount},transaction_uuid=${transactionUuid},product_code=${productCode}`;
     const signature = esewaSign(config.secretKey, signatureMessage);
 
-    const frontendUrl = process.env.FRONTEND_URL || DEFAULT_FRONTEND_URL;
+    const frontendUrl = getFrontendUrl();
     const successUrl = `${frontendUrl}/order-success/${order._id}`;
     const failureUrl = `${frontendUrl}/payment-failure/${order._id}`;
 
@@ -241,7 +242,7 @@ exports.initiateKhalti = async (req, res, next) => {
     const { baseUrl } = getKhaltiConfig();
     const gatewayUrl = `${baseUrl}/epayment/initiate/`;
 
-    const frontendUrl = process.env.FRONTEND_URL || DEFAULT_FRONTEND_URL;
+    const frontendUrl = getFrontendUrl();
     const returnUrl = `${frontendUrl}/order-success/${order._id}`;
     const websiteUrl = frontendUrl;
     const customer = await User.findById(order.user);
@@ -433,22 +434,22 @@ exports.esewaSuccess = async (req, res, next) => {
     const { oid, refId, transaction_uuid } = req.query;
 
     if (!oid || !transaction_uuid) {
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment-failure/${oid || 'unknown'}?error=missing_params`);
+      return res.redirect(`${getFrontendUrl()}/payment-failure/${oid || 'unknown'}?error=missing_params`);
     }
 
     const order = await Order.findById(oid);
     if (!order) {
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment-failure/${oid}?error=order_not_found`);
+      return res.redirect(`${getFrontendUrl()}/payment-failure/${oid}?error=order_not_found`);
     }
 
     // Already verified - redirect to success
     if (order.isPaid && order.orderStatus === 'confirmed') {
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/order-success/${oid}`);
+      return res.redirect(`${getFrontendUrl()}/order-success/${oid}`);
     }
 
     const config = getEsewaConfig();
     if (!config.secretKey || !config.productCode) {
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment-failure/${oid}?error=not_configured`);
+      return res.redirect(`${getFrontendUrl()}/payment-failure/${oid}?error=not_configured`);
     }
 
     // Verify payment with eSewa
@@ -469,14 +470,14 @@ exports.esewaSuccess = async (req, res, next) => {
       clearTimeout(timeout);
     } catch (fetchErr) {
       clearTimeout(timeout);
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment-failure/${oid}?error=verification_timeout`);
+      return res.redirect(`${getFrontendUrl()}/payment-failure/${oid}?error=verification_timeout`);
     }
 
     const gatewayData = await gatewayResponse.json();
 
     if (gatewayData.status !== 'COMPLETE') {
       await failOrder(order, `eSewa payment status: ${gatewayData.status || 'NOT FOUND'}`);
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment-failure/${oid}?error=payment_not_complete`);
+      return res.redirect(`${getFrontendUrl()}/payment-failure/${oid}?error=payment_not_complete`);
     }
 
     // Finalize the order
@@ -491,11 +492,11 @@ exports.esewaSuccess = async (req, res, next) => {
       order.user
     );
 
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/order-success/${oid}`);
+    res.redirect(`${getFrontendUrl()}/order-success/${oid}`);
   } catch (error) {
     console.error('eSewa success callback error:', error);
     const oid = req.query.oid || 'unknown';
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment-failure/${oid}?error=server_error`);
+    res.redirect(`${getFrontendUrl()}/payment-failure/${oid}?error=server_error`);
   }
 };
 
@@ -513,11 +514,11 @@ exports.esewaFailure = async (req, res, next) => {
       }
     }
 
-    const failureUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment-failure/${oid || 'unknown'}`;
+    const failureUrl = `${getFrontendUrl()}/payment-failure/${oid || 'unknown'}`;
     res.redirect(failureUrl);
   } catch (error) {
     console.error('eSewa failure callback error:', error);
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment-failure?error=server_error`);
+    res.redirect(`${getFrontendUrl()}/payment-failure?error=server_error`);
   }
 };
 
@@ -529,21 +530,21 @@ exports.fonepaySuccess = async (req, res, next) => {
     const { oid, transaction_uuid, refId } = req.query;
 
     if (!oid || !transaction_uuid) {
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment-failure/${oid || 'unknown'}?error=missing_params`);
+      return res.redirect(`${getFrontendUrl()}/payment-failure/${oid || 'unknown'}?error=missing_params`);
     }
 
     const order = await Order.findById(oid);
     if (!order) {
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment-failure/${oid}?error=order_not_found`);
+      return res.redirect(`${getFrontendUrl()}/payment-failure/${oid}?error=order_not_found`);
     }
 
     if (order.isPaid && order.orderStatus === 'confirmed') {
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/order-success/${oid}`);
+      return res.redirect(`${getFrontendUrl()}/order-success/${oid}`);
     }
 
     const config = getFonepayConfig();
     if (!config.merchantId || !config.merchantSecret || !config.appId) {
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment-failure/${oid}?error=not_configured`);
+      return res.redirect(`${getFrontendUrl()}/payment-failure/${oid}?error=not_configured`);
     }
 
     const expectedTotal = Math.round(order.totalAmount);
@@ -566,20 +567,20 @@ exports.fonepaySuccess = async (req, res, next) => {
       clearTimeout(timeout);
     } catch (fetchErr) {
       clearTimeout(timeout);
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment-failure/${oid}?error=verification_timeout`);
+      return res.redirect(`${getFrontendUrl()}/payment-failure/${oid}?error=verification_timeout`);
     }
 
     let gatewayData;
     try {
       gatewayData = await gatewayResponse.json();
     } catch {
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment-failure/${oid}?error=invalid_response`);
+      return res.redirect(`${getFrontendUrl()}/payment-failure/${oid}?error=invalid_response`);
     }
 
     const isSuccess = gatewayData.status === 'SUCCESS' || gatewayData.status === 'COMPLETE' || gatewayData.response_code === '00' || gatewayData.response_code === '0';
     if (!isSuccess) {
       await failOrder(order, `FonePay payment status: ${gatewayData.status || gatewayData.response_code || 'NOT FOUND'}`);
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment-failure/${oid}?error=payment_not_complete`);
+      return res.redirect(`${getFrontendUrl()}/payment-failure/${oid}?error=payment_not_complete`);
     }
 
     await finalizePaidOrder(
@@ -593,11 +594,11 @@ exports.fonepaySuccess = async (req, res, next) => {
       order.user
     );
 
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/order-success/${oid}`);
+    res.redirect(`${getFrontendUrl()}/order-success/${oid}`);
   } catch (error) {
     console.error('FonePay success callback error:', error);
     const oid = req.query.oid || 'unknown';
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment-failure/${oid}?error=server_error`);
+    res.redirect(`${getFrontendUrl()}/payment-failure/${oid}?error=server_error`);
   }
 };
 
@@ -615,11 +616,11 @@ exports.fonepayFailure = async (req, res, next) => {
       }
     }
 
-    const failureUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment-failure/${oid || 'unknown'}`;
+    const failureUrl = `${getFrontendUrl()}/payment-failure/${oid || 'unknown'}`;
     res.redirect(failureUrl);
   } catch (error) {
     console.error('FonePay failure callback error:', error);
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment-failure?error=server_error`);
+    res.redirect(`${getFrontendUrl()}/payment-failure?error=server_error`);
   }
 };
 
@@ -653,7 +654,7 @@ exports.initiateFonepay = async (req, res, next) => {
       });
     }
 
-    const frontendUrl = process.env.FRONTEND_URL || DEFAULT_FRONTEND_URL;
+    const frontendUrl = getFrontendUrl();
     const successUrl = `${frontendUrl}/order-success/${order._id}`;
     const failureUrl = `${frontendUrl}/payment-failure/${order._id}`;
 
