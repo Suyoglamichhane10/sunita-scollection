@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { FaEye, FaEyeSlash, FaLock, FaEnvelope } from 'react-icons/fa';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { FaEnvelope, FaLock, FaEye, FaEyeSlash } from 'react-icons/fa';
 import { useAuth } from '../../Context/Authcontext';
 import toast from 'react-hot-toast';
 import logo from '../../assets/LOGO!.png';
@@ -12,11 +12,6 @@ const Login = () => {
   const [submitting, setSubmitting] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
-
-  // ✅ Debug: log when component mounts
-  useEffect(() => {
-    console.log('✅ Login component mounted successfully');
-  }, []);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -40,15 +35,8 @@ const Login = () => {
     toast.error(result.error || 'Login failed');
   };
 
-  // ✅ Google Login - Hardcoded redirect URL (no env vars needed)
   const handleGoogleLogin = () => {
-    console.log('🔵 handleGoogleLogin function called!');
-    alert('🔵 Google Login button clicked!');
-    const redirectUrl = 'https://sunitaz-backend.onrender.com/api/auth/google';
-    console.log('🔵 Redirect URL:', redirectUrl);
-    console.log('🔵 Starting redirect...');
-    window.location.href = redirectUrl;
-    console.log('🔵 Redirect initiated');
+    window.location.href = 'https://sunitaz-backend.onrender.com/api/auth/google';
   };
 
   return (
@@ -86,7 +74,6 @@ const Login = () => {
             <h2 className="font-serif text-center text-2xl font-bold text-primary-800 mb-1">Sign in</h2>
             <p className="text-center text-sm text-ink-light mb-7">Welcome back to trendy fashion</p>
 
-            {/* ✅ FORM - contains only email, password, remember me, submit */}
             <form className="space-y-5" onSubmit={handleSubmit}>
               <div className="relative">
                 <FaEnvelope className="absolute left-4 top-1/2 -translate-y-1/2 text-gold-500" />
@@ -146,7 +133,6 @@ const Login = () => {
               </button>
             </form>
 
-            {/* ✅ Google Button - OUTSIDE the form, type="button" */}
             <div className="mt-6">
               <div className="relative py-2">
                 <div className="absolute inset-0 flex items-center">
@@ -157,20 +143,10 @@ const Login = () => {
                 </div>
               </div>
 
-              {/* ✅ DEBUG: visible rendering indicator */}
-              <p className="text-center text-xs text-green-500 mb-2">✅ Google button rendering here</p>
-
-              {/* ✅ WORKING GOOGLE BUTTON with inline arrow function, unique ID, type="button" */}
               <button
                 id="google-login-btn"
                 type="button"
-                onClick={() => {
-                  console.log('🔵 [inline] Google button onClick fired!');
-                  alert('🔵 Google Login button clicked!');
-                  const redirectUrl = 'https://sunitaz-backend.onrender.com/api/auth/google';
-                  console.log('🔵 [inline] Redirecting to:', redirectUrl);
-                  window.location.href = redirectUrl;
-                }}
+                onClick={handleGoogleLogin}
                 className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white py-2.5 text-sm font-semibold text-gray-700 transition hover:border-red-500 hover:text-red-600"
               >
                 <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
@@ -181,11 +157,6 @@ const Login = () => {
                 </svg>
                 Continue with Google
               </button>
-
-              {/* ✅ Debug info */}
-              <p className="text-center text-xs text-gray-400 mt-2">
-                ID: google-login-btn | type: button | onClick: inline arrow
-              </p>
             </div>
 
             <div className="text-center text-sm text-ink-light">
