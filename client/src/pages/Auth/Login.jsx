@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaEye, FaEyeSlash, FaLock, FaEnvelope } from 'react-icons/fa';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../Context/Authcontext';
@@ -12,6 +12,11 @@ const Login = () => {
   const [submitting, setSubmitting] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  // ✅ Debug: log when component mounts
+  useEffect(() => {
+    console.log('✅ Login component mounted successfully');
+  }, []);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -37,10 +42,13 @@ const Login = () => {
 
   // ✅ Google Login - Hardcoded redirect URL (no env vars needed)
   const handleGoogleLogin = () => {
+    console.log('🔵 handleGoogleLogin function called!');
     alert('🔵 Google Login button clicked!');
     const redirectUrl = 'https://sunitaz-backend.onrender.com/api/auth/google';
-    console.log('🔵 Google Login clicked! Redirecting to:', redirectUrl);
+    console.log('🔵 Redirect URL:', redirectUrl);
+    console.log('🔵 Starting redirect...');
     window.location.href = redirectUrl;
+    console.log('🔵 Redirect initiated');
   };
 
   return (
@@ -149,9 +157,20 @@ const Login = () => {
                 </div>
               </div>
 
+              {/* ✅ DEBUG: visible rendering indicator */}
+              <p className="text-center text-xs text-green-500 mb-2">✅ Google button rendering here</p>
+
+              {/* ✅ WORKING GOOGLE BUTTON with inline arrow function, unique ID, type="button" */}
               <button
+                id="google-login-btn"
                 type="button"
-                onClick={handleGoogleLogin}
+                onClick={() => {
+                  console.log('🔵 [inline] Google button onClick fired!');
+                  alert('🔵 Google Login button clicked!');
+                  const redirectUrl = 'https://sunitaz-backend.onrender.com/api/auth/google';
+                  console.log('🔵 [inline] Redirecting to:', redirectUrl);
+                  window.location.href = redirectUrl;
+                }}
                 className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white py-2.5 text-sm font-semibold text-gray-700 transition hover:border-red-500 hover:text-red-600"
               >
                 <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
@@ -162,6 +181,11 @@ const Login = () => {
                 </svg>
                 Continue with Google
               </button>
+
+              {/* ✅ Debug info */}
+              <p className="text-center text-xs text-gray-400 mt-2">
+                ID: google-login-btn | type: button | onClick: inline arrow
+              </p>
             </div>
 
             <div className="text-center text-sm text-ink-light">
