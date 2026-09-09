@@ -115,17 +115,42 @@ export const AuthProvider = ({ children }) => {
 
   const loginWithToken = async (token) => {
     try {
-      setToken(token);
-      localStorage.setItem('token', token);
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      console.log('🔵 loginWithToken called with token:', token ? 'Present' : 'Missing');
 
+      // Store token in localStorage
+      localStorage.setItem('token', token);
+      console.log('✅ Token stored in localStorage');
+
+      // Update api default header (also handled by request interceptor, but set explicitly)
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      console.log('✅ Authorization header set on api');
+
+      // Update state
+      setToken(token);
+      console.log('✅ Token state updated');
+
+      // Fetch user data
+      console.log('🔄 Fetching user data...');
       const freshUser = await fetchCurrentUser();
+      console.log('✅ User data received:', freshUser);
+
+      // Update user state
       setUser(freshUser);
+      console.log('✅ User state updated');
+
       toast.success('Welcome! You are now logged in.');
       return { success: true, user: freshUser };
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Login failed');
-      return { success: false, error: error.response?.data?.message };
+      console.error('❌ loginWithToken error:', error.response?.data || error.message);
+
+      // Clean up on error
+      localStorage.removeItem('token');
+      delete api.defaults.headers.common['Authorization'];
+      setToken(null);
+      setUser(null);
+
+      toast.error('Failed to authenticate. Please try again.');
+      return { success: false, error: error.response?.data?.message || error.message };
     }
   };
 

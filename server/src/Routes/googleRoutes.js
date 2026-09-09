@@ -43,8 +43,18 @@ router.get('/google/callback', (req, res, next) => {
       console.error('[Google OAuth] Authentication failed:', err?.message || 'no user returned');
       return res.redirect(`${getFrontendUrl()}/login?error=google_auth_failed`);
     }
-    const token = user.getSignedJwtToken();
-    res.redirect(`${getFrontendUrl()}/auth/google/success?token=${token}`);
+    console.log('✅ Google OAuth callback received user:', user.email);
+
+    try {
+      const token = user.getSignedJwtToken();
+      console.log('✅ JWT token generated for user:', user.email);
+      const redirectUrl = `${getFrontendUrl()}/auth/google/success?token=${token}`;
+      console.log('🔵 Redirecting to frontend:', redirectUrl);
+      res.redirect(redirectUrl);
+    } catch (error) {
+      console.error('[Google OAuth] Token generation error:', error.message);
+      res.redirect(`${getFrontendUrl()}/login?error=token_generation_failed`);
+    }
   })(req, res, next);
 });
 
