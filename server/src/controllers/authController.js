@@ -1,14 +1,13 @@
 const User = require('../Models/User');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const axios = require('axios');
 const { sendPasswordReset } = require('../services/emailService');
 const { getFrontendUrl } = require('../Utils/frontendUrl');
 
-const https = require('https');
-
 const FACEBOOK_GRAPH_URL = 'https://graph.facebook.com/v18.0';
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
-const GOOGLE_USERINFO_URL = 'https://www.googleapis.com/oauth2/v3/userinfo';
+const GOOGLE_USERINFO_URL = 'https://www.googleapis.com/oauth2/v2/userinfo';
 
 const generateToken = (user) => {
   return jwt.sign(
@@ -40,119 +39,73 @@ const sendTokenResponse = (user, statusCode, res) => {
   });
 };
 
-const fetchFacebookUser = async (accessToken) => {
-  return new Promise((resolve, reject) => {
-    https.get(
-      `${FACEBOOK_GRAPH_URL}/me?fields=id,name,email,picture.type(large)&access_token=${accessToken}`,
-      (res) => {
-        let data = '';
-        res.on('data', (chunk) => (data += chunk));
-        res.on('end', () => {
-          try {
-            const parsed = JSON.parse(data);
-            if (parsed.error) {
-              return reject(new Error(parsed.error.message || 'Facebook fetch failed'));
-            }
-            resolve(parsed);
-          } catch (err) {
-            reject(err);
-          }
-        });
-      }
-    ).on('error', reject);
-  });
-};
-
-const exchangeCodeForToken = async (code) => {
-  return new Promise((resolve, reject) => {
-    const params = new URLSearchParams({
+const exchangeCodeForToken = async (code, provider) => {
+  let url, params;
+  
+  if (provider === 'facebook') {
+    url = `${FACEBOOK_GRAPH_URL}/oauth/access_token`;
+    params = {
       client_id: process.env.FACEBOOK_APP_ID,
       client_secret: process.env.FACEBOOK_APP_SECRET,
       redirect_uri: process.env.FACEBOOK_CALLBACK_URL,
       code,
-    });
+    };
+  } else if (provider === 'google') {
+    url = GOOGLE_TOKEN_URL;
+    const callbackUrl = process.env.GOOGLE_CALLBACK_URL || `${process.env.FRONTEND_URL}/api/auth/google/callback`;
+    params = {
+      code,
+      client_id: process.env.GOOGLE_CLIENT_ID,
+      client_secret: process.env.GOOGLE_CLIENT_SECRET,
+      redirect_uri: callbackUrl,
+      grant_type: 'authorization_code',
+    };
+  } else {
+    throw new Error(`Unknown provider: ${provider}`);
+  }
 
-    https.get(
-      `${FACEBOOK_GRAPH_URL}/oauth/access_token?${params.toString()}`,
-      (res) => {
-        let data = '';
-        res.on('data', (chunk) => (data += chunk));
-        res.on('end', () => {
-          try {
-            const parsed = JSON.parse(data);
-            if (parsed.error) {
-              return reject(new Error(parsed.error.message || 'Facebook token exchange failed'));
-            }
-            resolve(parsed.access_token);
-          } catch (err) {
-            reject(err);
-          }
-        });
-      }
-    ).on('error', reject);
-  });
+  try {
+    const response = await axios.post(url, new URLSearchParams(params).toString(), {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      timeout: 10000,
+    });
+    
+    if (provider === 'facebook') {
+      return response.data.access_token;
+    } else {
+      return response.data.access_token;
+    }
+  } catch (error) {
+    if (error.response?.data?.error) {
+      throw new Error(error.response.data.error.error_description || error.response.data.error.message || `${provider} token exchange failed`);
+    }
+    throw error;
+  }
 };
 
-const postForm = (url, formParams) =>
-  new Promise((resolve, reject) => {
-    const payload = new URLSearchParams(formParams).toString();
-    const req = https.request(
-      url,
-      { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' } },
-      (res) => {
-        let data = '';
-        res.on('data', (chunk) => (data += chunk));
-        res.on('end', () => {
-          try {
-            const parsed = JSON.parse(data || '{}');
-            if (res.statusCode !== 200 || parsed.error) {
-              return reject(
-                new Error(
-                  parsed.error?.error_description ||
-                  parsed.error?.message ||
-                  `Token exchange failed with status ${res.statusCode}`
-                )
-              );
-            }
-            resolve(parsed);
-          } catch (err) {
-            reject(err);
-          }
-        });
-      }
-    );
-    req.on('error', reject);
-    req.write(payload);
-    req.end();
-  });
+const fetchSocialUser = async (accessToken, provider) => {
+  let url;
+  
+  if (provider === 'facebook') {
+    url = `${FACEBOOK_GRAPH_URL}/me?fields=id,name,email,picture.type(large)`;
+  } else if (provider === 'google') {
+    url = GOOGLE_USERINFO_URL;
+  } else {
+    throw new Error(`Unknown provider: ${provider}`);
+  }
 
-const fetchGoogleUser = async (accessToken) => {
-  return new Promise((resolve, reject) => {
-    const options = {
-      hostname: 'www.googleapis.com',
-      path: '/oauth2/v3/userinfo',
-      method: 'GET',
+  try {
+    const response = await axios.get(url, {
       headers: { Authorization: `Bearer ${accessToken}` },
-    };
-
-    https.get(options, (res) => {
-      let data = '';
-      res.on('data', (chunk) => (data += chunk));
-      res.on('end', () => {
-        try {
-          const parsed = JSON.parse(data || '{}');
-          if (res.statusCode !== 200 || parsed.error) {
-            return reject(
-              new Error(parsed.error?.message || `Google fetch failed with status ${res.statusCode}`)
-            );
-          }
-          resolve(parsed);
-        } catch (err) {
-          reject(err);
-        }
-      });
-    }).on('error', reject);
-  });
+      timeout: 10000,
+    });
+    return response.data;
+  } catch (error) {
+    if (error.response?.data?.error) {
+      throw new Error(error.response.data.error.message || `${provider} user fetch failed`);
+    }
+    throw error;
+  }
 };
 
 // @desc    Register user
@@ -240,8 +193,8 @@ exports.facebookCallback = async (req, res, next) => {
       return res.redirect(`${getFrontendUrl()}/login?error=facebook_auth_denied`);
     }
 
-    const accessToken = await exchangeCodeForToken(code);
-    const fbUser = await fetchFacebookUser(accessToken);
+    const accessToken = await exchangeCodeForToken(code, 'facebook');
+    const fbUser = await fetchSocialUser(accessToken, 'facebook');
 
     if (!fbUser.email) {
       return res.redirect(`${getFrontendUrl()}/login?error=facebook_email_required`);
@@ -285,6 +238,7 @@ exports.googleLogin = async (req, res, next) => {
     const callbackUrl =
       process.env.GOOGLE_CALLBACK_URL ||
       `${req.protocol}://${req.get('host')}/api/auth/google/callback`;
+    console.log('🔵 Google OAuth initiated, callback URL:', callbackUrl);
     const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(callbackUrl)}&response_type=code&scope=openid%20profile%20email&access_type=offline&prompt=consent`;
     res.redirect(googleAuthUrl);
   } catch (error) {
@@ -296,40 +250,43 @@ exports.googleCallback = async (req, res, next) => {
   try {
     const code = req.query.code;
     if (!code) {
+      console.log('❌ No authorization code received from Google');
       return res.redirect(`${getFrontendUrl()}/login?error=google_auth_denied`);
     }
+    console.log('✅ Authorization code received');
 
-    const callbackUrl =
-      process.env.GOOGLE_CALLBACK_URL ||
-      `${req.protocol}://${req.get('host')}/api/auth/google/callback`;
-    const tokenResponse = await postForm(GOOGLE_TOKEN_URL, {
-      code,
-      client_id: process.env.GOOGLE_CLIENT_ID,
-      client_secret: process.env.GOOGLE_CLIENT_SECRET,
-      redirect_uri: callbackUrl,
-      grant_type: 'authorization_code',
-    });
+    // Exchange code for tokens
+    const accessToken = await exchangeCodeForToken(code, 'google');
+    console.log('✅ Access token received from Google');
 
-    const googleUser = await fetchGoogleUser(tokenResponse.access_token);
+    // Get user info from Google
+    const googleUser = await fetchSocialUser(accessToken, 'google');
+    console.log('✅ Google user info received:', { id: googleUser.id, email: googleUser.email, name: googleUser.name });
 
     if (!googleUser.email) {
+      console.log('❌ No email in Google user response');
       return res.redirect(`${getFrontendUrl()}/login?error=google_email_required`);
     }
 
+    // Use 'id' from v2 endpoint (or 'sub' if using v3)
+    const googleId = googleUser.id || googleUser.sub;
+    
     let user = await User.findOne({ email: googleUser.email });
 
     if (!user) {
+      console.log('👤 Creating new user from Google account');
       user = await User.create({
         name: googleUser.name,
         email: googleUser.email,
         password: crypto.randomBytes(20).toString('hex'),
         socialProvider: 'google',
-        socialId: googleUser.sub,
+        socialId: googleId,
         avatar: googleUser.picture || null,
       });
     } else if (!user.socialProvider) {
+      console.log('🔗 Linking existing local account to Google');
       user.socialProvider = 'google';
-      user.socialId = googleUser.sub;
+      user.socialId = googleId;
       if (!user.avatar && googleUser.picture) {
         user.avatar = googleUser.picture;
       }
@@ -340,10 +297,15 @@ exports.googleCallback = async (req, res, next) => {
     await user.save();
 
     const token = generateToken(user);
+    console.log('✅ User authenticated, redirecting to success page');
 
     res.redirect(`${getFrontendUrl()}/auth/google/success?token=${token}`);
   } catch (error) {
-    console.error('Google callback error:', error);
+    console.error('❌ Google callback error:', error.message);
+    if (error.response) {
+      console.error('   Response status:', error.response.status);
+      console.error('   Response data:', error.response.data);
+    }
     res.redirect(`${getFrontendUrl()}/login?error=google_auth_failed`);
   }
 };
