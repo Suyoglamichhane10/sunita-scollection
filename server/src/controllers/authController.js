@@ -103,9 +103,15 @@ const postForm = (url, formParams) =>
         res.on('data', (chunk) => (data += chunk));
         res.on('end', () => {
           try {
-            const parsed = JSON.parse(data);
-            if (parsed.error) {
-              return reject(new Error(parsed.error.error_description || parsed.error.message || 'Token exchange failed'));
+            const parsed = JSON.parse(data || '{}');
+            if (res.statusCode !== 200 || parsed.error) {
+              return reject(
+                new Error(
+                  parsed.error?.error_description ||
+                  parsed.error?.message ||
+                  `Token exchange failed with status ${res.statusCode}`
+                )
+              );
             }
             resolve(parsed);
           } catch (err) {
@@ -121,24 +127,30 @@ const postForm = (url, formParams) =>
 
 const fetchGoogleUser = async (accessToken) => {
   return new Promise((resolve, reject) => {
-    https.get(
-      `${GOOGLE_USERINFO_URL}?access_token=${accessToken}`,
-      (res) => {
-        let data = '';
-        res.on('data', (chunk) => (data += chunk));
-        res.on('end', () => {
-          try {
-            const parsed = JSON.parse(data);
-            if (parsed.error) {
-              return reject(new Error(parsed.error.message || 'Google fetch failed'));
-            }
-            resolve(parsed);
-          } catch (err) {
-            reject(err);
+    const options = {
+      hostname: 'www.googleapis.com',
+      path: '/oauth2/v3/userinfo',
+      method: 'GET',
+      headers: { Authorization: `Bearer ${accessToken}` },
+    };
+
+    https.get(options, (res) => {
+      let data = '';
+      res.on('data', (chunk) => (data += chunk));
+      res.on('end', () => {
+        try {
+          const parsed = JSON.parse(data || '{}');
+          if (res.statusCode !== 200 || parsed.error) {
+            return reject(
+              new Error(parsed.error?.message || `Google fetch failed with status ${res.statusCode}`)
+            );
           }
-        });
-      }
-    ).on('error', reject);
+          resolve(parsed);
+        } catch (err) {
+          reject(err);
+        }
+      });
+    }).on('error', reject);
   });
 };
 
@@ -269,7 +281,9 @@ exports.facebookCallback = async (req, res, next) => {
 exports.googleLogin = async (req, res, next) => {
   try {
     const clientId = process.env.GOOGLE_CLIENT_ID;
-    const callbackUrl = process.env.GOOGLE_CALLBACK_URL || `${process.env.FRONTEND_URL}/api/auth/google/callback`;
+    const callbackUrl =
+      process.env.GOOGLE_CALLBACK_URL ||
+      `${req.protocol}://${req.get('host')}/api/auth/google/callback`;
     const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(callbackUrl)}&response_type=code&scope=openid%20profile%20email&access_type=offline&prompt=consent`;
     res.redirect(googleAuthUrl);
   } catch (error) {
@@ -284,7 +298,9 @@ exports.googleCallback = async (req, res, next) => {
       return res.redirect(`${process.env.FRONTEND_URL}/login?error=google_auth_denied`);
     }
 
-    const callbackUrl = process.env.GOOGLE_CALLBACK_URL || `${process.env.FRONTEND_URL}/api/auth/google/callback`;
+    const callbackUrl =
+      process.env.GOOGLE_CALLBACK_URL ||
+      `${req.protocol}://${req.get('host')}/api/auth/google/callback`;
     const tokenResponse = await postForm(GOOGLE_TOKEN_URL, {
       code,
       client_id: process.env.GOOGLE_CLIENT_ID,
@@ -324,7 +340,7 @@ exports.googleCallback = async (req, res, next) => {
 
     const token = generateToken(user);
 
-    res.redirect(`${process.env.FRONTEND_URL}/login?token=${token}`);
+    res.redirect(`${process.env.FRONTEND_URL}/auth/google/success?token=${token}`);
   } catch (error) {
     console.error('Google callback error:', error);
     res.redirect(`${process.env.FRONTEND_URL}/login?error=google_auth_failed`);

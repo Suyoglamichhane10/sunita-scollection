@@ -22,6 +22,8 @@ router.post('/forgot-password', forgotPassword);
 router.put('/reset-password/:resetToken', resetPassword);
 router.get('/facebook', facebookLogin);
 router.get('/facebook/callback', facebookCallback);
+router.get('/google', googleLogin);
+router.get('/google/callback', googleCallback);
 
 // Protected routes
 router.get('/logout', protect, logout);
