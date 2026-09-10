@@ -234,11 +234,12 @@ exports.facebookCallback = async (req, res, next) => {
 
 exports.googleLogin = async (req, res, next) => {
   try {
-    const redirectUri = `${req.protocol}://${req.get('host')}/api/auth/google/callback`;
     const clientId = process.env.GOOGLE_CLIENT_ID;
+    // Use exact env var - MUST match Google Cloud Console
+    const redirectUri = process.env.GOOGLE_CALLBACK_URL;
     
-    if (!clientId) {
-      console.error('❌ GOOGLE_CLIENT_ID not set in environment');
+    if (!clientId || !redirectUri) {
+      console.error('❌ GOOGLE_CLIENT_ID or GOOGLE_CALLBACK_URL not set');
       return res.redirect(`${getFrontendUrl()}/login?error=google_config_error`);
     }
 
@@ -271,11 +272,12 @@ exports.googleCallback = async (req, res, next) => {
 
     console.log('🔵 Google callback received with code');
 
-    const redirectUri = `${req.protocol}://${req.get('host')}/api/auth/google/callback`;
+    // Use exact same env var as googleLogin - MUST match Google Cloud Console
+    const redirectUri = process.env.GOOGLE_CALLBACK_URL;
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
 
-    if (!clientId || !clientSecret) {
+    if (!clientId || !clientSecret || !redirectUri) {
       console.error('❌ Google credentials not configured');
       return res.redirect(`${getFrontendUrl()}/login?error=google_config_error`);
     }
