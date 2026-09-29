@@ -101,18 +101,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const loginWithRoleCheck = async (credentials, expectedRole) => {
-    const result = await login(credentials);
-    if (result.success && result.user) {
-      const role = result.user.role || 'customer';
-      if (expectedRole && role !== expectedRole) {
-        toast.error('Invalid credentials');
-        return { success: false, error: 'Invalid credentials' };
-      }
-    }
-    return result;
-  };
-
   const loginWithToken = async (token) => {
     try {
       console.log('🔵 loginWithToken called with token:', token ? 'Present' : 'Missing');
@@ -178,6 +166,22 @@ export const AuthProvider = ({ children }) => {
     return freshUser;
   };
 
+  const updateUser = (partialUser) => {
+    setUser((prev) => (prev ? { ...prev, ...partialUser } : null));
+  };
+
+  const deleteAccount = async () => {
+    ++requestIdRef.current;
+    setUser(null);
+    setToken(null);
+    localStorage.removeItem('token');
+    localStorage.removeItem('guest_cart');
+    localStorage.removeItem('cart');
+    localStorage.removeItem('chat_history');
+    localStorage.removeItem('rememberedEmail');
+    delete api.defaults.headers.common['Authorization'];
+  };
+
   const value = {
     user,
     setUser,
@@ -189,6 +193,8 @@ export const AuthProvider = ({ children }) => {
     refreshUser,
     loginWithToken,
     googleLogin,
+    updateUser,
+    deleteAccount,
     isAuthenticated: !!user,
     isAdmin: user?.role === 'admin',
     isDeliveryPerson: user?.isDeliveryPerson,

@@ -18,6 +18,9 @@ const {
   addAddress,
   updateAddress,
   deleteAddress,
+  setDefaultAddress,
+  deactivateAccount,
+  deleteOwnAccount,
   getCart,
   addToCart,
   updateCartItem,
@@ -63,6 +66,7 @@ router.get('/profile/addresses', protect, getAddresses);
 router.post('/profile/addresses', protect, addAddress);
 router.put('/profile/addresses/:addressId', protect, updateAddress);
 router.delete('/profile/addresses/:addressId', protect, deleteAddress);
+router.put('/profile/addresses/:addressId/default', protect, setDefaultAddress);
 router.get('/profile/wishlist', protect, getWishlist);
 router.post('/profile/wishlist/:productId', protect, addToWishlist);
 router.delete('/profile/wishlist/:productId', protect, removeFromWishlist);
@@ -73,6 +77,8 @@ router.put('/profile/cart/:key', protect, updateCartItem);
 router.delete('/profile/cart/:key', protect, removeCartItem);
 router.post('/avatar', protect, upload.single('avatar'), uploadAvatar);
 router.delete('/avatar', protect, deleteAvatar);
+router.put('/me/deactivate', protect, deactivateAccount);
+router.delete('/me', protect, deleteOwnAccount);
 router.get('/:id/avatar', getUserAvatar);
 router.put('/:id/role', protect, authorize('admin'), updateUserRole);
 router.delete('/:id', protect, authorize('admin'), deleteUser);

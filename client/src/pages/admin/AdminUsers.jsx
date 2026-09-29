@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { FaSpinner, FaTrash, FaEye, FaTimes, FaCamera, FaSave, FaUndo } from 'react-icons/fa';
+import { FaSpinner, FaTrash, FaEye, FaTimes, FaCamera } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 import api from '../../Services/api';
 import { useAuth } from '../../Context/Authcontext';

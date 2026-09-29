@@ -52,7 +52,7 @@ const exchangeCodeForToken = async (code, provider) => {
     };
   } else if (provider === 'google') {
     url = GOOGLE_TOKEN_URL;
-    const callbackUrl = process.env.GOOGLE_CALLBACK_URL || `${process.env.FRONTEND_URL}/api/auth/google/callback`;
+    const callbackUrl = process.env.GOOGLE_CALLBACK_URL;
     params = {
       code,
       client_id: process.env.GOOGLE_CLIENT_ID,
@@ -178,7 +178,7 @@ exports.login = async (req, res, next) => {
 exports.facebookLogin = async (req, res, next) => {
   try {
     const appId = process.env.FACEBOOK_APP_ID;
-    const callbackUrl = process.env.FACEBOOK_CALLBACK_URL || `${process.env.FRONTEND_URL}/api/auth/facebook/callback`;
+    const callbackUrl = process.env.FACEBOOK_CALLBACK_URL || `${getFrontendUrl()}/api/auth/facebook/callback`;
     const facebookAuthUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(callbackUrl)}&scope=email,public_profile&display=popup`;
     res.redirect(facebookAuthUrl);
   } catch (error) {
@@ -282,27 +282,10 @@ exports.googleCallback = async (req, res, next) => {
       return res.redirect(`${getFrontendUrl()}/login?error=google_config_error`);
     }
 
-    // Exchange code for access token using axios
-    const tokenResponse = await axios.post('https://oauth2.googleapis.com/token', {
-      code,
-      client_id: clientId,
-      client_secret: clientSecret,
-      redirect_uri: redirectUri,
-      grant_type: 'authorization_code'
-    });
+    const accessToken = await exchangeCodeForToken(code, 'google');
+    const userInfoResponse = await fetchSocialUser(accessToken, 'google');
 
-    console.log('✅ Access token received');
-
-    const { access_token } = tokenResponse.data;
-
-    // Get user info from Google
-    const userInfoResponse = await axios.get('https://www.googleapis.com/oauth2/v2/userinfo', {
-      headers: { 
-        Authorization: `Bearer ${access_token}` 
-      }
-    });
-
-    const { id, name, email, picture } = userInfoResponse.data;
+    const { id, name, email, picture } = userInfoResponse;
     console.log('✅ Google user info received:', { id, name, email });
 
     // Find or create user - check socialId first
@@ -416,7 +399,7 @@ exports.forgotPassword = async (req, res, next) => {
 
     await user.save({ validateBeforeSave: false });
 
-const resetUrl = `${getFrontendUrl()}/reset-password/${resetToken}`;
+    const resetUrl = `${getFrontendUrl()}/reset-password/${resetToken}`;
 
     // Send password reset email (non-blocking)
     try {

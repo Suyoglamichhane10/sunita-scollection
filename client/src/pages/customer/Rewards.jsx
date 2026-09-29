@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaTrophy, FaMedal, FaGift, FaStar, FaCopy, FaCogs, FaCalendarAlt } from 'react-icons/fa';
+import { FaTrophy, FaMedal, FaGift, FaStar, FaCopy, FaCogs } from 'react-icons/fa';
 import api from '../../Services/api';
 import { useAuth } from '../../Context/Authcontext';
 import toast from 'react-hot-toast';
@@ -62,24 +62,6 @@ const Rewards = () => {
       toast.error(error.response?.data?.message || 'Unable to spin');
     } finally {
       setSpinning(false);
-    }
-  };
-
-  const copyReferral = () => {
-    navigator.clipboard?.writeText(referralCode);
-    toast.success('Referral code copied!');
-  };
-
-  const checkBirthday = async () => {
-    try {
-      const { data } = await api.post('/loyalty/birthday', { month: 1, day: 1 });
-      if (data.isBirthday) {
-        toast.success('Happy Birthday! Reward claimed 🎉');
-      } else {
-        toast.success(data.message || 'Birthday reward checked');
-      }
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Unable to check birthday');
     }
   };
 
@@ -237,16 +219,30 @@ const Rewards = () => {
           {activeTab === 'referral' && (
             <div className="rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
               <h3 className="text-xl font-bold text-gray-900">Refer a Friend</h3>
-              <p className="mt-1 text-sm text-gray-500">Share your code and earn 200 points when your friend joins!</p>
+              <p className="mt-1 text-sm text-gray-500">Share your referral link and earn 300 points when your friend completes a purchase!</p>
               <div className="mt-6 flex items-center gap-3">
-                <div className="flex-1 rounded-3xl border-2 border-dashed border-pink-300 bg-pink-50 px-6 py-4 text-center">
-                  <span className="font-mono text-2xl font-bold tracking-widest text-pink-600">{referralCode || '----'}</span>
-                </div>
-                <button type="button" onClick={copyReferral} className="flex items-center gap-2 rounded-full bg-pink-600 px-5 py-3 text-sm font-semibold text-white hover:bg-pink-700">
+                <input
+                  type="text"
+                  readOnly
+                  value={referralCode ? `${window.location.origin}/r/${referralCode}` : ''}
+                  onClick={(e) => referralCode && e.target.select()}
+                  placeholder="No referral code yet"
+                  className="flex-1 rounded-3xl border-2 border-dashed border-pink-300 bg-pink-50 px-4 py-3 font-mono text-sm text-pink-600 outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!referralCode) return;
+                    navigator.clipboard?.writeText(`${window.location.origin}/r/${referralCode}`);
+                    toast.success('Referral link copied!');
+                  }}
+                  disabled={!referralCode}
+                  className="flex items-center gap-2 rounded-full bg-pink-600 px-5 py-3 text-sm font-semibold text-white hover:bg-pink-700 disabled:opacity-50"
+                >
                   <FaCopy /> Copy
                 </button>
               </div>
-              <p className="mt-4 text-sm text-gray-500">Have a friend&apos;s code? Use it during signup to get rewarded.</p>
+              <p className="mt-4 text-sm text-gray-500">Your friend gets a discount on their first order and you earn 300 points when they complete a purchase!</p>
             </div>
           )}
 

@@ -39,7 +39,7 @@ const HeroImageSlideshow = ({ slides = [], showCounter = true }) => {
   const slideInterval = 2000; // 2 seconds
 
   const goToSlide = useCallback((index) => {
-    setCurrentSlide((prev) => (index + activeSlides.length) % activeSlides.length);
+    setCurrentSlide((index + activeSlides.length) % activeSlides.length);
   }, [activeSlides.length]);
 
   const goToPrevious = useCallback(() => {

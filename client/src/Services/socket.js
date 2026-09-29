@@ -53,7 +53,7 @@ export const disconnectSocket = () => {
     socket.removeAllListeners();
     try {
       socket.disconnect();
-    } catch (e) {
+    } catch {
       // ignore
     }
     socket = null;

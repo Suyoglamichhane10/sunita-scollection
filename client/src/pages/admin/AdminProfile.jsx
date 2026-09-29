@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import api from '../../Services/api';
 import { useAuth } from '../../Context/Authcontext';
 import toast from 'react-hot-toast';
-import { FaCamera, FaCheckCircle, FaEnvelope, FaEye, FaEyeSlash, FaPhone, FaShieldAlt, FaTrash, FaUserCircle, FaUserShield } from 'react-icons/fa';
+import { FaCamera, FaCheckCircle, FaEnvelope, FaEye, FaEyeSlash, FaPhone, FaShieldAlt, FaTrash, FaUserShield } from 'react-icons/fa';
 import Avatar from '../../components/common/Avatar';
 import LOGO from '../../assets/LOGO!.png';
 

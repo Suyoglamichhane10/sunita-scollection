@@ -72,9 +72,8 @@ const AutocompleteDropdown = ({
                   {highlightMatch(suggestion.name, query)}
                 </p>
                 <p className="truncate text-xs text-ink-light">
-                  {suggestion.category}
-                  {suggestion.price != null && ` • Rs. ${suggestion.price}`}
-                </p>
+                   {suggestion.category}
+                   </p>
               </div>
             </li>
           ))}

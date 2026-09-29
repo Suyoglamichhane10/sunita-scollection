@@ -4,11 +4,13 @@ const User = require('../Models/User');
 const Review = require('../Models/Review');
 const Conversation = require('../Models/Conversation');
 const Message = require('../Models/Message');
+const Enquiry = require('../Models/Enquiry');
 const Stripe = require('stripe');
 const { sendOrderConfirmation } = require('../services/emailService');
 const { decrementStock } = require('../services/stockService');
 const loyaltyService = require('../services/loyaltyService');
 const automationService = require('../services/automationService');
+const crypto = require('crypto');
 
 const stripe = process.env.STRIPE_SECRET_KEY ? Stripe(process.env.STRIPE_SECRET_KEY) : null;
 
@@ -23,9 +25,9 @@ const calculateTotals = (items, shippingAddress) => {
 
 exports.createOrder = async (req, res, next) => {
   try {
-    const { items, shippingAddress, paymentMethod } = req.body;
+    const { items, shippingAddress, paymentMethod, referralCode } = req.body;
 
-if (!items || !items.length) {
+    if (!items || !items.length) {
       return res.status(400).json({ success: false, message: 'Cart is empty' });
     }
 
@@ -33,9 +35,6 @@ if (!items || !items.length) {
       return res.status(400).json({ success: false, message: 'Shipping address is incomplete' });
     }
 
-// Consolidate incoming line items by product + variant so that duplicate
-    // rows for the same product+variant are merged into a single quantity.
-    // This keeps the order summary accurate and prevents inflated totals.
     const consolidatedMap = new Map();
     for (const item of items) {
       const qty = Math.floor(Number(item.quantity));
@@ -53,8 +52,43 @@ if (!items || !items.length) {
     }
     const consolidatedItems = Array.from(consolidatedMap.values());
 
-const products = await Product.find({ _id: { $in: consolidatedItems.map((item) => item.productId) } });
+    const approvedEnquiries = await Enquiry.find({
+      userId: req.user.id,
+      status: { $in: ['deal_closed', 'customer_agreed', 'converted'] },
+      dealPrice: { $ne: null },
+      productId: { $in: consolidatedItems.map((i) => i.productId) },
+    }).select('productId dealPrice');
 
+    const approvedMap = new Map();
+    for (const ae of approvedEnquiries) {
+      approvedMap.set(ae.productId.toString(), ae.dealPrice);
+    }
+
+    for (const item of consolidatedItems) {
+      const pid = item.productId.toString();
+      if (item.dealPrice != null && item.dealPrice !== '') {
+        if (!approvedMap.has(pid)) {
+          return res.status(403).json({
+            success: false,
+            message: `Enquiry for ${item.name || 'product'} requires admin approval before purchase.`,
+          });
+        }
+      }
+    }
+
+    const products = await Product.find({ _id: { $in: consolidatedItems.map((item) => item.productId) } });
+
+    let referredBy = null;
+    let appliedReferralCode = null;
+    if (referralCode) {
+      const referrer = await User.findOne({ referralCode: String(referralCode).toUpperCase() });
+      if (referrer && referrer._id.toString() !== req.user.id) {
+        referredBy = referrer._id;
+        appliedReferralCode = String(referralCode).toUpperCase();
+      }
+    }
+
+    const approvedProductIds = [];
     const lineItems = consolidatedItems.map((item) => {
       const product = products.find((p) => p._id.toString() === item.productId);
       if (!product) throw new Error('Product not found');
@@ -73,23 +107,55 @@ const products = await Product.find({ _id: { $in: consolidatedItems.map((item) =
         throw new Error(`Insufficient stock for product ${product.name}`);
       }
 
-      const price = variant?.price ?? product.price;
+      let finalPrice;
+      let isDeal = false;
+      if (item.dealPrice != null && item.dealPrice !== '') {
+        const approvedDeal = approvedMap.get(item.productId.toString());
+        if (approvedDeal == null) {
+          throw new Error('Deal price not authorized');
+        }
+        finalPrice = Number(approvedDeal);
+        isDeal = true;
+      } else {
+        finalPrice = variant?.price ?? product.price;
+      }
+
+      if (finalPrice <= 0) {
+        throw new Error(`Invalid price for product ${product.name}`);
+      }
+
       const image = variant?.images?.[0]?.url || product.images?.[0]?.url || '';
       const variantTitle = variant ? variant.title || Array.from(variant.attributes || new Map()).map(([key, value]) => value).join(' / ') : null;
+
+      if (isDeal) {
+        approvedProductIds.push(item.productId.toString());
+      }
 
       return {
         product: product._id,
         name: product.name,
-        price,
+        price: finalPrice,
         quantity: item.quantity,
         image,
-        total: price * item.quantity,
+        total: finalPrice * item.quantity,
         variantSku: variant?.sku || null,
         variantTitle,
       };
     });
 
     const totals = calculateTotals(lineItems, shippingAddress);
+
+    // Mark related enquiries as converted after successful order creation
+    if (approvedEnquiries.length) {
+      try {
+        await Enquiry.updateMany(
+          { _id: { $in: approvedEnquiries.map((e) => e._id) }, userId: req.user.id },
+          { $set: { status: 'converted', approvedAt: new Date() } }
+        );
+      } catch (convertErr) {
+        console.error('Failed to convert enquiries:', convertErr.message);
+      }
+    }
 
     const order = await Order.create({
       user: req.user.id,
@@ -102,7 +168,7 @@ const products = await Product.find({ _id: { $in: consolidatedItems.map((item) =
       paymentStatus: 'pending',
       shippingAddress,
       orderStatus: 'pending',
-      isPaid: paymentMethod === 'stripe' ? false : false,
+      isPaid: false,
       statusHistory: [
         {
           status: 'pending',
@@ -111,6 +177,8 @@ const products = await Product.find({ _id: { $in: consolidatedItems.map((item) =
         },
       ],
       deliveryDate: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000),
+      referralCode: appliedReferralCode,
+      referredBy,
     });
 
     const customerName = req.user.name || 'A customer';
@@ -181,10 +249,10 @@ const products = await Product.find({ _id: { $in: consolidatedItems.map((item) =
       console.error('Delivery creation failed:', deliveryErr.message);
     }
 
-    // For gateway payments (eSewa / Khalti / Stripe), stock is decremented only
+    // For gateway payments (eSewa / FonePay / Stripe), stock is decremented only
     // after payment verification (see orderFinalizeService). For COD, decrement
     // stock now using atomic operations to prevent overselling.
-    const isDeferredPayment = ['esewa', 'khalti', 'fonepay'].includes(paymentMethod);
+    const isDeferredPayment = ['esewa', 'fonepay'].includes(paymentMethod);
     if (!isDeferredPayment) {
       const stockItems = lineItems.map((li) => ({
         product: li.product,
@@ -195,7 +263,7 @@ const products = await Product.find({ _id: { $in: consolidatedItems.map((item) =
     }
 
     // Send order confirmation email + award loyalty points (non-blocking).
-    // For eSewa/Khalti these are deferred until payment verification
+    // For eSewa/FonePay these are deferred until payment verification
     // (handled in orderFinalizeService), so they are skipped here.
     if (!isDeferredPayment) {
       try {
@@ -286,6 +354,30 @@ if (orderStatus === 'delivered') {
     }
 await order.save();
 
+    if (orderStatus === 'delivered') {
+      if (order.referredBy) {
+        setImmediate(async () => {
+          try {
+            await loyaltyService.awardPoints(order.referredBy, 300, 'referral_purchase');
+            await loyaltyService.awardBadge(order.referredBy, 'referrer');
+          } catch (err) {
+            console.error('Referral reward error:', err.message);
+          }
+        });
+      }
+      setImmediate(async () => {
+        try {
+          const user = await User.findById(order.user);
+          if (user && !user.referralCode) {
+            user.referralCode = crypto.randomBytes(4).toString('hex').toUpperCase();
+            await user.save();
+          }
+        } catch (err) {
+          console.error('Referral code generation error:', err.message);
+        }
+      });
+    }
+
     // Emit live order-tracking update to the customer's order room
     try {
       const app = require('../app');
@@ -372,6 +464,66 @@ exports.deleteOrder = async (req, res, next) => {
     const order = await Order.findById(req.params.id);
     if (!order) {
       return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    const orderId = order._id;
+    const userId = order.user;
+
+    // Remove reviews linked to this order (recompute product ratings)
+    const reviews = await Review.find({ order: orderId }).select('product');
+    await Review.deleteMany({ order: orderId });
+    for (const r of reviews) {
+      if (r.product) {
+        const stats = await Review.aggregate([
+          { $match: { product: r.product, isApproved: true } },
+          { $group: { _id: '$product', avgRating: { $avg: '$rating' }, count: { $sum: 1 } } },
+        ]);
+        await Product.findByIdAndUpdate(r.product, {
+          'rating.average': stats.length ? stats[0].avgRating : 0,
+          'rating.count': stats.length ? stats[0].count : 0,
+        });
+      }
+    }
+
+    // Delete order-linked messages and conversations
+    await Message.deleteMany({ order: orderId });
+    await Conversation.deleteMany({ order: orderId });
+
+    // Remove the order from the user's orderHistory
+    if (userId) {
+      await User.updateOne({ _id: userId }, { $pull: { orderHistory: orderId } });
+    }
+
+    await order.deleteOne();
+
+    res.status(200).json({ success: true, message: 'Order deleted successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Delete own order (customer) - only for cancelled or delivered orders
+// @route   DELETE /api/orders/:id
+// @access  Private
+exports.deleteOwnOrder = async (req, res, next) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    // Check if the order belongs to the authenticated user
+    if (order.user.toString() !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Unauthorized to delete this order' });
+    }
+
+    // Only allow deletion of cancelled or delivered orders
+    const deletableStatuses = ['cancelled', 'delivered'];
+    if (!deletableStatuses.includes(order.orderStatus)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Cannot delete order with status: ${order.orderStatus}. Only cancelled or delivered orders can be deleted.` 
+      });
     }
 
     const orderId = order._id;

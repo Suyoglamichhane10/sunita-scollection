@@ -34,6 +34,8 @@ const wishlistRoutes = require('./Routes/wishlistRoutes');
 const reviewRoutes = require('./Routes/reviewRoutes');
 const conversationRoutes = require('./Routes/conversationRoutes');
 const googleRoutes = require('./Routes/googleRoutes');
+const enquiryRoutes = require('./Routes/enquiryRoutes');
+const notificationRoutes = require('./Routes/notificationRoutes');
 
 const app = express();
 
@@ -43,9 +45,6 @@ app.set('trust proxy', 1);
 // ✅ CORS CONFIGURATION - MUST BE FIRST!
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-
     // Build allowed origins from env var, falling back to defaults
     const envOrigins = (process.env.FRONTEND_URL || '')
       .split(',')
@@ -58,6 +57,12 @@ const corsOptions = {
       'http://localhost:5173',
       'http://localhost:3000'
     ];
+
+    // Allow requests with no origin (health checks, direct navigation, server-to-server)
+    // CORS is browser-enforced: browsers always send Origin for cross-origin requests
+    if (!origin) {
+      return callback(null, true);
+    }
 
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
@@ -83,12 +88,22 @@ app.options('*', cors(corsOptions));
 app.use(helmet());
 app.use(compression());
 app.use(cookieParser());
+app.use('/api/payments/stripe/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 app.use(
   session({
-    secret: process.env.JWT_SECRET || 'your_super_secret_jwt_key',
+    secret: (() => {
+      const secret = process.env.SESSION_SECRET || process.env.JWT_SECRET;
+      if (!secret) {
+        if (process.env.NODE_ENV === 'production') {
+          throw new Error('SESSION_SECRET or JWT_SECRET must be set in production');
+        }
+        return 'change-this-session-secret-in-development';
+      }
+      return secret;
+    })(),
     resave: false,
     saveUninitialized: false,
     cookie: {
@@ -101,12 +116,46 @@ app.use(
 
 app.use(passport.initialize());
 
-// Rate limiting
-const limiter = rateLimit({
+// Rate limiting - stricter for authenticated routes, lenient for public
+const strictLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100 // limit each IP to 100 requests per windowMs
 });
-app.use('/api', limiter);
+
+const publicLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 500 // higher limit for public API routes
+});
+
+// Apply strict limiter to auth-sensitive routes
+  app.use('/api/auth', strictLimiter);
+  app.use('/api/orders', strictLimiter);
+  app.use('/api/users', strictLimiter);
+  app.use('/api/dashboard', strictLimiter);
+  app.use('/api/upload', strictLimiter);
+  app.use('/api/payments', strictLimiter);
+  app.use('/api/wishlist', strictLimiter);
+  app.use('/api/reviews', strictLimiter);
+  app.use('/api/conversations', strictLimiter);
+
+// Apply lenient limiter to public routes
+  app.use('/api/products', publicLimiter);
+  app.use('/api/categories', publicLimiter);
+  app.use('/api/slides', publicLimiter);
+  app.use('/api/recommendations', publicLimiter);
+  app.use('/api/messages', publicLimiter);
+  app.use('/api/social', publicLimiter);
+  app.use('/api/analytics', publicLimiter);
+  app.use('/api/delivery', publicLimiter);
+  app.use('/api/marketing', publicLimiter);
+  app.use('/api/loyalty', publicLimiter);
+  app.use('/api/chatbot', publicLimiter);
+
+  // Read-only polling limiter - higher limit for polling endpoints
+  const pollLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: 30, // 30 requests per minute per IP
+  });
 
 // Serve uploaded files (product images, avatars, etc.) as static assets.
 // This is distinct from serving the client build (which lives on Vercel).
@@ -142,20 +191,22 @@ app.use('/api/loyalty', loyaltyRoutes);
 app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/conversations', conversationRoutes);
+app.use('/api/enquiries', enquiryRoutes);
+app.use('/api/notifications', notificationRoutes);
 
-app.use('/api/payments/stripe/webhook', express.raw({ type: 'application/json' }));
 app.use('/api/payments', paymentRoutes);
 
-  // Health check
-  app.get('/api/health', (req, res) => {
-    const dbConnected = isDbConnected();
-    res.status(dbConnected ? 200 : 503).json({
-      status: dbConnected ? 'OK' : 'DEGRADED',
-      message: 'Server is running',
-      database: dbConnected ? 'connected' : 'disconnected',
-      timestamp: new Date().toISOString(),
-    });
+// Health check
+app.get('/api/health', (req, res) => {
+  const dbConnected = isDbConnected();
+  res.status(200).json({
+    success: true,
+    status: dbConnected ? 'OK' : 'DEGRADED',
+    message: 'Server is running',
+    database: dbConnected ? 'connected' : 'disconnected',
+    timestamp: new Date().toISOString(),
   });
+});
 
   // Root health check for Render's default health check path
   app.get('/', (req, res) => {

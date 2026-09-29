@@ -152,16 +152,16 @@ const defaultIntents = [
       { pattern: 'payment method', language: 'both' },
       { pattern: 'cod', language: 'both' },
       { pattern: 'esewa', language: 'both' },
-      { pattern: 'khalti', language: 'both' },
+
       { pattern: 'भुक्तानी', language: 'ne' },
       { pattern: 'कसरी पैसा तिर्ने', language: 'ne' },
     ],
     responses: {
       en: [
-        'We accept Cash on Delivery (COD), eSewa, Khalti, and credit/debit card payments via Stripe. All payments are secure.',
+        'We accept Cash on Delivery (COD), eSewa, and credit/debit card payments via Stripe. All payments are secure.',
       ],
       ne: [
-        'हामी क्यास अन डेलिभरी (COD), eSewa, Khalti र क्रेडिट/डेबिट कार्ड भुक्तानी स्वीकार गर्छौं। सबै भुक्तानी सुरक्षित छन्।',
+        'हामी क्यास अन डेलिभरी (COD), eSewa र क्रेडिट/डेबिट कार्ड भुक्तानी स्वीकार गर्छौं। सबै भुक्तानी सुरक्षित छन्।',
       ],
     },
   },

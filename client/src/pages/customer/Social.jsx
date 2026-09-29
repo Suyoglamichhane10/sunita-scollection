@@ -1,7 +1,7 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  FaHeart, FaComment, FaShare, FaUserPlus, FaCamera, FaFire, FaTrophy,
+  FaHeart, FaComment, FaShare, FaCamera, FaFire, FaTrophy,
 } from 'react-icons/fa';
 import api from '../../Services/api';
 import { useAuth } from '../../Context/Authcontext';
@@ -56,7 +56,7 @@ const Social = () => {
       ]);
       setHashtags(h.data.hashtags || []);
       setChallenges(c.data.challenges || []);
-    } catch (error) {
+    } catch {
       /* non-critical */
     }
   };
@@ -93,7 +93,7 @@ const Social = () => {
             : p
         )
       );
-    } catch (error) {
+    } catch {
       toast.error('Unable to like post');
     }
   };
@@ -109,7 +109,7 @@ const Social = () => {
             : p
         )
       );
-    } catch (error) {
+    } catch {
       toast.error('Unable to comment');
     }
   };
@@ -119,7 +119,9 @@ const Social = () => {
     if (navigator.share) {
       try {
         await navigator.share({ title: post.caption || 'Check this out!', url });
-      } catch (e) { /* cancelled */ }
+      } catch {
+      /* cancelled */
+    }
     } else {
       navigator.clipboard?.writeText(url || window.location.href);
       toast.success('Link copied!');
@@ -263,7 +265,7 @@ const Social = () => {
                                 await api.delete(`/social/posts/${post._id}`);
                                 setPosts((prev) => prev.filter((p) => p._id !== post._id));
                                 toast.success('Post deleted');
-                              } catch (e) {
+                              } catch {
                                 toast.error('Unable to delete post');
                               }
                             }

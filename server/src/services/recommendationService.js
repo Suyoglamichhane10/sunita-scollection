@@ -73,7 +73,7 @@ exports.getComplementaryItems = async (cartProductIds, limit = 4) => {
 // Trending products based on user's style profile (occasion/style preferences)
 exports.getTrendingForUser = async (userId, limit = 6) => {
   try {
-    const user = await User.findById(userId).select('styleProfile');
+    const user = userId ? await User.findById(userId).select('styleProfile') : null;
     const styles = user?.styleProfile?.preferences?.styles || [];
     const occasions = user?.styleProfile?.preferences?.occasions || [];
 
@@ -81,7 +81,7 @@ exports.getTrendingForUser = async (userId, limit = 6) => {
     if (styles.length) tagFilter.push({ tags: { $in: styles } });
     if (occasions.length) tagFilter.push({ tags: { $in: occasions } });
 
-const query = { isActive: true };
+    const query = { isActive: true };
     if (tagFilter.length) query.$or = tagFilter;
 
     const results = await Product.find(query)

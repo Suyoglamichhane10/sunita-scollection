@@ -18,8 +18,8 @@ const normalizeServerItem = (cartItem) => {
     (v) => (v.sku && v.sku === variantSku) || (v._id && v._id.toString() === variantSku)
   ) || null;
 
-  const price = variant?.price ?? product.price;
-      const image = variant?.images?.[0]?.url || product.images?.[0]?.url || getFallbackImage();
+  const price = cartItem.dealPrice ?? variant?.price ?? product.price;
+  const image = variant?.images?.[0]?.url || product.images?.[0]?.url || getFallbackImage();
   const stock = variant?.stock ?? product.stock;
 
   return {
@@ -27,6 +27,7 @@ const normalizeServerItem = (cartItem) => {
     productId: product._id,
     name: product.name,
     price,
+    dealPrice: cartItem.dealPrice || null,
     image,
     quantity: Math.min(cartItem.quantity, stock || cartItem.quantity),
     stock,
@@ -78,7 +79,7 @@ const { data } = await api.get('/users/profile/cart');
       let guestItems = [];
       try {
         guestItems = JSON.parse(localStorage.getItem(GUEST_CART_KEY) || '[]');
-      } catch (e) {
+      } catch {
         guestItems = [];
       }
 
@@ -152,7 +153,7 @@ const { data } = await api.get('/users/profile/cart');
         try {
           const parsed = JSON.parse(savedCart);
           setCartItems(Array.isArray(parsed) ? parsed : []);
-        } catch (e) {
+        } catch {
           setCartItems([]);
         }
       } else {
@@ -188,8 +189,8 @@ const { data } = await api.get('/users/profile/cart');
     setTotalPrice(price);
   }, [cartItems]);
 
-const addToCart = useCallback(
-    (product, quantity = 1, variant = null) => {
+ const addToCart = useCallback(
+    (product, quantity = 1, variant = null, dealPrice = null) => {
       if (!isAuthenticated) {
         toast.error('Please login to add items to your cart');
         return false;
@@ -197,7 +198,7 @@ const addToCart = useCallback(
 
       const variantSku = variant?.sku || variant?._id || null;
       const key = variantSku ? `${product._id}:${variantSku}` : `${product._id}`;
-      const price = variant?.price ?? product.price;
+      const price = dealPrice ?? (variant?.price ?? product.price);
   const image = variant?.images?.[0]?.url || product.images?.[0]?.url || getFallbackImage();
       const stock = variant?.stock ?? product.stock;
 
@@ -207,6 +208,7 @@ const addToCart = useCallback(
         productId: product._id,
         name: product.name,
         price,
+        dealPrice,
         image,
         quantity: Math.min(sanitizedQty, stock || sanitizedQty),
         stock,
@@ -225,7 +227,7 @@ const addToCart = useCallback(
       });
 
       api
-        .post('/users/profile/cart', { productId: product._id, quantity: sanitizedQty, variantSku })
+        .post('/users/profile/cart', { productId: product._id, quantity: sanitizedQty, variantSku, dealPrice: dealPrice || undefined })
         .then(({ data }) => {
           setCartItems(
             consolidateCartItems(

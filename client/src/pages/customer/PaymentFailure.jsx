@@ -4,7 +4,6 @@ import { FaTimesCircle } from 'react-icons/fa';
 import api from '../../Services/api';
 import toast from 'react-hot-toast';
 import EsewaLogo from '../../assets/Esewa_logo.webp';
-import KhaltiLogo from '../../assets/khalti.png';
 import FonepayLogo from '../../assets/fonepay.png';
 
 const PaymentFailure = () => {
@@ -76,15 +75,6 @@ const PaymentFailure = () => {
         form.submit();
         return;
       }
-      if (order.paymentMethod === 'khalti') {
-        const khaltiRes = await api.post('/payments/khalti/initiate', { orderId });
-        const paymentUrl = khaltiRes.data.data.paymentUrl;
-        if (paymentUrl) {
-          window.location.href = paymentUrl;
-          return;
-        }
-        toast.error('Unable to start Khalti payment');
-      }
       // Fallback: go checkout to choose again
       navigate('/checkout');
     } catch (error) {
@@ -121,7 +111,6 @@ const PaymentFailure = () => {
                 <div className="flex items-center gap-2">
                   <span className="font-semibold text-gray-900">{order.paymentMethod?.toUpperCase()}</span>
                   {order.paymentMethod === 'esewa' && <img src={EsewaLogo} alt="eSewa" className="h-6 w-auto object-contain" />}
-                  {order.paymentMethod === 'khalti' && <img src={KhaltiLogo} alt="Khalti" className="h-6 w-auto object-contain" />}
                   {order.paymentMethod === 'fonepay' && <img src={FonepayLogo} alt="FonePay" className="h-6 w-auto object-contain" />}
                 </div>
               </div>

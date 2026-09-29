@@ -2,8 +2,8 @@ module.exports = {
   apps: [
     {
       name: 'sunitas-collection-api',
-      script: 'server/src/server.js',
-      cwd: process.cwd(),
+      script: 'src/server.js',
+      cwd: __dirname,
       instances: 'max',
       exec_mode: 'cluster',
       env: {
@@ -17,8 +17,8 @@ module.exports = {
       max_memory_restart: '350M',
       time: true,
       log_date_format: 'YYYY-MM-DD HH:mm:ss',
-      error_file: 'server/logs/err.log',
-      out_file: 'server/logs/out.log',
+      error_file: 'logs/err.log',
+      out_file: 'logs/out.log',
       merge_logs: true,
       max_restarts: 10,
       wait_ready: true,

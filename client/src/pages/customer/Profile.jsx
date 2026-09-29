@@ -4,7 +4,7 @@ import api from '../../Services/api';
 import { useAuth } from '../../Context/Authcontext';
 import { uploadAvatar, deleteAvatar } from '../../Services/api';
 import toast from 'react-hot-toast';
-import { FaEye, FaEyeSlash, FaPlus, FaTshirt, FaCamera, FaTrash, FaUserCircle, FaCheckCircle, FaEnvelope, FaPhone, FaSave, FaUndo } from 'react-icons/fa';
+import { FaEye, FaEyeSlash, FaPlus, FaTshirt, FaCamera, FaTrash, FaCheckCircle, FaEnvelope, FaPhone, FaSave, FaUndo } from 'react-icons/fa';
 import Avatar from '../../components/common/Avatar';
 
 const Profile = () => {
@@ -18,7 +18,6 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
-  const [avatarError, setAvatarError] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarDirty, setAvatarDirty] = useState(false);
@@ -44,7 +43,6 @@ const Profile = () => {
           address: data.user.address || { street: '', city: '', state: '', country: 'Nepal' },
         });
         setAddresses(data.user.addresses || []);
-        setAvatarError(false);
       } catch (error) {
         toast.error('Unable to load profile');
       } finally {
@@ -100,7 +98,6 @@ const handleProfileSubmit = async (e) => {
   const handleAvatarSave = async () => {
     if (!avatarFile || !avatarDirty) return;
     setAvatarUploading(true);
-    setAvatarError(false);
     try {
       const response = await uploadAvatar(avatarFile);
       setProfile((prev) => ({ ...prev, avatar: response.avatar }));
@@ -129,12 +126,11 @@ const handleProfileSubmit = async (e) => {
     try {
       const response = await deleteAvatar();
       setProfile((prev) => ({ ...prev, avatar: response?.user?.avatar || '' }));
-      setAvatarError(false);
       setAvatarPreview(null);
       setAvatarDirty(false);
       if (setUser) setUser(response.user);
       toast.success('Profile photo removed');
-    } catch (error) {
+    } catch {
       toast.error('Unable to remove photo');
     }
   };
@@ -197,22 +193,6 @@ const handleProfileSubmit = async (e) => {
 const [styleProfile, setStyleProfile] = useState({ shoeSize: '', dressSize: '', preferences: [], occasions: [], preferredColors: [] });
   const [styleLoading, setStyleLoading] = useState(false);
 
-  const loadStyleProfile = async () => {
-    try {
-      const { data } = await api.get('/users/profile');
-      const sp = data.user.styleProfile || {};
-      setStyleProfile({
-        shoeSize: sp.shoeSize || '',
-        dressSize: sp.dressSize || '',
-        preferences: sp.preferences || [],
-        occasions: sp.occasions || [],
-        preferredColors: sp.preferredColors || [],
-      });
-    } catch (error) {
-      // ignore
-    }
-  };
-
   const handleStyleField = (field, value) => {
     setStyleProfile((prev) => ({ ...prev, [field]: value }));
   };
@@ -253,10 +233,6 @@ const [styleProfile, setStyleProfile] = useState({ shoeSize: '', dressSize: '', 
       </div>
     );
   }
-
-  const initialLetter = (profile.name || user?.name || 'U')
-    .charAt(0)
-    .toUpperCase();
 
   return (
     <div className="min-h-screen bg-gray-50 py-16">

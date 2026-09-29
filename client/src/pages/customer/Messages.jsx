@@ -8,7 +8,7 @@ import ChatWindow from '../../components/chat/ChatWindow';
 import { FaPlus, FaComments } from 'react-icons/fa';
 
 const Messages = () => {
-  const { isAuthenticated, loading: authLoading, user } = useAuth();
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const { socketRef } = useChat();
   const navigate = useNavigate();
   const [conversations, setConversations] = useState([]);

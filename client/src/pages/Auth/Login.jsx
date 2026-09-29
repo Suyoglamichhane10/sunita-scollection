@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { FaEnvelope, FaLock, FaEye, FaEyeSlash } from 'react-icons/fa';
 import { useAuth } from '../../Context/Authcontext';
 import toast from 'react-hot-toast';
@@ -10,8 +10,19 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const redirect = params.get('redirect');
+    const enquire = params.get('enquire');
+    if (isAuthenticated && redirect && enquire === '1') {
+      navigate(redirect, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, location.search, navigate]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -28,6 +39,15 @@ const Login = () => {
       else localStorage.removeItem('rememberedEmail');
 
       const loggedInUser = result.user;
+      const params = new URLSearchParams(location.search);
+      const redirect = params.get('redirect');
+      const enquire = params.get('enquire');
+
+      if (redirect && enquire === '1') {
+        navigate(redirect, { replace: true });
+        return;
+      }
+
       const target = loggedInUser?.role === 'admin' ? '/admin' : '/dashboard';
       navigate(target, { replace: true });
       return;

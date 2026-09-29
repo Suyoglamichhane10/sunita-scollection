@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 
 const HeroVideo = () => {
   const [videoError, setVideoError] = useState(false);
-  const [isVideoLoaded, setIsVideoLoaded] = useState(false);
   const videoRef = useRef(null);
 
   // Sample video URL - replace with your actual video

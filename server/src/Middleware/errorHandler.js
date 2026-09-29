@@ -34,6 +34,10 @@ const errorHandler = (err, req, res, next) => {
     error = { message, statusCode: 401 };
   }
 
+  if (err.code && String(err.code).startsWith('LIMIT_')) {
+    error = { message: err.message, statusCode: 400 };
+  }
+
   res.status(error.statusCode || 500).json({
     success: false,
     message: error.message || 'Server Error',

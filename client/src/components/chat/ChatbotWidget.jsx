@@ -177,7 +177,7 @@ const ChatbotWidget = () => {
                           )}
                           <div className="min-w-0">
                             <p className="truncate text-xs font-semibold text-gray-900">{p.name}</p>
-                            <p className="text-xs font-bold text-pink-600">Rs. {p.price}</p>
+                            <p className="text-xs font-bold text-pink-600">Contact for price</p>
                           </div>
                         </a>
                       ))}

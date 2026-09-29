@@ -7,38 +7,17 @@ const { getEsewaConfig } = require('../config/esewa');
 const { getFonepayConfig } = require('../config/fonepay');
 const { getFrontendUrl } = require('../Utils/frontendUrl');
 
-const stripe = process.env.STRIPE_SECRET_KEY ? Stripe(process.env.STRIPE_SECRET_KEY) : null;
-
-const DEFAULT_FRONTEND_URL = 'http://localhost:5173';
-
-/**
- * Validate the Khalti secret key. Real Khalti secret keys are ~32-char hex
- * strings. Placeholder/too-short keys cause the gateway to reject requests
- * with "Authentication credentials were not provided", so fail fast with a
- * clear, actionable message instead.
- * @param {string} secretKey
- * @returns {boolean}
- */
-const isValidKhaltiSecret = (secretKey) => {
-  if (!secretKey || typeof secretKey !== 'string') return false;
-  const trimmed = secretKey.trim();
-  // Reject the documented placeholder and keys that are clearly not real
-  // (real Khalti keys are 32 hex chars). Allow a small tolerance for variant
-  // dev keys but never accept obvious placeholders.
-  if (/^your[_ ]?secret[_ ]?key/i.test(trimmed)) return false;
-  if (trimmed.length < 32) return false;
+const isValidFonepayConfig = (config) => {
+  if (!config.merchantId || !config.merchantSecret || !config.appId) return false;
+  if (/your[_ ]?merchant[_ ]?id/i.test(config.merchantId)) return false;
+  if (/your[_ ]?merchant[_ ]?secret/i.test(config.merchantSecret)) return false;
+  if (/your[_ ]?app[_ ]?id/i.test(config.appId)) return false;
   return true;
 };
 
-/**
- * Resolve the Khalti base URL based on KHALTI_ENV.
- * @returns {{ baseUrl: string, isLive: boolean }}
- */
-const getKhaltiConfig = () => {
-  const isLive = process.env.KHALTI_ENV !== 'test';
-  const baseUrl = process.env.KHALTI_BASE_URL || (isLive ? 'http://khalti.com/api/v2' : 'https://dev.khalti.com/api/v2');
-  return { baseUrl, isLive };
-};
+const stripe = process.env.STRIPE_SECRET_KEY ? Stripe(process.env.STRIPE_SECRET_KEY) : null;
+
+const DEFAULT_FRONTEND_URL = 'http://localhost:5173';
 
 /**
  * Helper: compute eSewa HMAC-SHA256 signature.
@@ -204,169 +183,6 @@ exports.verifyEsewa = async (req, res, next) => {
         paymentId: transactionUuid,
         paymentDate: new Date(),
         gateway: 'esewa',
-      },
-      order.user
-    );
-
-    res.status(200).json({ success: true, message: 'Payment verified successfully', order: finalOrder });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Initiate Khalti payment
-// @route   POST /api/payments/khalti/initiate
-// @access  Private
-exports.initiateKhalti = async (req, res, next) => {
-  try {
-    const { orderId } = req.body;
-    const order = await Order.findById(orderId);
-    if (!order) {
-      return res.status(404).json({ success: false, message: 'Order not found' });
-    }
-    if (order.user.toString() !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'Unauthorized' });
-    }
-
-    const secretKey = process.env.KHALTI_SECRET_KEY;
-    if (!isValidKhaltiSecret(secretKey)) {
-      return res.status(503).json({
-        success: false,
-        message:
-          'Khalti is not configured on the server. KHALTI_SECRET_KEY is missing or invalid ' +
-          '(a real Khalti test secret key is a 32-character hex string found in the Khalti ' +
-          'merchant dashboard under Settings > API Keys). Replace the placeholder value in server/.env and restart.',
-      });
-    }
-
-    const { baseUrl } = getKhaltiConfig();
-    const gatewayUrl = `${baseUrl}/epayment/initiate/`;
-
-    const frontendUrl = getFrontendUrl();
-    const returnUrl = `${frontendUrl}/order-success/${order._id}`;
-    const websiteUrl = frontendUrl;
-    const customer = await User.findById(order.user);
-
-    const payload = {
-      return_url: returnUrl,
-      website_url: websiteUrl,
-      amount: Math.round(order.totalAmount * 100), // paisa
-      purchase_order_id: order.orderNumber,
-      purchase_order_name: "Sunita'z Collection Order",
-      customer_info: {
-        name: customer?.name || 'Customer',
-        email: customer?.email || '',
-        phone: customer?.phone || '',
-      },
-    };
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
-    let gatewayData;
-    let gatewayResponse;
-    try {
-      gatewayResponse = await fetch(gatewayUrl, {
-        method: 'POST',
-        headers: { Authorization: `Key ${secretKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      });
-      gatewayData = await gatewayResponse.json();
-    } catch (fetchErr) {
-      clearTimeout(timeout);
-      return res.status(504).json({ success: false, message: 'Khalti initiation timed out or could not reach the gateway' });
-    }
-    clearTimeout(timeout);
-
-    if (!gatewayResponse.ok || !gatewayData.payment_url) {
-      return res.status(502).json({
-        success: false,
-        message: gatewayData?.detail || gatewayData?.message || 'Unable to start Khalti payment',
-      });
-    }
-
-    order.paymentDetails = { paymentId: gatewayData.pidx, gateway: 'khalti' };
-    await order.save();
-
-    res.status(200).json({
-      success: true,
-      data: { paymentUrl: gatewayData.payment_url, pidx: gatewayData.pidx },
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Verify Khalti payment
-// @route   POST /api/payments/khalti/verify
-// @access  Private
-exports.verifyKhalti = async (req, res, next) => {
-  try {
-    const { orderId, pidx } = req.body;
-    const order = await Order.findById(orderId);
-    if (!order) {
-      return res.status(404).json({ success: false, message: 'Order not found' });
-    }
-    // This endpoint is public (gateway callback). When a user IS present,
-    // enforce ownership; otherwise skip the check (the transaction reference
-    // match below still provides validation).
-    if (req.user && order.user.toString() !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'Unauthorized' });
-    }
-
-    if (order.isPaid && order.orderStatus === 'confirmed') {
-      return res.status(200).json({ success: true, message: 'Payment already verified', order });
-    }
-
-    const secretKey = process.env.KHALTI_SECRET_KEY;
-    if (!pidx || order.paymentDetails?.paymentId !== pidx || !isValidKhaltiSecret(secretKey)) {
-      await failOrder(order, 'Invalid Khalti verification request');
-      return res.status(400).json({ success: false, message: 'Invalid Khalti verification request' });
-    }
-
-    const { baseUrl } = getKhaltiConfig();
-    const gatewayUrl = `${baseUrl}/epayment/lookup/`;
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
-    let gatewayData;
-    let gatewayResponse;
-    try {
-      gatewayResponse = await fetch(gatewayUrl, {
-        method: 'POST',
-        headers: { Authorization: `Key ${secretKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pidx }),
-        signal: controller.signal,
-      });
-      gatewayData = await gatewayResponse.json();
-    } catch (fetchErr) {
-      clearTimeout(timeout);
-      return res.status(504).json({ success: false, message: 'Khalti verification timed out or could not reach the gateway' });
-    }
-    clearTimeout(timeout);
-
-    if (!gatewayResponse.ok || gatewayData.status !== 'Completed') {
-      await failOrder(order, `Khalti payment status: ${gatewayData.status || 'NOT COMPLETED'}`);
-      return res.status(409).json({
-        success: false,
-        message: 'Khalti payment is not confirmed',
-        status: gatewayData.status,
-      });
-    }
-
-    // Amount in paisa must match the order total.
-    if (gatewayData.total_amount !== Math.round(order.totalAmount * 100)) {
-      await failOrder(order, 'Khalti payment amount mismatch');
-      return res.status(409).json({ success: false, message: 'Khalti payment amount mismatch' });
-    }
-
-    const finalOrder = await finalizePaidOrder(
-      order,
-      {
-        transactionId: gatewayData.transaction_id,
-        paymentId: pidx,
-        paymentDate: new Date(),
-        gateway: 'khalti',
       },
       order.user
     );
@@ -624,14 +440,6 @@ exports.fonepayFailure = async (req, res, next) => {
   }
 };
 
-const isValidFonepayConfig = (config) => {
-  if (!config.merchantId || !config.merchantSecret || !config.appId) return false;
-  if (/your[_ ]?merchant[_ ]?id/i.test(config.merchantId)) return false;
-  if (/your[_ ]?merchant[_ ]?secret/i.test(config.merchantSecret)) return false;
-  if (/your[_ ]?app[_ ]?id/i.test(config.appId)) return false;
-  return true;
-};
-
 // @desc    Initiate FonePay payment
 // @route   POST /api/payments/fonepay/initiate
 // @access  Private
@@ -666,7 +474,7 @@ exports.initiateFonepay = async (req, res, next) => {
       app_id: config.appId,
       amount: String(amount),
       transaction_uuid: transactionUuid,
-      product_code: 'SunitaCollection',
+      product_code: config.productCode,
       return_url: successUrl,
       failure_url: failureUrl,
       customer_info: {

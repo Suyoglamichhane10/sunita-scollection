@@ -263,8 +263,11 @@ exports.getRelatedProducts = async (req, res, next) => {
 // @access  Public
 exports.getProduct = async (req, res, next) => {
   try {
-    const product = await Product.findById(req.params.id)
-      .populate('category');
+    const product = await Product.findByIdAndUpdate(
+      req.params.id,
+      { $inc: { views: 1 } },
+      { new: true, runValidators: true }
+    ).populate('category');
 
     if (!product) {
       return res.status(404).json({
@@ -272,10 +275,6 @@ exports.getProduct = async (req, res, next) => {
         message: 'Product not found',
       });
     }
-
-    // Increment views
-    product.views += 1;
-    await product.save();
 
     res.status(200).json({
       success: true,

@@ -7,6 +7,7 @@ const {
   getOrder,
   updateOrderStatus,
   deleteOrder,
+  deleteOwnOrder,
   cancelOrder,
   getOrderMetrics,
   getOrderInvoice,
@@ -21,6 +22,7 @@ router.get('/metrics', protect, authorize('admin'), getOrderMetrics);
 router.get('/:id/invoice', protect, getOrderInvoice);
 router.get('/:id', protect, getOrder);
 router.put('/:id/cancel', protect, cancelOrder);
+router.delete('/:id', protect, deleteOwnOrder);
 
 // Admin routes
 router.get('/', protect, authorize('admin'), getOrders);

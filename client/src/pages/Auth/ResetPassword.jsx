@@ -29,7 +29,7 @@ const ResetPassword = () => {
       await api.put(`/auth/reset-password/${resetToken}`, { password });
       toast.success('Password reset successfully! Please login.');
       navigate('/login');
-    } catch (error) {
+    } catch {
       toast.error(error.response?.data?.message || 'Unable to reset password');
     } finally {
       setLoading(false);

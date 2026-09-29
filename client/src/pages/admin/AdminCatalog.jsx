@@ -188,7 +188,7 @@ const AdminCatalog = () => {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [stockFilter, setStockFilter] = useState('all');
 
-  const STORAGE_KEY = 'adminCatalogState';
+  const STORAGE_KEY = 'catalog_v2';
 
   const saveStateToStorage = (state) => {
     try {

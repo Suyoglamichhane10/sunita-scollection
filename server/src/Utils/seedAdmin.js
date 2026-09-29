@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const User = require('../Models/User');
@@ -26,10 +27,11 @@ async function seedAdmin() {
     }
 
     console.log('📦 Creating admin user...');
+    const password = process.env.SEED_ADMIN_PASSWORD || crypto.randomBytes(18).toString('hex');
     const admin = await User.create({
       name: 'Admin',
       email: 'admin@shopsync.com',
-      password: 'Admin123!',
+      password,
       role: 'admin',
       isEmailVerified: true,
       phone: '9800000000',
@@ -37,7 +39,7 @@ async function seedAdmin() {
 
     console.log('✅ Admin created successfully!');
     console.log(`📧 Email: ${admin.email}`);
-    console.log(`🔑 Password: Admin123!`);
+    console.log(`🔑 Password: ${process.env.SEED_ADMIN_PASSWORD ? '(from SEED_ADMIN_PASSWORD env)' : '(auto-generated, not logged for security)'}`);
     process.exit(0);
   } catch (error) {
     console.error('❌ Admin creation failed:', error.message);

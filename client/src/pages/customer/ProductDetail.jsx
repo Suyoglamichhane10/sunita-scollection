@@ -1,16 +1,35 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useNavigate, useParams, Link, useSearchParams } from 'react-router-dom';
 import api from '../../Services/api';
 import { useCart } from '../../Context/CartContext';
 import { useAuth } from '../../Context/Authcontext';
+import useEnquiry from '../../hooks/useEnquiry';
+import useCustomerEnquiry from '../../hooks/useCustomerEnquiry';
 import toast from 'react-hot-toast';
-import { FaStar, FaStarHalfAlt, FaRulerHorizontal } from 'react-icons/fa';
+import { FaStar, FaStarHalfAlt, FaRulerHorizontal, FaAward } from 'react-icons/fa';
 import RelatedProducts from '../../components/products/RelatedProducts';
 import ImageGallery from '../../components/products/ImageGallery';
 import Breadcrumb from '../../components/common/Breadcrumb';
 import SocialShare from '../../components/products/SocialShare';
 import SizeGuide from '../../components/products/SizeGuide';
+import EsewaLogo from '../../assets/Esewa_logo.webp';
 import { getCloudinaryOptimizedUrl, getMainImage, handleImageError } from '../../utils/imageOptimizer';
+
+const getEnquiryButton = (enquiry, isAuthenticated) => {
+  if (!isAuthenticated) return { label: 'Enquire Now', type: 'enquire' };
+  if (!enquiry) return { label: 'Enquire Now', type: 'enquire' };
+  switch (enquiry.status) {
+    case 'customer_agreed':
+    case 'deal_closed':
+      return { label: `Add to Cart at Rs. ${enquiry.dealPrice || enquiry.quotedPrice}`, type: 'add-cart', price: enquiry.dealPrice || enquiry.quotedPrice };
+    case 'pending':
+    case 'price_shared':
+    case 'negotiating':
+      return { label: 'View Negotiation', type: 'view' };
+    default:
+      return { label: 'Enquire Now', type: 'enquire' };
+  }
+};
 
 const StarRating = ({ value, onChange, readOnly }) => {
   return (
@@ -76,7 +95,7 @@ const ReviewsSection = ({ productId, productName }) => {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setPhoto(data.url || data.secure_url);
-    } catch {
+    } catch (error) {
       toast.error('Failed to upload image');
     }
   };
@@ -266,7 +285,9 @@ const ProductDetail = () => {
   const { addToCart } = useCart();
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const isAuthenticatedRef = React.useRef(isAuthenticated);
+  const { openEnquiry } = useEnquiry();
 
   const sizes = useMemo(() => extractSizes(product?.variants), [product]);
 
@@ -317,6 +338,7 @@ const ProductDetail = () => {
   useEffect(() => {
     let active = true;
     const fetchRecentlyViewed = async () => {
+      if (!isAuthenticated) return;
       try {
         const { data } = await api.get('/recommendations/recently-viewed?limit=6');
         if (active) setRecentlyViewed(data.products || []);
@@ -328,7 +350,7 @@ const ProductDetail = () => {
     return () => {
       active = false;
     };
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     let active = true;
@@ -349,14 +371,108 @@ const ProductDetail = () => {
     };
   }, [id]);
 
+  const { enquiry } = useCustomerEnquiry(product?._id);
+  const enquiryButton = getEnquiryButton(enquiry, isAuthenticated, product);
+
   useEffect(() => {
+    if (product && isAuthenticated && searchParams.get('enquire') === '1') {
+      openEnquiry(product);
+      window.history.replaceState({}, document.title, `/product/${product._id}`);
+    }
+  }, [product, isAuthenticated, searchParams, openEnquiry]);
+
+   useEffect(() => {
     if (addToCartBounce) {
       const timer = setTimeout(() => setAddToCartBounce(false), 600);
       return () => clearTimeout(timer);
     }
   }, [addToCartBounce]);
 
-  if (loading) {
+  const handleAddToCart = (dealPrice = null) => {
+    if (stock < 1) return;
+    addToCart(product, quantity, selectedVariant, dealPrice);
+    setAddToCartBounce(true);
+  };
+
+  const handleEnquire = () => {
+    if (!isAuthenticated) {
+      navigate(`/login?redirect=${encodeURIComponent(`/product/${product._id}?enquire=1`)}`);
+      return;
+    }
+    openEnquiry(product);
+  };
+
+  const renderActionButtons = () => {
+    if (stock < 1) return null;
+
+    if (enquiryButton.type === 'add-cart') {
+      return (
+        <div className={`flex gap-3 transition-transform duration-300 ${addToCartBounce ? 'scale-105' : 'scale-100'}`}>
+          <button
+            onClick={() => handleAddToCart(enquiryButton.price)}
+            className="flex-1 rounded-full bg-pink-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-pink-700"
+          >
+            {enquiryButton.label}
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowSizeGuide(true)}
+            className="rounded-full border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 transition hover:border-pink-300 hover:text-pink-600"
+            title="Size Guide"
+          >
+            <FaRulerHorizontal className="inline mr-1" />
+            Size Guide
+          </button>
+        </div>
+      );
+    }
+
+    if (enquiryButton.type === 'view') {
+      return (
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard')}
+            className="flex-1 rounded-full bg-primary-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-primary-700"
+          >
+            {enquiryButton.label}
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowSizeGuide(true)}
+            className="rounded-full border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 transition hover:border-pink-300 hover:text-pink-600"
+            title="Size Guide"
+          >
+            <FaRulerHorizontal className="inline mr-1" />
+            Size Guide
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <div className={`flex gap-3 transition-transform duration-300 ${addToCartBounce ? 'scale-105' : 'scale-100'}`}>
+        <button
+          type="button"
+          onClick={handleEnquire}
+          className="flex-1 rounded-full bg-pink-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-pink-700"
+        >
+          Enquire Now
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowSizeGuide(true)}
+          className="rounded-full border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 transition hover:border-pink-300 hover:text-pink-600"
+          title="Size Guide"
+        >
+          <FaRulerHorizontal className="inline mr-1" />
+          Size Guide
+        </button>
+      </div>
+    );
+   };
+
+   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 py-20">
         <div className="container-custom px-4 lg:px-8">
@@ -377,27 +493,12 @@ const ProductDetail = () => {
   }
 
   const stock = selectedVariant?.stock ?? product.stock;
-  const currentPrice = selectedVariant?.price ?? product.price;
   const lowStockThreshold = product.lowStockThreshold || 5;
-  const hasDiscount = product.comparePrice && product.comparePrice > currentPrice;
-  const discountPercent = hasDiscount ? Math.round(((product.comparePrice - currentPrice) / product.comparePrice) * 100) : 0;
 
   const breadcrumbItems = [
     { label: product.category?.name || 'Shop', href: `/shop?category=${product.category?._id || ''}` },
     { label: product.name },
   ];
-
-  const handleAddToCart = async () => {
-    if (!isAuthenticated) {
-      navigate('/login');
-      return;
-    }
-    if (stock < 1) return;
-    const success = addToCart(product, quantity, selectedVariant);
-    if (success) {
-      setAddToCartBounce(true);
-    }
-  };
 
   const handleSizeSelect = (size) => {
     setSelectedSize(size);
@@ -428,23 +529,6 @@ const ProductDetail = () => {
             <div className="mt-2 flex items-center gap-2">
               <StarRating value={product.rating?.average || 0} readOnly />
               <span className="text-sm text-gray-500">({product.rating?.count || 0} reviews)</span>
-            </div>
-
-            <div className="mt-4 flex flex-wrap items-center gap-3">
-              <p className="text-2xl font-bold text-pink-600">Rs. {currentPrice}</p>
-              {hasDiscount && (
-                <>
-                  <p className="text-base text-gray-400 line-through">Rs. {product.comparePrice}</p>
-                  <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-red-600">
-                    {discountPercent}% OFF
-                  </span>
-                  {discountPercent >= 20 && (
-                    <span className="animate-pulse rounded-full bg-yellow-100 px-3 py-1 text-xs font-bold text-yellow-700">
-                      Price Drop Alert!
-                    </span>
-                  )}
-                </>
-              )}
             </div>
 
             <p className="mt-4 leading-relaxed text-gray-600">{product.description}</p>
@@ -518,24 +602,7 @@ const ProductDetail = () => {
                 />
               </div>
 
-              <div className={`flex gap-3 transition-transform duration-300 ${addToCartBounce ? 'scale-105' : 'scale-100'}`}>
-                <button
-                  disabled={stock < 1}
-                  onClick={handleAddToCart}
-                  className="flex-1 rounded-full bg-pink-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-pink-700 disabled:cursor-not-allowed disabled:bg-gray-300"
-                >
-                  {stock < 1 ? 'Out of Stock' : 'Add to Cart'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowSizeGuide(true)}
-                  className="rounded-full border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 transition hover:border-pink-300 hover:text-pink-600"
-                  title="Size Guide"
-                >
-                  <FaRulerHorizontal className="inline mr-1" />
-                  Size Guide
-                </button>
-              </div>
+              {renderActionButtons()}
 
               <div className="flex flex-wrap items-center gap-3">
                 <SocialShare productName={product.name} productUrl={`${window.location.origin}/product/${product._id}`} />
@@ -544,6 +611,15 @@ const ProductDetail = () => {
               <div className="rounded-3xl border border-gray-200 bg-gray-50 p-4">
                 <p className="text-sm font-semibold text-gray-700">Delivery</p>
                 <p className="mt-1 text-sm text-gray-600">Free shipping over Rs. 1,000 • 3-5 business days nationwide.</p>
+              </div>
+
+              <div className="rounded-3xl border border-gray-200 bg-gray-50 p-4">
+                <div className="flex items-center gap-2">
+                  <img src={EsewaLogo} alt="eSewa" className="h-5 w-auto object-contain" />
+                  <span className="text-sm font-semibold text-gray-700">eSewa Recommended</span>
+                  <FaAward className="text-green-500" />
+                </div>
+                <p className="mt-1 text-xs text-gray-500">Pay conveniently with eSewa at checkout</p>
               </div>
             </div>
           </div>
@@ -558,65 +634,67 @@ const ProductDetail = () => {
           </div>
         </div>
 
-        {recentlyViewed.length > 0 && (
+{recentlyViewed.length > 0 && (
           <div className="mt-12">
             <h2 className="font-serif text-2xl font-bold text-gray-900">Recently Viewed</h2>
             <p className="mt-1 text-sm text-gray-500">Products you have browsed recently</p>
-            <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6">
+            <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
               {recentlyViewed.map((p) => {
                 const mainImage = getMainImage(p.images, p.name);
                 return (
-                  <Link key={p._id} to={`/product/${p._id}`} className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:shadow-md">
+                   <Link key={p._id} to={`/product/${p._id}`} className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:shadow-md flex flex-col">
                     {mainImage?.url ? (
-                      <img src={getCloudinaryOptimizedUrl(mainImage.url, 400)} alt={p.name} className="h-40 w-full object-cover" onError={handleImageError} />
+                      <img src={getCloudinaryOptimizedUrl(mainImage.url, 400)} alt={p.name} className="aspect-square w-full object-cover" onError={handleImageError} />
                     ) : (
-                      <div className="flex h-40 w-full items-center justify-center bg-gray-100 text-3xl text-gray-300">👗</div>
+                      <div className="flex aspect-square w-full items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300">
+                        <span className="text-4xl text-gray-300">👗</span>
+                      </div>
                     )}
-                     <div className="p-3">
+                    <div className="p-3 flex flex-1 flex-col">
+                      <p className="line-clamp-1 text-sm font-semibold text-gray-900">{p.name}</p>
+                    </div>
+                  </Link>
+                 );
+              })}
+            </div>
+          </div>
+        )}
+  
+        {alsoBought.length > 0 && (
+          <div className="mt-12">
+            <h2 className="font-serif text-2xl font-bold text-gray-900">Customers Also Bought</h2>
+            <p className="mt-1 text-sm text-gray-500">Frequently purchased together with this item</p>
+            {alsoBoughtLoading ? (
+              <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="animate-pulse rounded-3xl border border-gray-200 bg-gray-50 p-4">
+                    <div className="aspect-square w-full rounded-2xl bg-gray-200" />
+                    <div className="mt-4 space-y-3">
+                      <div className="h-4 w-3/4 rounded bg-gray-200" />
+                      <div className="h-4 w-1/2 rounded bg-gray-200" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+                {alsoBought.slice(0, 4).map((p) => {
+                  const mainImage = getMainImage(p.images, p.name);
+                  return (
+                   <Link key={p._id} to={`/product/${p._id}`} className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:shadow-md flex flex-col">
+                     {mainImage?.url ? (
+                       <img src={getCloudinaryOptimizedUrl(mainImage.url, 400)} alt={p.name} className="aspect-square w-full object-cover" onError={handleImageError} />
+                     ) : (
+                       <div className="flex aspect-square w-full items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300">
+                         <span className="text-4xl text-gray-300">👗</span>
+                       </div>
+                     )}
+                     <div className="p-3 flex flex-1 flex-col">
                        <p className="line-clamp-1 text-sm font-semibold text-gray-900">{p.name}</p>
-                       <p className="text-sm font-bold text-pink-600">Rs. {p.price}</p>
                      </div>
                    </Link>
                  );
                })}
-             </div>
-           </div>
-         )}
- 
-         {alsoBought.length > 0 && (
-           <div className="mt-12">
-             <h2 className="font-serif text-2xl font-bold text-gray-900">Customers Also Bought</h2>
-             <p className="mt-1 text-sm text-gray-500">Frequently purchased together with this item</p>
-             {alsoBoughtLoading ? (
-               <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
-                 {Array.from({ length: 4 }).map((_, i) => (
-                   <div key={i} className="animate-pulse rounded-3xl border border-gray-200 bg-gray-50 p-4">
-                     <div className="h-40 w-full rounded-2xl bg-gray-200" />
-                     <div className="mt-4 space-y-3">
-                       <div className="h-4 w-3/4 rounded bg-gray-200" />
-                       <div className="h-4 w-1/2 rounded bg-gray-200" />
-                     </div>
-                   </div>
-                 ))}
-               </div>
-             ) : (
-               <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
-                 {alsoBought.slice(0, 4).map((p) => {
-                   const mainImage = getMainImage(p.images, p.name);
-                   return (
-                     <Link key={p._id} to={`/product/${p._id}`} className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:shadow-md">
-                       {mainImage?.url ? (
-                         <img src={getCloudinaryOptimizedUrl(mainImage.url, 400)} alt={p.name} className="h-40 w-full object-cover" onError={handleImageError} />
-                       ) : (
-                         <div className="flex h-40 w-full items-center justify-center bg-gray-100 text-3xl text-gray-300">👗</div>
-                       )}
-                      <div className="p-3">
-                        <p className="line-clamp-1 text-sm font-semibold text-gray-900">{p.name}</p>
-                        <p className="text-sm font-bold text-pink-600">Rs. {p.price}</p>
-                      </div>
-                    </Link>
-                  );
-                })}
               </div>
             )}
           </div>

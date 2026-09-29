@@ -5,12 +5,14 @@ import api from '../../Services/api';
 import wishlistApi from '../../Services/wishlistApi';
 import { useCart } from '../../Context/CartContext';
 import { useAuth } from '../../Context/Authcontext';
+import useEnquiry from '../../hooks/useEnquiry';
 import { getCloudinaryOptimizedUrl, getAbsoluteImageUrl, handleImageError, getFallbackImage } from '../../utils/imageOptimizer';
 import SearchBar from '../../components/shop/SearchBar';
 import CategoryFilter from '../../components/shop/CategoryFilter';
 import PriceFilter from '../../components/shop/PriceFilter';
 import SortDropdown from '../../components/shop/SortDropdown';
 import ProductGrid from '../../components/shop/ProductGrid';
+import { useApprovedProducts } from '../../hooks/useApprovedProducts';
 
 const variantLabel = (variant) => {
   if (!variant) return '';
@@ -23,10 +25,22 @@ const variantLabel = (variant) => {
 const ShopProductCard = React.memo(({ product, addToCart, isAuthenticated, navigate }) => {
   const [selectedVariant, setSelectedVariant] = useState(product.variants?.[0] || null);
   const [inWishlist, setInWishlist] = useState(false);
+  const { isApproved, loading: approvedLoading } = useApprovedProducts();
+  const hasApproved = !approvedLoading && isApproved(product._id);
+  const { openEnquiry } = useEnquiry();
 
   const handleAdd = () => {
     if (!isAuthenticated) return navigate('/login');
     addToCart(product, 1, selectedVariant);
+  };
+
+  const handleEnquire = (e) => {
+    e.preventDefault();
+    if (!isAuthenticated) {
+      navigate(`/login?redirect=${encodeURIComponent(`/product/${product._id}?enquire=1`)}`);
+      return;
+    }
+    openEnquiry(product);
   };
 
   const toggleWishlist = async (e) => {
@@ -45,41 +59,42 @@ const ShopProductCard = React.memo(({ product, addToCart, isAuthenticated, navig
 
   const variant = selectedVariant;
   const stock = variant?.stock ?? product.stock;
-  const price = variant?.price ?? product.price;
   const hasVariants = (product.variants || []).length > 0;
 
   return (
-    <div className="card-luxury relative overflow-hidden rounded-3xl border border-gold/20 bg-white shadow-card">
-      <Link to={`/product/${product._id}`} className="block overflow-hidden">
+    <div className="card-luxury relative overflow-hidden rounded-3xl border border-gold/20 bg-white shadow-card flex flex-col">
+      <Link to={`/product/${product._id}`} className="relative block aspect-square overflow-hidden flex-shrink-0">
         <img
           src={getAbsoluteImageUrl(getCloudinaryOptimizedUrl(variant?.images?.[0]?.url || product.images?.[0]?.url)) || getFallbackImage()}
           alt={product.name}
-          className="h-64 w-full object-cover transition duration-300 hover:scale-105"
+          className="h-full w-full object-cover transition duration-300 hover:scale-105"
           onError={handleImageError}
         />
       </Link>
       <button
         type="button"
         onClick={toggleWishlist}
-        className={`absolute right-3 top-3 rounded-full p-2 shadow-lg transition ${
+        className={`absolute right-2 top-2 rounded-full p-1.5 shadow-lg transition ${
           inWishlist ? 'bg-red-500 text-white' : 'bg-white text-red-500 hover:bg-red-50'
         }`}
       >
-        <FaHeart />
+        <FaHeart className="h-4 w-4" />
       </button>
-      <div className="p-5">
-        <div className="mb-3 flex items-center justify-between text-sm text-gold-600 uppercase tracking-[0.18em]">
+      <div className="flex flex-1 flex-col p-4">
+        <div className="mb-2 flex items-center justify-between text-xs text-gold-600 uppercase tracking-[0.15em]">
           <span>{product.category?.name || 'Women'}</span>
           <span className={stock > 0 ? 'text-primary-600' : 'text-rose-500'}>{stock > 0 ? 'In stock' : 'Sold out'}</span>
         </div>
-        {product.brand && <p className="text-xs font-semibold text-ink-light uppercase tracking-wide">{product.brand}</p>}
-        <h3 className="font-serif text-lg font-bold text-primary-800">{product.name}</h3>
-        <p className="mt-2 text-sm text-ink-light line-clamp-2">{product.description}</p>
+        {product.brand && <p className="text-[10px] font-semibold text-ink-light uppercase tracking-wide">{product.brand}</p>}
+        <Link to={`/product/${product._id}`}>
+          <h3 className="font-serif text-base font-bold text-primary-800 line-clamp-2 leading-snug">{product.name}</h3>
+        </Link>
+        <p className="mt-1.5 text-xs text-ink-light line-clamp-2 leading-snug">{product.description}</p>
 
         {hasVariants && (
-          <div className="mt-3">
-            <p className="text-xs font-semibold text-ink-light">Color</p>
-            <div className="mt-1.5 flex flex-wrap gap-1.5">
+          <div className="mt-2">
+            <p className="text-[10px] font-semibold text-ink-light">Color</p>
+            <div className="mt-1 flex flex-wrap gap-1">
               {product.variants.map((v) => {
                 const active = selectedVariant && (selectedVariant.sku || selectedVariant._id) === (v.sku || v._id);
                 return (
@@ -87,7 +102,7 @@ const ShopProductCard = React.memo(({ product, addToCart, isAuthenticated, navig
                     key={v.sku || v._id}
                     type="button"
                     onClick={() => setSelectedVariant(v)}
-                    className={`rounded-full border px-2.5 py-1 text-xs font-semibold transition ${
+                    className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold transition ${
                       active
                         ? 'border-primary-600 bg-primary-600 text-white'
                         : 'border-gold/40 bg-white text-ink-light hover:border-gold-500'
@@ -101,34 +116,43 @@ const ShopProductCard = React.memo(({ product, addToCart, isAuthenticated, navig
           </div>
         )}
 
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-lg font-bold text-gold-600">Rs. {price}</p>
-          <div className="flex flex-wrap gap-2">
+        <div className="mt-auto grid grid-cols-1 gap-1.5 sm:grid-cols-2 pt-3">
+          <div className="flex flex-col gap-1.5">
             <Link
               to={`/product/${product._id}`}
-              className="rounded-full border border-gold/40 px-4 py-2 text-sm font-semibold text-primary-700 transition hover:bg-cream"
+              className="rounded-full border border-gold/40 px-3 py-1.5 text-xs font-semibold text-primary-700 transition hover:bg-cream text-center"
             >
               View
             </Link>
-            <button
-              type="button"
-              disabled={stock < 1}
-              onClick={handleAdd}
-              className="btn-elegant rounded-full px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <FaShoppingBag className="mr-1 inline" /> Add
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (!isAuthenticated) return navigate('/login');
-                navigate(`/product/${product._id}`);
-              }}
-              className="rounded-full border border-gold-500 bg-white px-4 py-2 text-sm font-semibold text-gold-600 transition hover:bg-gold-50"
-            >
-              Details
-            </button>
+            {hasApproved ? (
+              <button
+                type="button"
+                disabled={stock < 1}
+                onClick={handleAdd}
+                className="btn-elegant rounded-full px-3 py-1.5 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <FaShoppingBag className="mr-1 inline h-3 w-3" /> Add
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleEnquire}
+                className="rounded-full bg-pink-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-pink-700"
+              >
+                Enquire Now
+              </button>
+            )}
           </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (!isAuthenticated) return navigate('/login');
+              navigate(`/product/${product._id}`);
+            }}
+            className="rounded-full border border-gold-500 bg-white px-3 py-1.5 text-xs font-semibold text-gold-600 transition hover:bg-gold-50"
+          >
+            Details
+          </button>
         </div>
       </div>
     </div>
@@ -238,24 +262,26 @@ const Shop = () => {
   return (
     <div className="bg-cream py-10 text-ink">
       <div className="mx-auto max-w-[96rem] px-4 sm:px-6 lg:px-8">
-        <div className="mb-8 grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-gold-600">The Collection</p>
-            <h1 className="font-serif mt-2 text-3xl font-bold text-primary-800">Shop Women's Collections</h1>
-            <p className="mt-2 text-ink-light">Browse trendy tops, dresses, bottoms, footwear, and accessories.</p>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <SearchBar
-                value={search}
-                onChange={handleSearchChange}
-                onSelectSuggestion={handleSelectSuggestion}
-                suggestions={suggestions}
-                loading={suggestionsLoading}
-              />
+        <div className="mb-6 rounded-3xl bg-gradient-to-r from-cream via-gold-50 to-gold-100 p-5 md:p-8 shadow-lg border border-gold/10">
+          <div className="relative mb-4 min-h-[200px] grid gap-4 md:grid-cols-[1.2fr_0.8fr] items-start">
+            <div className="flex flex-col justify-center">
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-gold-600">The Collection</p>
+              <h1 className="font-serif mt-1 text-2xl md:text-3xl font-bold text-primary-800">Shop Women's Collections</h1>
+              <p className="mt-2 text-ink-light text-sm">Browse trendy tops, dresses, bottoms, footwear, and accessories.</p>
             </div>
-            <div className="relative">
-              <SortDropdown sort={sort} onChange={handleSortChange} />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <SearchBar
+                  value={search}
+                  onChange={handleSearchChange}
+                  onSelectSuggestion={handleSelectSuggestion}
+                  suggestions={suggestions}
+                  loading={suggestionsLoading}
+                />
+              </div>
+              <div className="relative">
+                <SortDropdown sort={sort} onChange={handleSortChange} />
+              </div>
             </div>
           </div>
         </div>

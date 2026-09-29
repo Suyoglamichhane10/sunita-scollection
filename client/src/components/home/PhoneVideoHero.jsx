@@ -212,7 +212,7 @@ const ProductScene = ({ onNext }) => (
       <h4 className="font-serif text-base font-bold text-primary-800">Classic Black Handbag</h4>
       <p className="text-xs text-ink-light">Size 1XL • Premium quality</p>
       <div className="mt-2 flex items-center justify-between">
-        <span className="text-base font-bold text-gold-600">Rs. 1,150</span>
+        <span className="text-base font-bold text-gold-600">Contact for price</span>
         <motion.button
           onClick={onNext}
           className="rounded-full bg-primary-700 px-4 py-2 text-xs font-semibold text-white shadow-md"
@@ -241,12 +241,12 @@ const CartScene = ({ onNext }) => (
         <div className="flex-1">
           <p className="text-xs font-bold text-primary-800">Classic Black Handbag</p>
           <p className="text-[10px] text-ink-light">Size 1XL</p>
-          <p className="text-xs font-bold text-gold-600">Rs. 1,150</p>
+          <p className="text-xs font-bold text-gold-600">Contact for price</p>
         </div>
       </div>
       <div className="mt-3 flex items-center justify-between rounded-2xl bg-white p-3 shadow-sm">
         <span className="text-xs font-semibold text-ink-light">Subtotal</span>
-        <span className="text-sm font-bold text-primary-800">Rs. 1,000</span>
+        <span className="text-sm font-bold text-primary-800">—</span>
       </div>
       <motion.button
         onClick={onNext}
@@ -305,7 +305,7 @@ const PaymentScene = ({ onNext }) => (
         </svg>
       </div>
       <h4 className="mt-4 font-serif text-lg font-bold text-primary-800">Payment Successful</h4>
-      <p className="mt-1 text-xs text-ink-light">eSewa Payment • Rs. 1,000</p>
+      <p className="mt-1 text-xs text-ink-light">eSewa Payment</p>
       <motion.button
         onClick={onNext}
         className="mt-6 rounded-full bg-green-600 px-8 py-2.5 text-sm font-semibold text-white shadow-md"

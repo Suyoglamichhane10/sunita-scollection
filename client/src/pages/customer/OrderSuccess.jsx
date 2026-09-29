@@ -4,7 +4,6 @@ import api from '../../Services/api';
 import { useCart } from '../../Context/CartContext';
 import toast from 'react-hot-toast';
 import EsewaLogo from '../../assets/Esewa_logo.webp';
-import KhaltiLogo from '../../assets/khalti.png';
 import FonepayLogo from '../../assets/fonepay.png';
 
 const OrderSuccess = () => {
@@ -13,11 +12,22 @@ const OrderSuccess = () => {
   const navigate = useNavigate();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [referralCode, setReferralCode] = useState('');
   const { clearCart } = useCart();
+
+  useEffect(() => {
+    if (order?.isDelivered && !referralCode) {
+      api.get('/loyalty/referral')
+        .then((res) => {
+          const code = res.data.referralCode || '';
+          setReferralCode(code);
+        })
+        .catch(() => {});
+    }
+  }, [order?.isDelivered, referralCode]);
 
 // Callback detection
   const isEsewaCallback = searchParams.get('refId') || searchParams.get('oid') || searchParams.get('transaction_uuid');
-  const isKhaltiCallback = searchParams.get('pidx');
   const isFonepayCallback = searchParams.get('oid') || searchParams.get('transaction_uuid');
   const isStripeCallback = searchParams.get('gateway') === 'stripe';
 
@@ -76,27 +86,6 @@ const OrderSuccess = () => {
           }
         }
 
-        // If redirected from Khalti, verify via our Khalti verify endpoint.
-        if (orderId && isKhaltiCallback) {
-          try {
-            const pidx = searchParams.get('pidx');
-            const res = await api.post('/payments/khalti/verify', { orderId, pidx });
-            if (!res.data.success) {
-              navigate(`/payment-failure/${orderId}`, { replace: true });
-              return;
-            }
-            toast.success('Payment confirmed via Khalti!');
-            clearCart();
-          } catch (error) {
-            if (error.response?.status === 503 && import.meta.env.MODE === 'development') {
-              toast.success('Order placed successfully! (Development mode - Khalti bypassed)');
-              clearCart();
-            } else {
-              throw error;
-            }
-          }
-        }
-
         // If redirected from FonePay, verify via our FonePay verify endpoint.
         if (orderId && isFonepayCallback) {
           try {
@@ -136,7 +125,7 @@ const OrderSuccess = () => {
         console.error(error);
         const msg = error.response?.data?.message || 'Unable to load order';
         // On verification failure (payment not confirmed/timeout), show failure page
-        if (orderId && (isEsewaCallback || isKhaltiCallback || isFonepayCallback)) {
+        if (orderId && (isEsewaCallback || isFonepayCallback)) {
           navigate(`/payment-failure/${orderId}`, { replace: true });
         } else {
           toast.error(msg);
@@ -151,7 +140,7 @@ const OrderSuccess = () => {
     return () => {
       cancelled = true;
     };
-  }, [orderId, isEsewaCallback, isKhaltiCallback, isFonepayCallback, isStripeCallback, clearCart, navigate, searchParams]);
+  }, [orderId, isEsewaCallback, isFonepayCallback, isStripeCallback, clearCart, navigate, searchParams]);
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
@@ -196,14 +185,13 @@ const OrderSuccess = () => {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Total amount</span>
-                  <span className="font-semibold text-gray-900">Rs. {order.totalAmount}</span>
+                   <span className="font-semibold text-gray-900">Price hidden</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Payment method</span>
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-gray-900">{order.paymentMethod?.toUpperCase()}</span>
                     {order.paymentMethod === 'esewa' && <img src={EsewaLogo} alt="eSewa" className="h-6 w-auto object-contain" />}
-                    {order.paymentMethod === 'khalti' && <img src={KhaltiLogo} alt="Khalti" className="h-6 w-auto object-contain" />}
                     {order.paymentMethod === 'fonepay' && <img src={FonepayLogo} alt="FonePay" className="h-6 w-auto object-contain" />}
                   </div>
                 </div>
@@ -234,6 +222,24 @@ const OrderSuccess = () => {
           ) : (
             <div className="mt-8 rounded-xl border border-gray-200 bg-gray-50 p-6 text-gray-600">
               Order details are loading. You can view your orders from the My Orders page.
+            </div>
+          )}
+
+          {order?.isDelivered && referralCode && (
+            <div className="mt-8 rounded-2xl border-2 border-pink-200 bg-gradient-to-r from-pink-50 to-cream p-6 text-center">
+              <h3 className="font-serif text-xl font-bold text-primary-800">Share &amp; Earn!</h3>
+              <p className="mt-2 text-sm text-gray-600">Share your referral link with friends. When they complete a purchase, you both earn 300 reward points!</p>
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-center">
+                <div className="rounded-full bg-white px-4 py-2 text-center text-sm font-mono text-gray-700 shadow break-all">
+                  {`${window.location.origin}/r/${referralCode}`}
+                </div>
+                <button
+                  onClick={() => { navigator.clipboard?.writeText(`${window.location.origin}/r/${referralCode}`); toast.success('Referral link copied!'); }}
+                  className="rounded-full bg-pink-600 px-4 py-2 text-sm font-semibold text-white hover:bg-pink-700"
+                >
+                  Copy Link
+                </button>
+              </div>
             </div>
           )}
 

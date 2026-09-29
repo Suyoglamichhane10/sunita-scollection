@@ -110,6 +110,10 @@ const userSchema = new mongoose.Schema(
           type: String,
           default: null,
         },
+        dealPrice: {
+          type: Number,
+          default: null,
+        },
       },
     ],
     orderHistory: [

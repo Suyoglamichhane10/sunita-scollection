@@ -1,5 +1,5 @@
 import React, { lazy, Suspense } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import ProtectedRoute from '../components/common/ProtectedRoute';
 
 // Auth Pages
@@ -26,6 +26,7 @@ const Contact = lazy(() => import('../pages/customer/Contact'));
 const OrderTracking = lazy(() => import('../pages/customer/OrderTracking'));
 const DeliveryApp = lazy(() => import('../pages/delivery/DeliveryApp'));
 const Wishlist = lazy(() => import('../pages/customer/Wishlist'));
+const Rewards = lazy(() => import('../pages/customer/Rewards'));
 
 // Admin Pages
 const AdminDashboard = lazy(() => import('../pages/admin/AdminDashboard'));
@@ -41,12 +42,19 @@ const AdminMarketing = lazy(() => import('../pages/admin/AdminMarketing'));
 const AdminProfile = lazy(() => import('../pages/admin/AdminProfile'));
 const AdminDelivery = lazy(() => import('../pages/admin/AdminDelivery'));
 const AdminSlideshow = lazy(() => import('../pages/admin/AdminSlideshow'));
+const AdminEnquiries = lazy(() => import('../pages/admin/AdminEnquiries'));
+const AdminAnalytics = lazy(() => import('../pages/admin/AdminAnalytics'));
 
 // Layouts
 import CustomerLayout from '../Layouts/Customerlayout';
 import AdminLayout from '../Layouts/AdminLayout';
 
 const AppRoutes = () => {
+  const ReferralRedirect = () => {
+    const { code } = useParams();
+    return <Navigate to={`/register?ref=${code}`} replace />;
+  };
+
   return (
     <Suspense fallback={<div className="min-h-screen bg-stone-50 p-10 text-center text-slate-600">Loading...</div>}>
     <Routes>
@@ -57,14 +65,15 @@ const AppRoutes = () => {
       <Route path="/reset-password/:resetToken" element={<ResetPassword />} />
       <Route path="/auth/google/success" element={<GoogleSuccess />} />
 
-      {/* Public Customer Routes */}
-      <Route element={<CustomerLayout />}>
-        <Route path="/" element={<Home />} />
-        <Route path="/shop" element={<Shop />} />
-        <Route path="/product/:id" element={<ProductDetail />} />
-        <Route path="/about" element={<AboutUs />} />
-        <Route path="/contact" element={<Contact />} />
-      </Route>
+       {/* Public Customer Routes */}
+       <Route element={<CustomerLayout />}>
+         <Route path="/" element={<Home />} />
+         <Route path="/shop" element={<Shop />} />
+         <Route path="/product/:id" element={<ProductDetail />} />
+         <Route path="/about" element={<AboutUs />} />
+         <Route path="/contact" element={<Contact />} />
+         <Route path="/r/:code" element={<ReferralRedirect />} />
+       </Route>
 
       {/* Protected Customer Routes — require authentication */}
       <Route element={<CustomerLayout />}>
@@ -148,15 +157,23 @@ const AppRoutes = () => {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/wishlist"
-          element={
-            <ProtectedRoute>
-              <Wishlist />
-            </ProtectedRoute>
-          }
-        />
-      </Route>
+         <Route
+           path="/wishlist"
+           element={
+             <ProtectedRoute>
+               <Wishlist />
+             </ProtectedRoute>
+           }
+         />
+         <Route
+           path="/rewards"
+           element={
+             <ProtectedRoute>
+               <Rewards />
+             </ProtectedRoute>
+           }
+         />
+       </Route>
 
       {/* Admin Routes — require admin role */}
       <Route
@@ -177,6 +194,8 @@ const AppRoutes = () => {
         <Route path="slideshow" element={<AdminSlideshow />} />
         <Route path="users" element={<AdminUsers />} />
         <Route path="reports" element={<AdminReports />} />
+        <Route path="analytics" element={<AdminAnalytics />} />
+        <Route path="enquiries" element={<AdminEnquiries />} />
         <Route path="conversations" element={<AdminConversations />} />
         <Route path="marketing" element={<AdminMarketing />} />
         <Route path="profile" element={<AdminProfile />} />

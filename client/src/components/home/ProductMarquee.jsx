@@ -5,9 +5,11 @@ import { useCart } from '../../Context/CartContext';
 import { useAuth } from '../../Context/Authcontext';
 import api from '../../Services/api';
 import { getCloudinaryOptimizedUrl, handleImageError } from '../../utils/imageOptimizer';
+import { useApprovedProducts } from '../../hooks/useApprovedProducts';
+import EnquiryModal from '../common/EnquiryModal';
 
 const SkeletonCard = () => (
-  <div className="h-56 w-36 shrink-0 animate-pulse rounded-xl bg-gray-200 sm:w-44" />
+  <div className="shrink-0 animate-pulse rounded-xl bg-gray-200 aspect-[4/5] w-36 sm:w-44" />
 );
 
 const hasAvailableStock = (product) => {
@@ -16,13 +18,23 @@ const hasAvailableStock = (product) => {
   return false;
 };
 
-const MarqueeCard = React.memo(({ product, onAddToCart }) => {
+const MarqueeCard = React.memo(({ product, onAddToCart, hasApproved }) => {
+  const [showEnquiry, setShowEnquiry] = useState(false);
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+
+  const handleEnquire = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isAuthenticated) return navigate('/login');
+    setShowEnquiry(true);
+  };
+
   const mainImage = product.images?.[0]?.url;
-  const price = product.price;
 
   return (
-    <div className="marquee-card flex h-56 w-36 shrink-0 flex-col overflow-hidden rounded-xl bg-white shadow-sm transition-shadow hover:shadow-md sm:w-44">
-      <Link to={`/product/${product._id}`} className="block aspect-[3/4] overflow-hidden bg-gray-100">
+    <div className="marquee-card flex shrink-0 flex-col overflow-hidden rounded-xl bg-white shadow-sm transition-shadow hover:shadow-md w-36 sm:w-44">
+      <Link to={`/product/${product._id}`} className="block aspect-[4/5] overflow-hidden bg-gray-100 flex-shrink-0">
         {mainImage ? (
           <img
             src={getCloudinaryOptimizedUrl(mainImage, 400)}
@@ -43,20 +55,30 @@ const MarqueeCard = React.memo(({ product, onAddToCart }) => {
             {product.name}
           </h3>
         </Link>
-        <p className="mt-1 text-base font-bold text-gold-600">Rs. {price}</p>
+        <p className="mt-1 text-base font-bold text-gold-600">Contact for price</p>
         <div className="mt-auto flex gap-1.5">
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onAddToCart(product);
-            }}
-            className="flex flex-1 items-center justify-center gap-1 rounded-md bg-primary-600 px-1.5 py-1 text-[10px] font-semibold text-white transition hover:bg-primary-700"
-            title="Add to Cart"
-          >
-            <FaShoppingCart className="text-[9px]" />
-            Add
-          </button>
+          {hasApproved ? (
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onAddToCart(product);
+              }}
+              className="flex flex-1 items-center justify-center gap-1 rounded-md bg-primary-600 px-1.5 py-1 text-[10px] font-semibold text-white transition hover:bg-primary-700"
+              title="Add to Cart"
+            >
+              <FaShoppingCart className="text-[9px]" />
+              Add
+            </button>
+          ) : (
+            <button
+              onClick={handleEnquire}
+              className="flex flex-1 items-center justify-center gap-1 rounded-md bg-pink-600 px-1.5 py-1 text-[10px] font-semibold text-white transition hover:bg-pink-700"
+              title="Enquire Now"
+            >
+              Enquire
+            </button>
+          )}
           <Link
             to={`/product/${product._id}`}
             className="flex items-center justify-center rounded-md border border-primary-600 px-1.5 py-1 text-[10px] font-semibold text-primary-700 transition hover:bg-primary-50"
@@ -66,6 +88,8 @@ const MarqueeCard = React.memo(({ product, onAddToCart }) => {
           </Link>
         </div>
       </div>
+
+      <EnquiryModal product={product} isOpen={showEnquiry} onClose={() => setShowEnquiry(false)} />
     </div>
   );
 });
@@ -80,6 +104,7 @@ const ProductMarquee = ({ categories = [] }) => {
   const { addToCart } = useCart();
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const { isApproved, loading: approvedLoading } = useApprovedProducts();
 
   const handleAddToCart = useCallback(
     (product) => {
@@ -118,7 +143,7 @@ const ProductMarquee = ({ categories = [] }) => {
     fetchProducts();
     const interval = setInterval(() => {
       if (active) fetchProducts();
-    }, 30000);
+    }, 60000);
     return () => {
       active = false;
       clearInterval(interval);
@@ -230,11 +255,12 @@ const ProductMarquee = ({ categories = [] }) => {
             style={{ animationDuration: `${animationDuration}s` }}
           >
             {marqueeProducts.map((product, index) => (
-              <MarqueeCard
-                key={`${product._id}-${index}`}
-                product={product}
-                onAddToCart={handleAddToCart}
-              />
+             <MarqueeCard
+                 key={`${product._id}-${index}`}
+                 product={product}
+                 onAddToCart={handleAddToCart}
+                 hasApproved={!approvedLoading && isApproved(product._id)}
+               />
             ))}
           </div>
         </div>

@@ -1,14 +1,19 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useCompare } from '../../Context/CompareContext';
 import { FaTimes, FaShoppingBag } from 'react-icons/fa';
 import { useCart } from '../../Context/CartContext';
 import { useAuth } from '../../Context/Authcontext';
 import { Link } from 'react-router-dom';
+import { useApprovedProducts } from '../../hooks/useApprovedProducts';
+import EnquiryModal from '../common/EnquiryModal';
 
 const ProductCompare = ({ isOpen, onClose }) => {
   const { items, removeFromCompare, clearCompare } = useCompare();
   const { addToCart } = useCart();
   const { isAuthenticated } = useAuth();
+  const [showEnquiry, setShowEnquiry] = useState(false);
+  const [enquiryProduct, setEnquiryProduct] = useState(null);
+  const { isApproved, loading: approvedLoading } = useApprovedProducts();
 
   if (!isOpen) return null;
 
@@ -84,10 +89,7 @@ const ProductCompare = ({ isOpen, onClose }) => {
                   <td className="py-4 font-medium text-gray-700">Price</td>
                   {items.map((product) => (
                     <td key={product._id} className="py-4 px-4 text-center font-bold text-pink-600">
-                      Rs. {product.price}
-                      {product.comparePrice && product.comparePrice > product.price && (
-                        <div className="text-xs text-gray-400 line-through">Rs. {product.comparePrice}</div>
-                      )}
+                      Contact for price
                     </td>
                   ))}
                 </tr>
@@ -143,15 +145,25 @@ const ProductCompare = ({ isOpen, onClose }) => {
                       >
                         View Details
                       </Link>
-                      <button
-                        type="button"
-                        onClick={() => handleAddToCart(product)}
-                        disabled={product.stock === 0}
-                        className="ml-2 rounded-full border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        <FaShoppingBag className="mr-1 inline" />
-                        Add to Cart
-                      </button>
+                      {!approvedLoading && isApproved(product._id) ? (
+                        <button
+                          type="button"
+                          onClick={() => handleAddToCart(product)}
+                          disabled={product.stock === 0}
+                          className="ml-2 rounded-full border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <FaShoppingBag className="mr-1 inline" />
+                          Add to Cart
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => { if (!isAuthenticated) return; setEnquiryProduct(product); setShowEnquiry(true); }}
+                          className="ml-2 rounded-full border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-700 transition hover:bg-gray-50"
+                        >
+                          Enquire Now
+                        </button>
+                      )}
                     </td>
                   ))}
                 </tr>
@@ -171,6 +183,8 @@ const ProductCompare = ({ isOpen, onClose }) => {
             </button>
           </div>
         )}
+
+        <EnquiryModal product={enquiryProduct} isOpen={showEnquiry} onClose={() => { setShowEnquiry(false); setEnquiryProduct(null); }} />
       </div>
     </div>
   );

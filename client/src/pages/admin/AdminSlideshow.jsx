@@ -76,7 +76,7 @@ const AdminSlideshow = () => {
     try {
       await reorderSlides(ordered);
       toast.success('Order saved');
-    } catch (error) {
+    } catch {
       toast.error('Failed to save order');
       load();
     }

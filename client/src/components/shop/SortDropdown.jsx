@@ -10,7 +10,7 @@ const SortDropdown = ({ sort, onChange }) => {
         <select
           value={sort}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full appearance-none rounded-full border border-gold/30 bg-cream/50 px-4 py-2.5 pr-10 text-sm outline-none focus:border-gold-500 focus:ring-2 focus:ring-gold-200"
+          className="w-full appearance-none rounded-full border border-gold/30 bg-gold-100 px-4 py-2.5 pr-10 text-sm outline-none focus:border-gold-500 focus:ring-2 focus:ring-gold-200"
         >
           <option value="newest">Newest</option>
           <option value="price-low">Price: Low to High</option>

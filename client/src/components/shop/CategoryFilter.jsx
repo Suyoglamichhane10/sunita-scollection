@@ -8,8 +8,8 @@ const CategoryFilter = ({ categories, selected, onChange }) => {
         onClick={() => onChange('')}
         className={`rounded-full px-4 py-2 text-sm font-medium transition ${
           !selected
-            ? 'bg-primary-600 text-white shadow-md'
-            : 'border border-gold/30 bg-white text-ink hover:border-gold-400'
+            ? 'bg-gold-500 text-white shadow-md hover:bg-gold-600'
+            : 'border border-gold/30 bg-white text-ink hover:border-gold-400 hover:bg-gold-50'
         }`}
       >
         All Products
@@ -21,8 +21,8 @@ const CategoryFilter = ({ categories, selected, onChange }) => {
           onClick={() => onChange(cat._id)}
           className={`rounded-full px-4 py-2 text-sm font-medium transition ${
             selected === cat._id
-              ? 'bg-primary-600 text-white shadow-md'
-              : 'border border-gold/30 bg-white text-ink hover:border-gold-400'
+              ? 'bg-gold-500 text-white shadow-md hover:bg-gold-600'
+              : 'border border-gold/30 bg-white text-ink hover:border-gold-400 hover:bg-gold-50'
           }`}
         >
           {cat.name}

@@ -5,6 +5,7 @@ const Review = require('../Models/Review');
 const Conversation = require('../Models/Conversation');
 const Message = require('../Models/Message');
 const Gamification = require('../Models/Gamification');
+const Enquiry = require('../Models/Enquiry');
 const bcrypt = require('bcrypt');
 const path = require('path');
 const cloudinary = require('../config/cloudinary');
@@ -371,10 +372,119 @@ exports.deleteAddress = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Address not found' });
     }
 
-address.deleteOne();
+    user.addresses.pull(address._id);
     await user.save();
 
     res.status(200).json({ success: true, addresses: user.addresses });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Set default address
+// @route   PUT /api/users/profile/addresses/:addressId/default
+// @access  Private
+exports.setDefaultAddress = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id);
+    const address = user.addresses.id(req.params.addressId);
+    if (!address) {
+      return res.status(404).json({ success: false, message: 'Address not found' });
+    }
+
+    user.addresses.forEach((addr) => (addr.isDefault = false));
+    address.isDefault = true;
+
+    await user.save();
+    res.status(200).json({ success: true, addresses: user.addresses });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Deactivate own account (soft disable)
+// @route   PUT /api/users/me/deactivate
+// @access  Private
+exports.deactivateAccount = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    user.isActive = false;
+    await user.save();
+
+    res.status(200).json({ success: true, message: 'Account deactivated successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Delete own account (permanent)
+// @route   DELETE /api/users/me
+// @access  Private
+exports.deleteOwnAccount = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+
+    // Delete related data for this user
+    const Conversation = require('../Models/Conversation');
+    const Message = require('../Models/Message');
+    const Order = require('../Models/Order');
+    const Review = require('../Models/Review');
+    const Gamification = require('../Models/Gamification');
+    const Enquiry = require('../Models/Enquiry');
+    const Product = require('../Models/Product');
+
+    // Conversations where user is a participant or the customer
+    const conversations = await Conversation.find({
+      $or: [{ participants: userId }, { customer: userId }],
+    });
+    const conversationIds = conversations.map((c) => c._id);
+
+    if (conversationIds.length) {
+      await Message.deleteMany({ conversation: { $in: conversationIds } });
+    }
+    await Message.deleteMany({ user: userId });
+    await Message.deleteMany({ sender: userId });
+
+    await Conversation.deleteMany({
+      $or: [{ participants: userId }, { customer: userId }],
+    });
+
+    // Orders placed by the user
+    await Order.deleteMany({ user: userId });
+
+    // Reviews written by the user
+    const reviews = await Review.find({ user: userId }).select('product');
+    await Review.deleteMany({ user: userId });
+    // Recompute product ratings after review removal
+    for (const r of reviews) {
+      if (r.product) {
+        const stats = await Review.aggregate([
+          { $match: { product: r.product, isApproved: true } },
+          { $group: { _id: '$product', avgRating: { $avg: '$rating' }, count: { $sum: 1 } } },
+        ]);
+        await Product.findByIdAndUpdate(r.product, {
+          'rating.average': stats.length ? stats[0].avgRating : 0,
+          'rating.count': stats.length ? stats[0].count : 0,
+        });
+      }
+    }
+
+    // Enquiries
+    await Enquiry.deleteMany({ userId });
+
+    // Loyalty profile
+    const user = await User.findById(userId);
+    if (user?.loyalty) {
+      await Gamification.findByIdAndDelete(user.loyalty);
+    }
+
+    await user.deleteOne();
+
+    res.status(200).json({ success: true, message: 'Account deleted successfully' });
   } catch (error) {
     next(error);
   }
@@ -397,7 +507,7 @@ exports.deleteAvatar = async (req, res, next) => {
     await user.save();
 
     user.password = undefined;
-    res.status(200).json({ success: true, user });
+    res.status(200).json({ success: true, avatar: '', user });
   } catch (error) {
     next(error);
   }
@@ -601,62 +711,81 @@ exports.getCart = async (req, res, next) => {
   }
 };
 
-// @desc    Add item to cart
-// @route   POST /api/users/profile/cart
-// @access  Private
-exports.addToCart = async (req, res, next) => {
-  try {
-    const { productId, quantity = 1, variantSku = null } = req.body;
-    if (!productId) {
-      return res.status(400).json({ success: false, message: 'productId is required' });
-    }
-
-    // Validate quantity: must be a positive integer.
-    const qty = Math.floor(Number(quantity));
-    if (!Number.isFinite(qty) || qty < 1) {
-      return res.status(400).json({ success: false, message: 'Quantity must be a positive integer' });
-    }
-
-    const product = await Product.findById(productId);
-    if (!product) {
-      return res.status(404).json({ success: false, message: 'Product not found' });
-    }
-
-    let stock = product.stock;
-    let variant = null;
-    if (variantSku && product.variants && product.variants.length) {
-      variant = product.variants.find(
-        (v) => (v.sku && v.sku === variantSku) || (v._id && v._id.toString() === variantSku)
-      );
-      if (!variant) {
-        return res.status(400).json({ success: false, message: 'Variant not found' });
+  // @desc    Add item to cart
+  // @route   POST /api/users/profile/cart
+  // @access  Private
+  exports.addToCart = async (req, res, next) => {
+    try {
+      const { productId, quantity = 1, variantSku = null, dealPrice = null } = req.body;
+      if (!productId) {
+        return res.status(400).json({ success: false, message: 'productId is required' });
       }
-      stock = variant.stock;
+
+      // Validate dealPrice against approved enquiry
+      if (dealPrice !== null && dealPrice !== undefined && dealPrice !== '') {
+        const validEnquiry = await Enquiry.findOne({
+          userId: req.user.id,
+          productId,
+          status: { $in: ['deal_closed', 'customer_agreed', 'converted'] },
+          dealPrice: { $eq: Number(dealPrice) },
+        });
+        if (!validEnquiry) {
+          return res.status(403).json({
+            success: false,
+            message: 'This deal price is not authorized. Please confirm the enquiry deal first.',
+          });
+        }
+      }
+
+      // Validate quantity: must be a positive integer.
+      const qty = Math.floor(Number(quantity));
+      if (!Number.isFinite(qty) || qty < 1) {
+        return res.status(400).json({ success: false, message: 'Quantity must be a positive integer' });
+      }
+
+      const product = await Product.findById(productId);
+      if (!product) {
+        return res.status(404).json({ success: false, message: 'Product not found' });
+      }
+
+      let stock = product.stock;
+      let variant = null;
+      if (variantSku && product.variants && product.variants.length) {
+        variant = product.variants.find(
+          (v) => (v.sku && v.sku === variantSku) || (v._id && v._id.toString() === variantSku)
+        );
+        if (!variant) {
+          return res.status(400).json({ success: false, message: 'Variant not found' });
+        }
+        stock = variant.stock;
+      }
+
+      if (qty > stock) {
+        return res.status(400).json({ success: false, message: `Insufficient stock (max ${stock})` });
+      }
+
+      const user = await User.findById(req.user.id);
+      // Consolidate first so any pre-existing duplicate rows do not cause the
+      // same product+variant to be split across multiple entries.
+      user.cart = consolidateCart(user.cart || []);
+      const existing = user.cart.find((item) => cartItemHas(item, productId, variantSku));
+
+      if (existing) {
+        existing.quantity = Math.min(existing.quantity + qty, stock);
+        if (dealPrice !== null && existing.dealPrice !== dealPrice) {
+          existing.dealPrice = dealPrice;
+        }
+      } else {
+        user.cart.push({ product: productId, quantity: qty, variantSku: variantSku || null, dealPrice: dealPrice || null });
+      }
+
+      await user.save();
+      const populated = await User.findById(req.user.id).populate('cart.product');
+      res.status(200).json({ success: true, cart: populated.cart });
+    } catch (error) {
+      next(error);
     }
-
-    if (qty > stock) {
-      return res.status(400).json({ success: false, message: `Insufficient stock (max ${stock})` });
-    }
-
-    const user = await User.findById(req.user.id);
-    // Consolidate first so any pre-existing duplicate rows do not cause the
-    // same product+variant to be split across multiple entries.
-    user.cart = consolidateCart(user.cart || []);
-    const existing = user.cart.find((item) => cartItemHas(item, productId, variantSku));
-
-    if (existing) {
-      existing.quantity = Math.min(existing.quantity + qty, stock);
-    } else {
-      user.cart.push({ product: productId, quantity: qty, variantSku: variantSku || null });
-    }
-
-    await user.save();
-    const populated = await User.findById(req.user.id).populate('cart.product');
-    res.status(200).json({ success: true, cart: populated.cart });
-  } catch (error) {
-    next(error);
-  }
-};
+  };
 
 // @desc    Update cart item quantity
 // @route   PUT /api/users/profile/cart/:key

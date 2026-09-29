@@ -37,7 +37,7 @@ const connectDB = async () => {
     socketTimeoutMS: 45000,
     maxPoolSize: 10,
     minPoolSize: 1,
-    autoIndex: true,
+    autoIndex: process.env.NODE_ENV !== 'production',
     family: 4,
   };
 

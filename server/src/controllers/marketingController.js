@@ -103,11 +103,17 @@ exports.deleteCoupon = async (req, res, next) => {
 exports.validateCoupon = async (req, res, next) => {
   try {
     const { code, subtotal, userId } = req.body;
-    if (!code) {
+    if (typeof code !== 'string' || !code.trim()) {
       return res.status(400).json({ success: false, message: 'Coupon code is required' });
     }
+    if (subtotal !== undefined && (typeof subtotal !== 'number' || !Number.isFinite(subtotal) || subtotal < 0)) {
+      return res.status(400).json({ success: false, message: 'Subtotal must be a non-negative number' });
+    }
+    if (userId !== undefined && typeof userId !== 'string') {
+      return res.status(400).json({ success: false, message: 'User ID is invalid' });
+    }
 
-    const coupon = await Coupon.findOne({ code: code.toUpperCase(), isActive: true });
+    const coupon = await Coupon.findOne({ code: code.trim().toUpperCase(), isActive: true });
     if (!coupon) {
       return res.status(404).json({ success: false, message: 'Invalid coupon code' });
     }

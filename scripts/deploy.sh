@@ -12,7 +12,11 @@ cd "$APP_DIR"
 echo ""
 echo "[1/5] Installing server dependencies..."
 if [ -f "server/package.json" ]; then
-  (cd server && npm ci --omit=dev 2>/dev/null || npm install --omit=dev)
+  if [ -f "server/package-lock.json" ]; then
+    (cd server && npm ci --omit=dev 2>/dev/null || npm install --omit=dev)
+  else
+    (cd server && npm install --omit=dev)
+  fi
   echo "      Server dependencies installed."
 else
   echo "      ERROR: server/package.json not found."
@@ -23,7 +27,11 @@ fi
 echo ""
 echo "[2/5] Installing client dependencies..."
 if [ -f "client/package.json" ]; then
-  (cd client && npm install 2>/dev/null || npm install)
+  if [ -f "client/package-lock.json" ]; then
+    (cd client && npm ci 2>/dev/null || npm install)
+  else
+    (cd client && npm install)
+  fi
   echo "      Client dependencies installed."
 else
   echo "      ERROR: client/package.json not found."
@@ -33,6 +41,7 @@ fi
 # --- 3. Build client for production ---
 echo ""
 echo "[3/5] Building client..."
+export NODE_ENV=production
 (cd client && npm run build)
 echo "      Client build complete: client/dist/"
 
@@ -40,6 +49,7 @@ echo "      Client build complete: client/dist/"
 echo ""
 echo "[4/5] Preparing uploads directory..."
 mkdir -p server/uploads
+mkdir -p server/logs
 echo "      uploads/ ready."
 
 # --- 5. Start / reload with PM2 ---

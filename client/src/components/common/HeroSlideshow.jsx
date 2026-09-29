@@ -74,8 +74,6 @@ const HeroSlideshow = ({ slides = [] }) => {
   }
 
   const current = activeSlides[currentSlide];
-  const isLoaded = loadedImages.has(current._id || current.id);
-  const hasError = imageErrors[current._id || current.id];
 
   return (
     <div
@@ -90,8 +88,6 @@ const HeroSlideshow = ({ slides = [] }) => {
       {activeSlides.map((slide, index) => {
         const key = slide._id || slide.id;
         const isCurrent = index === currentSlide;
-        const isLoaded = loadedImages.has(key);
-        const hasError = imageErrors[key];
 
         return (
           <div

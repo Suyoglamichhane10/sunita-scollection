@@ -6,6 +6,8 @@ import { useAuth } from '../../Context/Authcontext';
 import toast from 'react-hot-toast';
 import wishlistApi from '../../Services/wishlistApi';
 import { getMainImage, getCloudinaryOptimizedUrl, handleImageError } from '../../utils/imageOptimizer';
+import { useApprovedProducts } from '../../hooks/useApprovedProducts';
+import EnquiryModal from '../common/EnquiryModal';
 
 const getAttr = (variant, key) => {
   if (!variant || !variant.attributes) return undefined;
@@ -41,6 +43,8 @@ const QuickViewModal = ({ product, isOpen, onClose }) => {
   const [related, setRelated] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [relatedLoading, setRelatedLoading] = useState(false);
+  const [showEnquiry, setShowEnquiry] = useState(false);
+  const { isApproved, loading: approvedLoading } = useApprovedProducts();
   const { addToCart } = useCart();
   const { isAuthenticated } = useAuth();
 
@@ -96,7 +100,6 @@ const QuickViewModal = ({ product, isOpen, onClose }) => {
   if (!isOpen || !product) return null;
 
   const stock = selectedVariant?.stock ?? product.stock;
-  const currentPrice = selectedVariant?.price ?? product.price;
   const displayImages = [];
   if (selectedVariant?.images?.length) displayImages.push(...selectedVariant.images);
   if (product.images?.length) {
@@ -143,6 +146,13 @@ const QuickViewModal = ({ product, isOpen, onClose }) => {
     addToCart(product, quantity, selectedVariant);
     onClose();
   };
+
+  const handleEnquire = (e) => {
+    e.preventDefault();
+    setShowEnquiry(true);
+  };
+
+  const hasApproved = !approvedLoading && isApproved(product._id);
 
   const toggleWishlist = async () => {
     if (!isAuthenticated) {
@@ -230,10 +240,7 @@ const QuickViewModal = ({ product, isOpen, onClose }) => {
               <p className="mt-1 text-xs text-gray-400">{product.views} views</p>
             )}
 
-            <p className="mt-4 text-2xl font-bold text-pink-600">Rs. {currentPrice}</p>
-            {product.comparePrice && product.comparePrice > currentPrice && (
-              <p className="mt-1 text-sm text-gray-400 line-through">Rs. {product.comparePrice}</p>
-            )}
+            <p className="mt-4 text-2xl font-bold text-pink-600">Contact for price</p>
 
             {/* Stock status */}
             <div className="mt-3">
@@ -336,14 +343,25 @@ const QuickViewModal = ({ product, isOpen, onClose }) => {
             </div>
 
             <div className="mt-6 flex gap-3">
-              <button
-                disabled={stock < 1}
-                onClick={handleAddToCart}
-                className="flex-1 rounded-full bg-pink-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-pink-700 disabled:cursor-not-allowed disabled:bg-gray-300"
-              >
-                <FaShoppingBag className="mr-2 inline" />
-                {stock < 1 ? 'Out of Stock' : 'Add to Cart'}
-              </button>
+              {hasApproved ? (
+                <button
+                  disabled={stock < 1}
+                  onClick={handleAddToCart}
+                  className="flex-1 rounded-full bg-pink-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-pink-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+                >
+                  <FaShoppingBag className="mr-2 inline" />
+                  {stock < 1 ? 'Out of Stock' : 'Add to Cart'}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleEnquire}
+                  disabled={stock < 1}
+                  className="flex-1 rounded-full bg-pink-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-pink-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+                >
+                  {stock < 1 ? 'Out of Stock' : 'Enquire Now'}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={toggleWishlist}
@@ -386,7 +404,7 @@ const QuickViewModal = ({ product, isOpen, onClose }) => {
             <div className="h-4 w-40 animate-pulse rounded bg-gray-200" />
             <div className="mt-4 grid grid-cols-2 gap-4 md:grid-cols-4">
               {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="h-40 animate-pulse rounded-2xl bg-gray-100" />
+                <div key={i} className="animate-pulse rounded-2xl bg-gray-100 aspect-square" />
               ))}
             </div>
           </div>
@@ -401,16 +419,18 @@ const QuickViewModal = ({ product, isOpen, onClose }) => {
                     key={rel._id}
                     to={`/product/${rel._id}`}
                     onClick={onClose}
-                    className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:shadow-lg"
+                    className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:shadow-lg flex flex-col"
                   >
                     {main?.url ? (
-                      <img src={getCloudinaryOptimizedUrl(main.url, 400)} alt={rel.name} className="h-32 w-full object-cover" onError={handleImageError} />
+                      <img src={getCloudinaryOptimizedUrl(main.url, 400)} alt={rel.name} className="aspect-square w-full object-cover" onError={handleImageError} />
                     ) : (
-                      <div className="flex h-32 w-full items-center justify-center bg-gray-100 text-3xl text-gray-300">👗</div>
+                      <div className="flex aspect-square w-full items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300">
+                        <span className="text-3xl text-gray-300">👗</span>
+                      </div>
                     )}
-                    <div className="p-3">
+                    <div className="p-3 flex flex-1 flex-col">
                       <p className="line-clamp-2 text-sm font-semibold text-gray-900">{rel.name}</p>
-                      <p className="mt-1 text-sm font-bold text-pink-600">Rs. {rel.price}</p>
+                      <p className="mt-1 text-sm font-bold text-pink-600">Contact for price</p>
                     </div>
                   </Link>
                 );
@@ -418,6 +438,8 @@ const QuickViewModal = ({ product, isOpen, onClose }) => {
             </div>
           </div>
         ) : null}
+
+        <EnquiryModal product={product} isOpen={showEnquiry} onClose={() => setShowEnquiry(false)} />
       </div>
     </div>
   );

@@ -255,8 +255,7 @@ const SearchBar = ({
                       )}
                     </div>
                     <p className="truncate text-xs text-ink-light">
-                      {suggestion.category && `${suggestion.category} • `}
-                      {suggestion.price != null && `Rs. ${suggestion.price}`}
+                      {suggestion.category && `${suggestion.category}`}
                     </p>
                   </div>
                 </li>

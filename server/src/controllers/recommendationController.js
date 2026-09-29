@@ -53,11 +53,12 @@ exports.getRecommendedForYou = async (req, res, next) => {
   }
 };
 
-// Trending based on style profile
+// Trending products based on user's style profile (occasion/style preferences)
 exports.getTrending = async (req, res, next) => {
   try {
     const limit = parseInt(req.query.limit, 10) || 6;
-    const products = await recommendationService.getTrendingForUser(req.user.id, limit);
+    const userId = req.user?.id;
+    const products = await recommendationService.getTrendingForUser(userId, limit);
     res.status(200).json({ success: true, products });
   } catch (error) {
     next(error);

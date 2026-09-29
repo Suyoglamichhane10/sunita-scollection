@@ -27,7 +27,7 @@ const ChatWindow = ({ conversationId, onBack }) => {
         const { data } = await api.get(`/conversations/${conversationId}/messages`);
         if (!active) return;
         setMessages(data.messages || []);
-      } catch (error) {
+      } catch {
         toast.error('Unable to load messages');
       } finally {
         if (active) setLoading(false);

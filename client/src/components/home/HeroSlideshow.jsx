@@ -67,7 +67,7 @@ const HeroSlideshow = ({ slides = [] }) => {
   const slideInterval = 3000; // 3 seconds
 
   const goToSlide = useCallback((index) => {
-    setCurrentSlide((prev) => (index + activeSlides.length) % activeSlides.length);
+    setCurrentSlide((index + activeSlides.length) % activeSlides.length);
   }, [activeSlides.length]);
 
   const goToPrevious = useCallback(() => {

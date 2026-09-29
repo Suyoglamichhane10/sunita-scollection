@@ -67,10 +67,7 @@ const TrendingBanner = ({ endpoint = '/products/featured?type=trending&limit=12'
           </p>
           <h3 className="font-serif text-base font-bold leading-snug sm:text-lg lg:text-xl">{product.name}</h3>
           <div className="flex items-center gap-2">
-            <span className="text-xl font-bold text-gold-300 sm:text-2xl">Rs. {product.price}</span>
-            {product.comparePrice && product.comparePrice > product.price && (
-              <span className="text-xs text-white/60 line-through">Rs. {product.comparePrice}</span>
-            )}
+            <span className="text-xl font-bold text-gold-300 sm:text-2xl">Contact for price</span>
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <Link

@@ -149,8 +149,9 @@ exports.toggleLike = async (req, res, next) => {
 
     const app = require('../app');
     const io = app.get('io');
-    if (io && liked && post.author.toString() !== req.user.id) {
-      io.to(`user_${post.author}`).emit('social:like', { postId: post._id, userId: req.user.id });
+    const postAuthorId = post.author ? post.author.toString() : null;
+    if (io && liked && postAuthorId && postAuthorId !== req.user.id) {
+      io.to(`user_${postAuthorId}`).emit('social:like', { postId: post._id, userId: req.user.id });
     }
 
     res.status(200).json({ success: true, liked, likes: post.likes.length });
@@ -180,7 +181,7 @@ exports.addComment = async (req, res, next) => {
 
     const app = require('../app');
     const io = app.get('io');
-    if (io && post.author.toString() !== req.user.id) {
+    if (io && post.author && post.author.toString() !== req.user.id) {
       io.to(`user_${post.author}`).emit('social:comment', { postId: post._id, comment });
     }
 
@@ -199,7 +200,7 @@ exports.deletePost = async (req, res, next) => {
     if (!post) {
       return res.status(404).json({ success: false, message: 'Post not found' });
     }
-    if (post.author.toString() !== req.user.id && req.user.role !== 'admin') {
+    if (post.author && post.author.toString() !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Not authorized to delete this post' });
     }
     await post.deleteOne();

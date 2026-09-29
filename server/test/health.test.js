@@ -1,6 +1,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const http = require('node:http');
+
+// Set test environment before loading app
+process.env.NODE_ENV = 'test';
 const app = require('../src/app');
 
 test('GET /api/health returns service health', async () => {
@@ -13,6 +16,8 @@ test('GET /api/health returns service health', async () => {
     const body = await response.json();
     assert.equal(response.status, 200);
     assert.equal(body.success, true);
+    assert.ok(['OK', 'DEGRADED'].includes(body.status));
+    assert.ok(['connected', 'disconnected'].includes(body.database));
   } finally {
     await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
   }

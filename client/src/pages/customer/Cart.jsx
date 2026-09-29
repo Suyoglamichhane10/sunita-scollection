@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../Context/CartContext';
 import { handleImageError } from '../../utils/imageOptimizer';
 
@@ -8,7 +8,7 @@ const Cart = () => {
   const navigate = useNavigate();
   const shippingCost = totalPrice >= 1000 ? 0 : 100;
   const tax = Math.round(totalPrice * 0.05);
-  const orderTotal = totalPrice + tax + shippingCost;
+  const totalAmount = totalPrice + tax + shippingCost;
 
   if (!cartItems.length) {
     return (
@@ -50,7 +50,11 @@ const Cart = () => {
                   {item.variant && (
                     <p className="mt-1 text-sm text-gray-600">Variant: {item.variant.sku || Object.values(item.variant.attributes || {}).join(' / ')}</p>
                   )}
-                  <p className="mt-2 text-sm text-gray-600">Rs. {item.price} each</p>
+                  {item.dealPrice && (
+                    <span className="inline-flex items-center gap-1 mt-1 rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-semibold text-purple-700">
+                      Deal Price: Rs. {item.dealPrice}
+                    </span>
+                  )}
                   <p className="mt-1 text-sm text-gray-600">Stock: {item.stock}</p>
                   <div className="mt-4 flex items-center gap-3">
                     <button
@@ -69,7 +73,6 @@ const Cart = () => {
                   </div>
                 </div>
                 <div className="flex flex-col justify-between gap-4 text-right">
-                  <p className="text-lg font-semibold text-gray-900">Rs. {item.price * item.quantity}</p>
                   <button
                     onClick={() => removeFromCart(item.key)}
                     className="text-sm font-semibold text-pink-600 hover:text-pink-700"
@@ -91,7 +94,7 @@ const Cart = () => {
             </div>
             <div className="flex items-center justify-between text-gray-600">
               <span>Subtotal</span>
-              <span>Rs. {totalPrice}</span>
+              <span>Rs. {totalPrice.toLocaleString()}</span>
             </div>
             <div className="flex items-center justify-between text-gray-600">
               <span>Shipping</span>
@@ -99,11 +102,11 @@ const Cart = () => {
             </div>
             <div className="flex items-center justify-between text-gray-600">
               <span>Estimated tax</span>
-              <span>Rs. {tax}</span>
+              <span>Rs. {tax.toLocaleString()}</span>
             </div>
             <div className="flex items-center justify-between text-gray-900 font-semibold text-lg">
               <span>Total</span>
-              <span>Rs. {orderTotal}</span>
+              <span>Rs. {totalAmount.toLocaleString()}</span>
             </div>
           </div>
 

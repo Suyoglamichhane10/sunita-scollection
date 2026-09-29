@@ -4,7 +4,6 @@ import { FaFacebookF, FaInstagram, FaTiktok, FaEnvelope, FaPhoneAlt } from 'reac
 import logo from '../../assets/LOGO!.png';
 import QRCode from '../../assets/QR.png';
 import EsewaLogo from '../../assets/Esewa_logo.webp';
-import KhaltiLogo from '../../assets/khalti.png';
 import FonepayLogo from '../../assets/fonepay.png';
 
 const Footer = () => {
@@ -38,7 +37,7 @@ const Footer = () => {
                 <Link to="/about" className="transition hover:text-gold-300">About Us</Link>
               </li>
               <li>
-                <Link to="/messages" className="transition hover:text-gold-300">Contact</Link>
+                <Link to="/contact" className="transition hover:text-gold-300">Contact</Link>
               </li>
             </ul>
           </div>
@@ -82,7 +81,6 @@ const Footer = () => {
           <p className="mb-4 text-center text-xs font-semibold uppercase tracking-[0.2em] text-gold-300">We Accept</p>
           <div className="flex flex-wrap items-center justify-center gap-6">
             <img src={EsewaLogo} alt="eSewa" className="h-10 w-auto object-contain" />
-            <img src={KhaltiLogo} alt="Khalti" className="h-10 w-auto object-contain" />
             <img src={FonepayLogo} alt="FonePay" className="h-10 w-auto object-contain" />
           </div>
         </div>

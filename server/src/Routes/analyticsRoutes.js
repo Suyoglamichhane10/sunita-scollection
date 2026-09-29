@@ -1,29 +1,22 @@
 const express = require('express');
 const router = express.Router();
-const {
-  getRevenueAnalytics,
-  getBestSellers,
-  getCustomerAnalytics,
-  getComparison,
-  getAnalyticsSummary,
-} = require('../controllers/analyticsController');
-const analyticsService = require('../services/analyticsService');
 const { protect, authorize } = require('../Middleware/auth');
+const analyticsController = require('../controllers/analyticsController');
 
-// All analytics routes are admin-only
 router.use(protect, authorize('admin'));
 
-router.get('/revenue', getRevenueAnalytics);
-router.get('/best-sellers', getBestSellers);
-router.get('/customers', getCustomerAnalytics);
-router.get('/comparison', getComparison);
-router.get('/summary', getAnalyticsSummary);
+router.get('/revenue', analyticsController.getRevenueAnalytics);
+router.get('/best-sellers', analyticsController.getBestSellers);
+router.get('/customers', analyticsController.getCustomerAnalytics);
+router.get('/comparison', analyticsController.getComparison);
+router.get('/summary', analyticsController.getAnalyticsSummary);
+router.get('/enquiries', analyticsController.getEnquiryStats);
+router.get('/payments', analyticsController.getPaymentBreakdown);
+router.get('/best-selling-revenue', analyticsController.getBestSellingByRevenue);
 
-// @desc    Recompute Best Seller + Trending categories from live data
-// @route   POST /api/analytics/refresh-merchandising
-// @access  Private/Admin
 router.post('/refresh-merchandising', async (req, res, next) => {
   try {
+    const analyticsService = require('../services/analyticsService');
     const result = await analyticsService.refreshMerchandising({
       bestSellers: req.body?.bestSellers || {},
       trending: req.body?.trending || {},

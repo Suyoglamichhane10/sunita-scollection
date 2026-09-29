@@ -24,7 +24,7 @@ const OrderTracking = () => {
         setDelivery(data.delivery);
         setOrder(data.order);
       }
-    } catch (error) {
+    } catch {
       console.error(error);
       setError(error.response?.data?.message || 'Failed to load tracking details');
     } finally {

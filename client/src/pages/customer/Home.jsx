@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   FaArrowRight,
+  FaChevronLeft,
+  FaChevronRight,
   FaHeadset,
   FaLeaf,
   FaLock,
@@ -17,12 +19,11 @@ import QuickViewModal from '../../components/products/QuickViewModal';
 import TypewriterTitle from '../../components/common/TypewriterTitle';
 import { getCloudinaryOptimizedUrl, handleImageError } from '../../utils/imageOptimizer';
 import EsewaLogo from '../../assets/Esewa_logo.webp';
-import KhaltiLogo from '../../assets/khalti.png';
 import FonepayLogo from '../../assets/fonepay.png';
 
 const serviceHighlights = [
   { icon: FaTruck, title: 'Delivery across Nepal', text: 'Reliable delivery to Kathmandu Valley and nationwide.' },
-  { icon: FaLock, title: 'Secure payments', text: 'Pay safely with COD, eSewa, Khalti, or FonePay.', logos: [EsewaLogo, KhaltiLogo, FonepayLogo] },
+  { icon: FaLock, title: 'Secure payments', text: 'Pay safely with COD, eSewa, or FonePay.', logos: [EsewaLogo, FonepayLogo] },
   { icon: FaHeadset, title: 'Here to help', text: 'Message us whenever you need product or order support.' },
   { icon: FaLeaf, title: 'Trendy curation', text: 'Fresh styles chosen for quality, comfort, and runway-ready looks.' },
 ];
@@ -78,20 +79,11 @@ const ProductSection = ({ title, subtitle, products, isLoading, viewAllLink, onQ
   );
 };
 
-const BrandSection = ({ title, brands, onQuickView }) => {
+const BrandSection = ({ title, brands }) => {
   const [expanded, setExpanded] = useState({});
+  const [current, setCurrent] = useState(0);
+  const [paused, setPaused] = useState(false);
   const brandEntries = Object.entries(brands);
-
-  if (!brandEntries.length) return null;
-
-  const getBrandColor = (brand) => {
-    let hash = 0;
-    for (let i = 0; i < brand.length; i++) {
-      hash = brand.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const h = Math.abs(hash) % 360;
-    return `hsl(${h}, 55%, 55%)`;
-  };
 
   const getBrandInitials = (brand) => {
     return brand
@@ -102,57 +94,101 @@ const BrandSection = ({ title, brands, onQuickView }) => {
       .toUpperCase();
   };
 
+  // Soft, aesthetic pastel gradients (dusty rose, mauve, sage, peach, lavender, cream)
+  const gradients = [
+    'from-rose-300 via-rose-400 to-rose-500',
+    'from-pink-200 via-fuchsia-300 to-violet-400',
+    'from-emerald-200 via-teal-300 to-cyan-400',
+    'from-amber-200 via-orange-300 to-rose-400',
+    'from-sky-200 via-indigo-300 to-purple-400',
+    'from-stone-200 via-rose-300 to-pink-400',
+  ];
+
+  const getGradient = (brand) => {
+    let hash = 0;
+    for (let i = 0; i < brand.length; i++) {
+      hash = brand.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return gradients[Math.abs(hash) % gradients.length];
+  };
+
+  const total = brandEntries.length;
+  const [brand, products] = brandEntries[current] || ['', []];
+  const gradient = brand ? getGradient(brand) : '';
+
+  const goPrev = () => setCurrent((c) => (c - 1 + total) % total);
+  const goNext = () => setCurrent((c) => (c + 1) % total);
+
+  useEffect(() => {
+    if (paused || total <= 1) return undefined;
+    const id = setInterval(() => {
+      setCurrent((c) => (c + 1) % total);
+    }, 3500);
+    return () => clearInterval(id);
+  }, [paused, total]);
+
+  if (!brandEntries.length) return null;
+
   return (
-    <section className="mx-auto max-w-7xl px-4 py-10 lg:px-8">
-      <div className="mb-8 text-center">
-        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-gold-600">Shop by Brand</p>
-        <h2 className="font-serif mt-2 text-3xl font-bold text-primary-800 sm:text-4xl">{title}</h2>
-        <p className="mx-auto mt-2 max-w-xl text-sm text-ink-light">Explore your favorite brands and discover their latest collections</p>
+    <section
+      className="relative mx-auto max-w-7xl px-4 py-16 lg:px-8"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+    >
+      <div className="absolute -inset-4 -z-10 rounded-[2.5rem] bg-gradient-to-r from-rose-50/80 via-pink-50/60 to-violet-50/80 blur-2xl" aria-hidden="true" />
+      <div className="text-center">
+        <p className="text-sm font-semibold uppercase tracking-[0.25em] text-rose-400">Shop by Brand</p>
+        <h2 className="font-serif mt-2 text-4xl font-bold text-primary-800 sm:text-5xl">{title}</h2>
+        <p className="mx-auto mt-3 max-w-2xl text-sm text-ink-light">Explore your favorite brands and discover their latest collections</p>
       </div>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-        {brandEntries.map(([brand, products]) => (
+
+      <div className="relative mt-10">
+        <div className="mx-auto max-w-xl">
           <div
-            key={brand}
-            className="group relative overflow-hidden rounded-2xl bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-elegant"
+            className="group relative overflow-hidden rounded-3xl bg-white shadow-[0_20px_50px_-20px_rgba(190,74,96,0.35)] transition-all duration-500"
           >
+            <div className="absolute inset-0 bg-gradient-to-br from-rose-50/60 via-pink-50/40 to-violet-50/60 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
             <button
               type="button"
               onClick={() => setExpanded((prev) => ({ ...prev, [brand]: !prev[brand] }))}
-              className="flex w-full flex-col items-center p-5 text-center"
+              className="relative flex w-full flex-col items-center p-8 text-center"
             >
-              <div
-                className="flex h-16 w-16 items-center justify-center rounded-full text-xl font-bold text-white shadow-md transition-transform duration-300 group-hover:scale-110"
-                style={{ backgroundColor: getBrandColor(brand) }}
-              >
-                {getBrandInitials(brand)}
+              <div className="relative">
+                <div
+                  className={`flex h-28 w-28 items-center justify-center rounded-full text-4xl font-bold text-white shadow-lg ring-4 ring-white transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3 bg-gradient-to-br ${gradient}`}
+                >
+                  {getBrandInitials(brand)}
+                </div>
               </div>
-              <h3 className="mt-3 font-serif text-sm font-bold text-primary-800">{brand}</h3>
-              <span className="mt-1 text-xs text-gray-500">{products.length} {products.length === 1 ? 'product' : 'products'}</span>
-              <span className="mt-2 inline-flex items-center text-xs font-semibold text-gold-600">
-                {expanded[brand] ? 'Hide' : 'View products'}
+              <h3 className="mt-5 font-serif text-3xl font-bold text-primary-800 transition-colors group-hover:text-rose-500">{brand}</h3>
+              <span className="mt-1 text-sm font-medium text-gray-500">
+                {products.length} {products.length === 1 ? 'product' : 'products'}
+              </span>
+              <span className="mt-4 inline-flex items-center text-sm font-semibold text-rose-400">
+                {expanded[brand] ? 'Hide products' : 'View products'}
                 <svg
-                  className={`ml-1 h-3 w-3 transition-transform duration-200 ${expanded[brand] ? 'rotate-180' : ''}`}
+                  className={`ml-1 h-4 w-4 transition-transform duration-300 ${expanded[brand] ? 'rotate-180' : ''}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
                 </svg>
               </span>
             </button>
             {expanded[brand] && (
-              <div className="border-t border-gold/10 px-3 pb-4 pt-3">
-                <div className="grid grid-cols-3 gap-2">
+              <div className="relative border-t border-rose-100 px-6 pb-6 pt-5">
+                <div className="grid grid-cols-3 gap-3">
                   {products.slice(0, 6).map((product) => (
                     <Link
                       key={product._id}
                       to={`/product/${product._id}`}
-                      className="rounded-lg border border-gray-100 bg-white p-1 shadow-sm transition hover:border-gold-300 hover:shadow-sm"
+                      className="group/item overflow-hidden rounded-xl border border-rose-100 bg-white p-1 shadow-sm transition-all hover:border-rose-300 hover:shadow-md"
                     >
                       <img
                         src={getCloudinaryOptimizedUrl(product.images?.[0]?.url, 200)}
                         alt={product.name}
-                        className="aspect-square rounded-md object-cover"
+                        className="aspect-square rounded-lg object-cover transition-transform duration-500 group-hover/item:scale-110"
                         loading="lazy"
                         onError={handleImageError}
                       />
@@ -162,55 +198,39 @@ const BrandSection = ({ title, brands, onQuickView }) => {
               </div>
             )}
           </div>
-        ))}
-      </div>
-    </section>
-  );
-};
 
-const ColorSection = ({ title, groups }) => {
-  const [expanded, setExpanded] = useState({});
-
-  if (!groups?.length) return null;
-
-  return (
-    <section className="mx-auto max-w-7xl px-4 py-8 lg:px-8">
-      <div className="mb-6">
-        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-gold-600">Shop by Color</p>
-        <h2 className="font-serif mt-2 text-3xl font-bold text-primary-800">{title}</h2>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {groups.slice(0, 12).map((group) => (
-          <div key={group.color} className="rounded-2xl border border-gold/20 bg-white p-4 shadow-card">
-            <div className="flex items-center justify-between">
-              <h3 className="font-serif text-lg font-bold text-primary-800 capitalize">{group.color}</h3>
-              <span className="text-xs text-gray-500">{group.products.length} items</span>
+          <div className="mt-6 flex items-center justify-center gap-4">
+            <button
+              type="button"
+              onClick={goPrev}
+              aria-label="Previous brand"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-rose-400 shadow-md transition hover:bg-rose-50 hover:text-rose-600"
+            >
+              <FaChevronLeft />
+            </button>
+            <div className="flex items-center gap-2">
+              {brandEntries.map((_, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setCurrent(idx)}
+                  aria-label={`Go to brand ${idx + 1}`}
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    idx === current ? 'w-6 bg-rose-400' : 'w-2 bg-rose-200'
+                  }`}
+                />
+              ))}
             </div>
             <button
               type="button"
-              onClick={() => setExpanded((prev) => ({ ...prev, [group.color]: !prev[group.color] }))}
-              className="mt-2 text-sm font-semibold text-gold-600 hover:text-gold-700"
+              onClick={goNext}
+              aria-label="Next brand"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-rose-400 shadow-md transition hover:bg-rose-50 hover:text-rose-600"
             >
-              {expanded[group.color] ? 'Hide' : 'Show items'}
+              <FaChevronRight />
             </button>
-            {expanded[group.color] && (
-              <div className="mt-3 grid grid-cols-2 gap-3">
-                {group.products.slice(0, 4).map((product) => (
-                  <Link key={product._id} to={`/product/${product._id}`} className="rounded-xl border border-gray-200 bg-white p-2 shadow-sm transition hover:border-gold-400">
-                    <img
-                      src={getCloudinaryOptimizedUrl(product.images?.[0]?.url, 300)}
-                      alt={product.name}
-                      className="h-24 w-full rounded-lg object-cover"
-                      onError={handleImageError}
-                    />
-                    <p className="mt-2 truncate text-xs font-semibold text-primary-800">{product.name}</p>
-                    <p className="text-xs font-bold text-gold-600">Rs. {product.price}</p>
-                  </Link>
-                ))}
-              </div>
-            )}
           </div>
-        ))}
+        </div>
       </div>
     </section>
   );
@@ -222,7 +242,6 @@ const Home = () => {
   const [bestSellers, setBestSellers] = useState([]);
   const [trending, setTrending] = useState([]);
   const [brands, setBrands] = useState({});
-  const [colorGroups, setColorGroups] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [recentlyViewed, setRecentlyViewed] = useState([]);
@@ -242,13 +261,12 @@ const Home = () => {
 
     const loadHomeData = async () => {
       try {
-        const [newArrivalsRes, featuredRes, bestSellersRes, trendingRes, brandsRes, colorsRes, categoriesRes] = await Promise.all([
+        const [newArrivalsRes, featuredRes, bestSellersRes, trendingRes, brandsRes, categoriesRes] = await Promise.all([
           api.get('/products/featured?type=newArrivals&limit=8'),
           api.get('/products/home/sections'),
           api.get('/products/featured?type=bestsellers&limit=8'),
           api.get('/products/featured?type=trending&limit=8'),
           api.get('/products/groups/brands'),
-          api.get('/products/groups/colors'),
           api.get('/categories'),
         ]);
 
@@ -258,7 +276,6 @@ const Home = () => {
         setTrending(trendingRes.data.products || []);
         setFeatured(featuredRes.data.sections?.featured || []);
         setBrands(brandsRes.data.groups || {});
-        setColorGroups(colorsRes.data.groups || []);
         setCategories((categoriesRes.data.categories || []).slice(0, 4));
       } catch (error) {
         console.error('Unable to load home page catalogue:', error);
@@ -287,6 +304,7 @@ const Home = () => {
 
    useEffect(() => {
     const fetchRecentlyViewed = async () => {
+      if (!isAuthenticated) return;
       try {
         const { data } = await api.get('/recommendations/recently-viewed?limit=6');
         setRecentlyViewed(data.products || []);
@@ -295,7 +313,7 @@ const Home = () => {
       }
     };
     fetchRecentlyViewed();
-   }, []);
+   }, [isAuthenticated]);
 
   return (
     <div className="bg-cream text-ink">
@@ -398,8 +416,6 @@ const Home = () => {
 
       <BrandSection title="Shop by Brand" brands={brands} />
 
-      <ColorSection title="Shop by Color" groups={colorGroups} />
-
       <ProductMarquee categories={categories} />
 
       <section className="mx-auto max-w-7xl px-4 pb-14 lg:px-8">
@@ -413,10 +429,6 @@ const Home = () => {
             <div className="flex flex-col items-center gap-2">
               <img src={EsewaLogo} alt="eSewa" className="h-12 w-auto object-contain" />
               <span className="text-xs font-semibold text-ink-light">eSewa</span>
-            </div>
-            <div className="flex flex-col items-center gap-2">
-              <img src={KhaltiLogo} alt="Khalti" className="h-12 w-auto object-contain" />
-              <span className="text-xs font-semibold text-ink-light">Khalti</span>
             </div>
             <div className="flex flex-col items-center gap-2">
               <img src={FonepayLogo} alt="FonePay" className="h-12 w-auto object-contain" />

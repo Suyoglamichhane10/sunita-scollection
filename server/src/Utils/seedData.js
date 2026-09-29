@@ -229,14 +229,14 @@ const chatbotIntents = [
       { pattern: 'payment', language: 'both' },
       { pattern: 'cod', language: 'both' },
       { pattern: 'esewa', language: 'both' },
-      { pattern: 'khalti', language: 'both' },
+
     ],
     responses: {
       en: [
-        'We accept Cash on Delivery (COD), eSewa, Khalti, and credit/debit cards via Stripe.',
+        'We accept Cash on Delivery (COD), eSewa, and credit/debit cards via Stripe.',
       ],
       ne: [
-        'हामी क्यास अन डेलिभरी (COD), eSewa, Khalti र क्रेडिट/डेबिट कार्ड स्वीकार गर्छौं।',
+        'हामी क्यास अन डेलिभरी (COD), eSewa र क्रेडिट/डेबिट कार्ड स्वीकार गर्छौं।',
       ],
     },
   },

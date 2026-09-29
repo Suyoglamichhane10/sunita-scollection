@@ -1,14 +1,26 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { FaBoxOpen, FaChartLine, FaComments, FaLayerGroup, FaTruck, FaUsers, FaWarehouse, FaInbox, FaBullhorn, FaUserCircle, FaSignOutAlt, FaMapMarkerAlt, FaImages, FaBars, FaTimes } from 'react-icons/fa';
+import { FaBoxOpen, FaChartLine, FaComments, FaLayerGroup, FaTruck, FaUsers, FaWarehouse, FaInbox, FaBullhorn, FaUserCircle, FaSignOutAlt, FaMapMarkerAlt, FaImages, FaBars, FaTimes, FaEnvelope } from 'react-icons/fa';
 import { useAuth } from '../Context/Authcontext';
 import NotificationCenter from '../components/chat/NotificationCenter';
 import Avatar from '../components/common/Avatar';
+import useAdminEnquiryBadge from '../hooks/useAdminEnquiryBadge';
 
 const AdminLayout = () => {
   const { isAuthenticated, isAdmin, loading, logout, user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { counts } = useAdminEnquiryBadge();
+
+  useEffect(() => {
+    document.title =
+      location.pathname === '/admin/enquiries'
+        ? `Enquiries (${counts.unread}) | Sunita'z Collection Admin`
+        : location.pathname === '/admin'
+          ? 'Overview | Sunita\'z Collection Admin'
+          : 'Admin Panel | Sunita\'z Collection';
+  }, [location.pathname, counts.unread]);
 
   useEffect(() => {
     if (!loading) {
@@ -50,7 +62,7 @@ const AdminLayout = () => {
 
   useEffect(() => {
     setSidebarOpen(false);
-  }, [location.pathname]);
+  }, []);
 
   if (loading || !isAuthenticated || !isAdmin) {
     return (
@@ -71,6 +83,8 @@ const AdminLayout = () => {
     { to: '/admin/categories', label: 'Categories', icon: FaLayerGroup },
     { to: '/admin/orders', label: 'Orders', icon: FaTruck },
     { to: '/admin/delivery', label: 'Delivery Tracking', icon: FaMapMarkerAlt },
+    { to: '/admin/enquiries', label: 'Enquiries', icon: FaEnvelope, badge: counts.unread || undefined },
+    { to: '/admin/analytics', label: 'Analytics', icon: FaChartLine },
     { to: '/admin/slideshow', label: 'Slideshow', icon: FaImages },
     { to: '/admin/messages', label: 'Messages', icon: FaComments },
     { to: '/admin/conversations', label: 'Inbox', icon: FaInbox },
@@ -106,7 +120,7 @@ const AdminLayout = () => {
       </div>
       <nav className="flex-1 overflow-y-auto">
         <ul className="space-y-1">
-          {navItems.map(({ to, label, icon: Icon, end }) => (
+          {navItems.map(({ to, label, icon: Icon, end, badge }) => (
             <li key={to}>
               <NavLink
                 to={to}
@@ -120,6 +134,11 @@ const AdminLayout = () => {
               >
                 <Icon className="text-base" />
                 {label}
+                {badge > 0 && (
+                  <span className="ml-auto inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-600 px-1.5 text-[11px] font-bold text-white">
+                    {badge > 99 ? '99+' : badge}
+                  </span>
+                )}
               </NavLink>
             </li>
           ))}
@@ -184,7 +203,14 @@ const AdminLayout = () => {
             <FaBars />
           </button>
           <p className="font-serif text-base font-bold text-primary">Store management</p>
-          <NotificationCenter />
+          <div className="flex items-center gap-2">
+              <NotificationCenter />
+              {counts.unread > 0 && (
+                <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-600 px-1.5 text-[11px] font-bold text-white">
+                  {counts.unread > 99 ? '99+' : counts.unread}
+                </span>
+              )}
+          </div>
         </header>
 
         <main className="flex-1 p-4">

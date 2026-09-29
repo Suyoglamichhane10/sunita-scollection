@@ -79,7 +79,7 @@ const orderSchema = new mongoose.Schema(
     },
     paymentMethod: {
       type: String,
-      enum: ['cod', 'esewa', 'khalti', 'fonepay'],
+       enum: ['cod', 'esewa', 'fonepay'],
       required: true,
     },
     paymentStatus: {
@@ -124,6 +124,15 @@ const orderSchema = new mongoose.Schema(
       default: false,
     },
     deliveredAt: Date,
+    referralCode: {
+      type: String,
+      default: null,
+    },
+    referredBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
     delivery: {
       assigned: { type: Boolean, default: false },
       deliveryPersonId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },

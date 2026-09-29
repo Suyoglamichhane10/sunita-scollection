@@ -5,13 +5,17 @@ import api from '../../Services/api';
 import wishlistApi from '../../Services/wishlistApi';
 import { useAuth } from '../../Context/Authcontext';
 import { FaHeart, FaShoppingCart, FaTimes, FaTrash } from 'react-icons/fa';
-import { getCloudinaryOptimizedUrl, getAbsoluteImageUrl, handleImageError, getFallbackImage } from '../../utils/imageOptimizer';
+import { getCloudinaryOptimizedUrl, getAbsoluteImageUrl, handleImageError } from '../../utils/imageOptimizer';
+import { useApprovedProducts } from '../../hooks/useApprovedProducts';
+import useEnquiry from '../../hooks/useEnquiry';
 
 const Wishlist = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const { isApproved, loading: approvedLoading } = useApprovedProducts();
+  const { openEnquiry } = useEnquiry();
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -25,8 +29,8 @@ const Wishlist = () => {
     try {
       const { data } = await wishlistApi.getWishlist();
       setItems(data.wishlist?.items || []);
-    } catch (error) {
-      console.error(error);
+    } catch {
+      console.error('Failed to load wishlist');
     } finally {
       setLoading(false);
     }
@@ -37,7 +41,7 @@ const Wishlist = () => {
       await wishlistApi.removeFromWishlist(productId, variantSku);
       toast.success('Removed from wishlist');
       fetchWishlist();
-    } catch (error) {
+    } catch {
       toast.error('Failed to remove item');
     }
   };
@@ -48,7 +52,7 @@ const Wishlist = () => {
       await wishlistApi.clearWishlist();
       toast.success('Wishlist cleared');
       setItems([]);
-    } catch (error) {
+    } catch {
       toast.error('Failed to clear wishlist');
     }
   };
@@ -61,7 +65,7 @@ const Wishlist = () => {
         variantSku: item.variantSku,
       });
       toast.success('Added to cart');
-    } catch (error) {
+    } catch {
       toast.error('Failed to add to cart');
     }
   };
@@ -101,29 +105,45 @@ const Wishlist = () => {
             </Link>
           </div>
         ) : (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {items.map((item) => (
-              <div key={`${item.product?._id}-${item.variantSku || ''}`} className="card-luxury overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-                <Link to={`/product/${item.product?._id}`} className="relative block">
+              <div key={`${item.product?._id}-${item.variantSku || ''}`} className="card-luxury overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm flex flex-col">
+                <Link to={`/product/${item.product?._id}`} className="relative block aspect-square overflow-hidden">
                   {item.product?.images?.[0]?.url ? (
-                    <img src={getAbsoluteImageUrl(getCloudinaryOptimizedUrl(item.product.images[0].url))} alt={item.product.name} className="h-56 w-full object-cover" onError={handleImageError} />
+                    <img src={getAbsoluteImageUrl(getCloudinaryOptimizedUrl(item.product.images[0].url))} alt={item.product.name} className="h-full w-full object-cover" onError={handleImageError} />
                   ) : (
-                    <div className="flex h-56 w-full items-center justify-center bg-gray-100 text-gray-400">No image</div>
+                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300">
+                      <span className="text-4xl text-gray-400">👗</span>
+                    </div>
                   )}
                 </Link>
-                <div className="p-4">
-                  <Link to={`/product/${item.product?._id}`} className="font-serif block text-lg font-bold text-gray-900 hover:text-pink-700">{item.product?.name}</Link>
+                <div className="flex flex-1 flex-col p-4">
+                  <Link to={`/product/${item.product?._id}`} className="font-serif block text-lg font-bold text-gray-900 hover:text-pink-700 line-clamp-2">{item.product?.name}</Link>
                   {item.variantSku && (
                     <p className="mt-1 text-xs text-gray-500">Variant: {item.variantSku}</p>
                   )}
-                  <p className="mt-2 text-lg font-bold text-pink-600">Rs. {item.product?.price}</p>
-                  <div className="mt-4 flex gap-2">
-                    <button
-                      onClick={() => handleAddToCart(item)}
-                      className="flex flex-1 items-center justify-center gap-2 rounded-full bg-pink-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-pink-700"
-                    >
-                      <FaShoppingCart /> Add to Cart
-                    </button>
+                  <p className="mt-2 text-lg font-bold text-pink-600">Contact for price</p>
+                  <div className="mt-auto grid grid-cols-1 gap-2 sm:grid-cols-2 pt-4">
+                    <div className="flex flex-col gap-2">
+                      {!approvedLoading && isApproved(item.product?._id) ? (
+                        <button
+                          onClick={() => handleAddToCart(item)}
+                          className="flex flex-1 items-center justify-center gap-2 rounded-full bg-pink-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-pink-700"
+                        >
+                          <FaShoppingCart /> Add to Cart
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            if (!isAuthenticated) return navigate('/login');
+                            openEnquiry(item.product);
+                          }}
+                          className="flex flex-1 items-center justify-center gap-2 rounded-full bg-pink-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-pink-700"
+                        >
+                          Enquire Now
+                        </button>
+                      )}
+                    </div>
                     <button
                       onClick={() => handleRemove(item.product?._id, item.variantSku)}
                       className="flex items-center justify-center rounded-full border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50"

@@ -26,14 +26,6 @@ const getEsewaConfig = () => {
     
     // Product code (usually same as merchant ID for eSewa)
     productCode: process.env.ESEWA_PRODUCT_CODE || process.env.ESEWA_MERCHANT_ID || 'EPAYTEST',
-    
-    // Test user credentials (for reference during development)
-    testCredentials: {
-      phone: '9800000000',
-      password: '123456',
-      pin: '1111',
-      otp: '1111'
-    }
   };
 };
 

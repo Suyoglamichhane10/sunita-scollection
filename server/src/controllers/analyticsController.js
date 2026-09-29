@@ -3,20 +3,17 @@ const Product = require('../Models/Product');
 const User = require('../Models/User');
 const Review = require('../Models/Review');
 const Message = require('../Models/Message');
+const Enquiry = require('../Models/Enquiry');
 
-// @desc    Get revenue analytics (daily/weekly/monthly)
-// @route   GET /api/analytics/revenue
-// @access  Private/Admin
 exports.getRevenueAnalytics = async (req, res, next) => {
   try {
-    const range = req.query.range || 'monthly'; // daily | weekly | monthly | yearly
+    const range = req.query.range || 'monthly';
     const orders = await Order.find({ orderStatus: { $ne: 'cancelled' } });
 
     const formatKey = (date, unit) => {
       const d = new Date(date);
       if (unit === 'daily') return d.toISOString().slice(0, 10);
       if (unit === 'weekly') {
-        // ISO week
         const temp = new Date(d);
         temp.setHours(0, 0, 0, 0);
         temp.setDate(temp.getDate() + 3 - ((temp.getDay() + 6) % 7));
@@ -53,9 +50,6 @@ exports.getRevenueAnalytics = async (req, res, next) => {
   }
 };
 
-// @desc    Get best-selling products
-// @route   GET /api/analytics/best-sellers
-// @access  Private/Admin
 exports.getBestSellers = async (req, res, next) => {
   try {
     const limit = parseInt(req.query.limit) || 10;
@@ -81,9 +75,6 @@ exports.getBestSellers = async (req, res, next) => {
   }
 };
 
-// @desc    Get customer analytics
-// @route   GET /api/analytics/customers
-// @access  Private/Admin
 exports.getCustomerAnalytics = async (req, res, next) => {
   try {
     const [totalCustomers, newThisMonth, orderStats, customerLifetimeValues, recentCustomers] = await Promise.all([
@@ -111,6 +102,8 @@ exports.getCustomerAnalytics = async (req, res, next) => {
         ? orderStats.reduce((acc, o) => acc + o.totalSpent, 0) / orderStats.length
         : 0;
 
+    const repeatCustomers = orderStats.filter((o) => o.orderCount > 1).length;
+
     res.status(200).json({
       success: true,
       data: {
@@ -119,6 +112,7 @@ exports.getCustomerAnalytics = async (req, res, next) => {
         avgOrderValue: Math.round(avgOrderValue),
         totalCustomerValue: orderStats.reduce((acc, o) => acc + o.totalSpent, 0),
         recentCustomers,
+        repeatCustomers,
       },
     });
   } catch (error) {
@@ -126,12 +120,9 @@ exports.getCustomerAnalytics = async (req, res, next) => {
   }
 };
 
-// @desc    Get monthly/yearly comparison
-// @route   GET /api/analytics/comparison
-// @access  Private/Admin
 exports.getComparison = async (req, res, next) => {
   try {
-    const period = req.query.period || 'monthly'; // monthly | yearly
+    const period = req.query.period || 'monthly';
     const limit = parseInt(req.query.limit) || 12;
 
     const orders = await Order.find({ orderStatus: { $ne: 'cancelled' } });
@@ -166,9 +157,6 @@ exports.getComparison = async (req, res, next) => {
   }
 };
 
-// @desc    Get overall dashboard analytics summary
-// @route   GET /api/analytics/summary
-// @access  Private/Admin
 exports.getAnalyticsSummary = async (req, res, next) => {
   try {
     const [orders, products, customers, reviews, messages] = await Promise.all([
@@ -195,6 +183,157 @@ exports.getAnalyticsSummary = async (req, res, next) => {
         revenue: revenueRes[0]?.total || 0,
       },
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.getEnquiryStats = async (req, res, next) => {
+  try {
+    const total = await Enquiry.countDocuments();
+    const pending = await Enquiry.countDocuments({ status: 'pending' });
+    const approved = await Enquiry.countDocuments({ status: 'approved' });
+    const rejected = await Enquiry.countDocuments({ status: 'rejected' });
+    const converted = await Enquiry.countDocuments({ status: 'converted' });
+
+    const daily = await Enquiry.aggregate([
+      { $match: { createdAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) } } },
+      { $group: { _id: null, count: { $sum: 1 } } },
+    ]);
+
+    const weekly = await Enquiry.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+        },
+      },
+      { $group: { _id: null, count: { $sum: 1 } } },
+    ]);
+
+    const mostEnquired = await Enquiry.aggregate([
+      { $group: { _id: '$productId', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 10 },
+      {
+        $lookup: {
+          from: 'products',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'product',
+        },
+      },
+      { $unwind: { path: '$product', preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          productId: '$_id',
+          name: { $ifNull: ['$product.name', 'Unknown'] },
+          count: 1,
+        },
+      },
+    ]);
+
+    const conversionRate = total > 0 ? Math.round((converted / total) * 100) : 0;
+
+    res.status(200).json({
+      success: true,
+      data: {
+        total,
+        daily: daily[0]?.count || 0,
+        weekly: weekly[0]?.count || 0,
+        pending,
+        approved,
+        rejected,
+        converted,
+        conversionRate,
+        mostEnquired,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.getPaymentBreakdown = async (req, res, next) => {
+  try {
+    const breakdown = await Order.aggregate([
+      { $match: { orderStatus: { $ne: 'cancelled' } } },
+      { $group: { _id: '$paymentMethod', count: { $sum: 1 }, revenue: { $sum: '$totalAmount' } } },
+      { $sort: { revenue: -1 } },
+    ]);
+
+    const totalRevenue = await Order.aggregate([
+      { $match: { orderStatus: { $ne: 'cancelled' } } },
+      { $group: { _id: null, total: { $sum: '$totalAmount' }, count: { $sum: 1 } } },
+    ]);
+
+    const avgOrderValue = totalRevenue[0] ? Math.round(totalRevenue[0].total / totalRevenue[0].count) : 0;
+
+    const paymentMethods = ['cod', 'esewa', 'fonepay'];
+    const result = paymentMethods.map((method) => {
+      const entry = breakdown.find((b) => b._id === method);
+      return {
+        method,
+        count: entry?.count || 0,
+        revenue: entry?.revenue || 0,
+        percentage: totalRevenue[0] && totalRevenue[0].total > 0
+          ? Math.round((entry?.revenue || 0) / totalRevenue[0].total * 100)
+          : 0,
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        breakdown: result,
+        totalRevenue: totalRevenue[0]?.total || 0,
+        totalOrders: totalRevenue[0]?.count || 0,
+        averageOrderValue: avgOrderValue,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.getBestSellingByRevenue = async (req, res, next) => {
+  try {
+    const limit = parseInt(req.query.limit) || 10;
+
+    const products = await Order.aggregate([
+      { $match: { orderStatus: { $ne: 'cancelled' } } },
+      { $unwind: '$items' },
+      {
+        $group: {
+          _id: '$items.product',
+          revenue: { $sum: { $multiply: ['$items.price', '$items.quantity'] } },
+          quantity: { $sum: '$items.quantity' },
+          orderCount: { $sum: 1 },
+        },
+      },
+      { $sort: { revenue: -1 } },
+      { $limit: limit },
+      {
+        $lookup: {
+          from: 'products',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'product',
+        },
+      },
+      { $unwind: { path: '$product', preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          productId: '$_id',
+          name: { $ifNull: ['$product.name', 'Unknown'] },
+          revenue: 1,
+          quantity: 1,
+          orderCount: 1,
+          image: { $ifNull: ['$product.images.0.url', ''] },
+        },
+      },
+    ]);
+
+    res.status(200).json({ success: true, data: products });
   } catch (error) {
     next(error);
   }
