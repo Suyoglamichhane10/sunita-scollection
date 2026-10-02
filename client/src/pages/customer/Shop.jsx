@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { FaShoppingBag, FaHeart } from 'react-icons/fa';
 import api from '../../Services/api';
 import wishlistApi from '../../Services/wishlistApi';
@@ -159,6 +159,18 @@ const ShopProductCard = React.memo(({ product, addToCart, isAuthenticated, navig
   );
 });
 
+const SORT_OPTIONS = [
+  'newest',
+  'price-low',
+  'price-high',
+  'rating',
+  'popular',
+  'trending',
+  'recommended',
+  'newarrival',
+  'bestseller',
+];
+
 const Shop = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -170,7 +182,18 @@ const Shop = () => {
   const [categories, setCategories] = useState([]);
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
-  const [sort, setSort] = useState('newest');
+  // "View all" links from the homepage sections arrive as ?sort=<value>.
+  const [searchParams] = useSearchParams();
+  const requestedSort = searchParams.get('sort');
+  const [sort, setSort] = useState(
+    SORT_OPTIONS.includes(requestedSort) ? requestedSort : 'newest'
+  );
+
+  useEffect(() => {
+    if (SORT_OPTIONS.includes(requestedSort)) {
+      setSort(requestedSort);
+    }
+  }, [requestedSort]);
   const { addToCart } = useCart();
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();

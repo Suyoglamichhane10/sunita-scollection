@@ -58,7 +58,7 @@ const Register = () => {
             </div>
             <h2 className="font-serif text-3xl font-bold text-gold-200 text-center">Join the Collection</h2>
             <p className="mt-3 leading-7 text-white/80 text-center">
-              Create your account to explore our trendy collection and enjoy a seamless shopping experience.
+              Make an account and your enquiries and orders stay in one place.
             </p>
             <div className="mt-8 space-y-3 text-sm text-white/80">
               <p className="flex items-center gap-2"><span className="text-gold-300">✦</span> Simple, secure & fast signup</p>

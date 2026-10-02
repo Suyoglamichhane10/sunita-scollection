@@ -37,8 +37,7 @@ exports.validateProduct = [
     .notEmpty()
     .withMessage('Product name is required'),
   body('price')
-    .isNumeric()
-    .withMessage('Price must be a number')
+    .optional({ values: 'falsy' })
     .isFloat({ min: 0 })
     .withMessage('Price cannot be negative'),
   body('category')

@@ -47,6 +47,13 @@ const ENQUIRY_STATUS = {
   converted: { bg: 'bg-indigo-100', text: 'text-indigo-700', label: 'Converted' },
 };
 
+// Enquiries still open for negotiation: the customer can agree, counter, or
+// request a call until the deal is closed, rejected, or converted.
+const CLOSED_ENQUIRY_STATUSES = ['customer_agreed', 'deal_closed', 'rejected', 'converted'];
+
+// Instant-support numbers shown on every open enquiry, tappable to dial.
+const SUPPORT_PHONE_NUMBERS = ['9768562128', '9845423800'];
+
 const DASHBOARD_SECTIONS = [
   { id: 'overview', label: 'Overview', icon: FaStar },
   { id: 'orders', label: 'Orders', icon: FaBoxOpen },
@@ -411,6 +418,7 @@ if (loading) {
   }
 
   return (
+    <Fragment>
     <div className="min-h-screen bg-cream py-8">
       <div className="container-custom px-4 lg:px-8">
         {/* Tab Bar */}
@@ -457,7 +465,7 @@ if (loading) {
                   </h1>
                   <p className="mt-2 text-white/90">
                     <ContinuousTypewriter
-                      words={["Welcome back to Sunita'z Collection", 'Great to see you again', 'Your style journey continues']}
+                      words={["Welcome back to Sunita'z Collections", 'Good to see you again', 'Here is what is new']}
                       speed={80}
                       deleteSpeed={50}
                       pause={2000}
@@ -792,7 +800,7 @@ if (loading) {
                       <div>
                         <div className="flex items-center gap-2">
                           <p className="font-semibold text-ink">
-                            {enquiry.productId?.name || enquiry.productName || 'Product'}
+                            {enquiry.productId?.name || enquiry.productName || 'General enquiry'}
                           </p>
                           <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${sConfig.bg} ${sConfig.text}`}>
                             {sConfig.label}
@@ -841,47 +849,9 @@ if (loading) {
                           </p>
                         )}
                         {(enquiry.status === 'price_shared' || enquiry.status === 'negotiating') && enquiry.quotedPrice && (
-                          <div className="mt-3 flex flex-wrap items-center gap-2">
-                            <button
-                              disabled={actionLoading === enquiry._id}
-                              onClick={() => handleAgree(enquiry)}
-                              className="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50 flex items-center gap-1"
-                            >
-                              <FaCheck className="text-xs" /> Agree at {money(enquiry.quotedPrice)}
-                            </button>
-                            <div className="flex items-center gap-1 w-full sm:w-auto flex-wrap">
-                              <input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                value={counterPrice}
-                                onChange={(e) => setCounterPrice(e.target.value)}
-                                placeholder="Your counter price"
-                                className="w-32 rounded-lg border border-gray-200 px-2 py-1.5 text-sm outline-none focus:border-pink-500"
-                              />
-                              <input
-                                type="text"
-                                value={counterMsg}
-                                onChange={(e) => setCounterMsg(e.target.value)}
-                                placeholder="Message (optional)"
-                                className="flex-1 min-w-[160px] rounded-lg border border-gray-200 px-2 py-1.5 text-sm outline-none focus:border-pink-500"
-                              />
-                              <button
-                                disabled={actionLoading === enquiry._id || !counterPrice}
-                                onClick={() => handleCounterSubmit(enquiry)}
-                                className="rounded-lg bg-orange-500 px-3 py-1.5 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-50"
-                              >
-                                Counter
-                              </button>
-                            </div>
-                            <button
-                              disabled={actionLoading === enquiry._id}
-                              onClick={() => handleCall(enquiry)}
-                              className="rounded-lg bg-pink-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-pink-700 disabled:opacity-50 flex items-center gap-1"
-                            >
-                              <FaPhoneAlt className="text-xs" /> Call
-                            </button>
-                          </div>
+                          <p className="mt-2 text-xs text-ink-light">
+                            Use the buttons below to agree, send a counter offer, or ask us to call you.
+                          </p>
                         )}
                         {enquiry.status === 'deal_closed' && enquiry.dealPrice && (
                           <div className="mt-3 flex flex-wrap gap-2">
@@ -901,6 +871,74 @@ if (loading) {
                             </button>
                           </div>
                         )}
+                      </div>
+                    )}
+
+                    {/* Agree / Counter Offer / Call stay available for the whole
+                        life of an open enquiry, even when the admin replied
+                        with no price attached. */}
+                    {!CLOSED_ENQUIRY_STATUSES.includes(enquiry.status) && (
+                      <div className="mt-3 rounded-xl border border-pink-200 bg-pink-50/70 p-3">
+                        <div className="flex items-center gap-2 text-xs font-semibold text-ink-light">
+                          <FaPhoneAlt className="text-pink-500" />
+                          Instant support &mdash; tap a number to call
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {SUPPORT_PHONE_NUMBERS.map((number) => (
+                            <a
+                              key={number}
+                              href={`tel:${number}`}
+                              className="flex items-center gap-1.5 rounded-full border border-pink-300 bg-white px-3 py-1.5 text-sm font-semibold text-pink-700 transition hover:bg-pink-600 hover:text-white"
+                            >
+                              <FaPhoneAlt className="text-xs" /> {number}
+                            </a>
+                          ))}
+                        </div>
+
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                          {(enquiry.status === 'price_shared' || enquiry.status === 'negotiating') && enquiry.quotedPrice && (
+                            <button
+                              disabled={actionLoading === enquiry._id}
+                              onClick={() => handleAgree(enquiry)}
+                              className="flex items-center gap-1 rounded-lg bg-green-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50"
+                            >
+                              <FaCheck className="text-xs" /> Agree at {money(enquiry.quotedPrice)}
+                            </button>
+                          )}
+                          <div className="flex w-full flex-wrap items-center gap-1 sm:w-auto">
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={counterPrice}
+                              onChange={(e) => setCounterPrice(e.target.value)}
+                              placeholder="Your counter price"
+                              className="w-32 rounded-lg border border-gray-200 px-2 py-1.5 text-sm outline-none focus:border-pink-500"
+                            />
+                            <input
+                              type="text"
+                              value={counterMsg}
+                              onChange={(e) => setCounterMsg(e.target.value)}
+                              placeholder="Message (optional)"
+                              className="min-w-[160px] flex-1 rounded-lg border border-gray-200 px-2 py-1.5 text-sm outline-none focus:border-pink-500"
+                            />
+                            <button
+                              disabled={actionLoading === enquiry._id || !counterPrice}
+                              onClick={() => handleCounterSubmit(enquiry)}
+                              className="rounded-lg bg-orange-500 px-3 py-1.5 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-50"
+                            >
+                              Counter
+                            </button>
+                          </div>
+                          <button
+                            disabled={actionLoading === enquiry._id}
+                            onClick={() => handleCall(enquiry)}
+                            title="Ask us to call you back"
+                            className="flex items-center gap-1 rounded-lg bg-pink-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-pink-700 disabled:opacity-50"
+                          >
+                            <FaPhoneAlt className="text-xs" /> Request Call
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1209,6 +1247,7 @@ if (loading) {
         </div>
       )}
     </Fragment>
+  </Fragment>
   );
 };
 

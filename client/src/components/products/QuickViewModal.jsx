@@ -43,8 +43,8 @@ const QuickViewModal = ({ product, isOpen, onClose }) => {
   const [related, setRelated] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [relatedLoading, setRelatedLoading] = useState(false);
-  const [showEnquiry, setShowEnquiry] = useState(false);
   const { isApproved, loading: approvedLoading } = useApprovedProducts();
+  const [showEnquiry, setShowEnquiry] = useState(false);
   const { addToCart } = useCart();
   const { isAuthenticated } = useAuth();
 
@@ -169,8 +169,8 @@ const QuickViewModal = ({ product, isOpen, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
-      <div className="relative max-h-[92vh] max-w-4xl w-full overflow-y-auto rounded-3xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 sm:items-center sm:p-4" onClick={onClose}>
+      <div className="relative max-h-[92vh] w-full overflow-y-auto rounded-t-3xl bg-white shadow-2xl sm:max-w-4xl sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
         <button
           type="button"
           onClick={onClose}
@@ -438,9 +438,9 @@ const QuickViewModal = ({ product, isOpen, onClose }) => {
             </div>
           </div>
         ) : null}
-
-        <EnquiryModal product={product} isOpen={showEnquiry} onClose={() => setShowEnquiry(false)} />
       </div>
+
+      <EnquiryModal product={product} isOpen={showEnquiry} onClose={() => setShowEnquiry(false)} />
     </div>
   );
 };

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import api from '../../Services/api';
 import { FaEye, FaTimes, FaTrash } from 'react-icons/fa';
+import { getFallbackImage } from '../../utils/imageOptimizer';
 
 const ORDER_STATUSES = ['pending', 'confirmed', 'processing', 'packed', 'shipped', 'delivered', 'cancelled'];
 
@@ -250,7 +251,7 @@ const AdminOrders = () => {
                       alt={item.name}
                       className="h-14 w-14 rounded-lg object-cover"
                       onError={(e) => {
-                        e.currentTarget.src = 'https://via.placeholder.com/200x200?text=No+Image';
+                        e.currentTarget.src = getFallbackImage('No Image');
                       }}
                     />
                     <div className="flex-1">

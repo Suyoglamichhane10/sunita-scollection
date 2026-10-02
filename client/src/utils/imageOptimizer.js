@@ -32,8 +32,20 @@ export const getCloudinaryThumbnailUrl = (url) => {
   return url;
 };
 
+const escapeSvgText = (text) =>
+  String(text)
+    .slice(0, 24)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+
+// Local inline SVG instead of via.placeholder.com, which is unreliable
+// (frequent ERR_CONNECTION_CLOSED) and adds a third-party request per image.
 export const getFallbackImage = (text = 'Product') => {
-  return `https://via.placeholder.com/800x800?text=${encodeURIComponent(text)}`;
+  const label = escapeSvgText(text || 'Product');
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400"><rect width="400" height="400" fill="#f3f4f6"/><text x="200" y="196" font-family="system-ui,sans-serif" font-size="20" font-weight="600" fill="#6b7280" text-anchor="middle">${label}</text><text x="200" y="224" font-family="system-ui,sans-serif" font-size="14" fill="#9ca3af" text-anchor="middle">No image</text></svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 };
 
 export const getAbsoluteImageUrl = (url) => {

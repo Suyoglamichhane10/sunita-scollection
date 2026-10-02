@@ -3,8 +3,8 @@ import { useNavigate, useParams, Link, useSearchParams } from 'react-router-dom'
 import api from '../../Services/api';
 import { useCart } from '../../Context/CartContext';
 import { useAuth } from '../../Context/Authcontext';
-import useEnquiry from '../../hooks/useEnquiry';
 import useCustomerEnquiry from '../../hooks/useCustomerEnquiry';
+import useEnquiry from '../../hooks/useEnquiry';
 import toast from 'react-hot-toast';
 import { FaStar, FaStarHalfAlt, FaRulerHorizontal, FaAward } from 'react-icons/fa';
 import RelatedProducts from '../../components/products/RelatedProducts';
@@ -13,7 +13,7 @@ import Breadcrumb from '../../components/common/Breadcrumb';
 import SocialShare from '../../components/products/SocialShare';
 import SizeGuide from '../../components/products/SizeGuide';
 import EsewaLogo from '../../assets/Esewa_logo.webp';
-import { getCloudinaryOptimizedUrl, getMainImage, handleImageError } from '../../utils/imageOptimizer';
+import { getCloudinaryOptimizedUrl, getMainImage, handleImageError, getFallbackImage } from '../../utils/imageOptimizer';
 
 const getEnquiryButton = (enquiry, isAuthenticated) => {
   if (!isAuthenticated) return { label: 'Enquire Now', type: 'enquire' };
@@ -395,10 +395,6 @@ const ProductDetail = () => {
   };
 
   const handleEnquire = () => {
-    if (!isAuthenticated) {
-      navigate(`/login?redirect=${encodeURIComponent(`/product/${product._id}?enquire=1`)}`);
-      return;
-    }
     openEnquiry(product);
   };
 
@@ -627,7 +623,7 @@ const ProductDetail = () => {
           <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
             <ImageGallery
               images={product.images}
-              fallbackImage="https://via.placeholder.com/800x800?text=Product"
+              fallbackImage={getFallbackImage('Product')}
               productName={product.name}
               selectedVariant={selectedVariant}
             />

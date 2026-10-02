@@ -86,7 +86,7 @@ const Rewards = () => {
     <div className="min-h-screen bg-gray-50 py-10">
       <div className="container-custom px-4 lg:px-8">
         <h1 className="text-3xl font-bold text-gray-900">Rewards & Loyalty</h1>
-        <p className="mt-2 text-gray-600">Earn points, unlock tiers, and enjoy exclusive perks.</p>
+        <p className="mt-2 text-gray-600">Points add up as you shop. Spend them on rewards.</p>
 
         {/* Tabs */}
         <div className="mt-6 flex gap-2 overflow-x-auto border-b border-gray-200 pb-3">

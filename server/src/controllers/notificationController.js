@@ -2,6 +2,7 @@ const Enquiry = require('../Models/Enquiry');
 const Order = require('../Models/Order');
 const Conversation = require('../Models/Conversation');
 const User = require('../Models/User');
+const Payment = require('../Models/Payment');
 
 const ACTIVE_ORDER_STATUSES = ['pending', 'confirmed', 'processing', 'packed', 'shipped'];
 const ACTIVE_ENQUIRY_STATUSES = ['pending', 'price_shared', 'negotiating', 'customer_agreed', 'deal_closed'];
@@ -41,7 +42,7 @@ exports.getNotifications = async (req, res, next) => {
   try {
     const userId = req.user.id;
 
-    const [enquiries, orders, conversations, user] = await Promise.all([
+    const [enquiries, orders, conversations, user, payments] = await Promise.all([
       Enquiry.find({ userId, readByCustomer: { $ne: true } })
         .populate('productId', 'name images')
         .sort('-createdAt')
@@ -54,11 +55,19 @@ exports.getNotifications = async (req, res, next) => {
         .sort('-lastMessageAt')
         .limit(15),
       User.findById(userId).select('notifications').lean(),
+      Payment.find({ userId, status: { $in: ['pending', 'completed', 'failed'] } })
+        .populate('order', 'orderNumber')
+        .sort('-createdAt')
+        .limit(10),
     ]);
 
     const items = [];
 
     enquiries.forEach((e) => {
+      let navigateTo = '/dashboard?tab=enquiries';
+      if (e.status === 'customer_agreed' || e.status === 'deal_closed') {
+        navigateTo = `/dashboard?tab=enquiries&enquiry=${e._id}`;
+      }
       items.push({
         _id: String(e._id),
         type: 'enquiry',
@@ -68,7 +77,8 @@ exports.getNotifications = async (req, res, next) => {
         productId: e.productId,
         read: !!e.readByCustomer,
         createdAt: e.repliedAt || e.updatedAt || e.createdAt,
-        navigateTo: '/dashboard#enquiries',
+        navigateTo,
+        status: e.status,
       });
     });
 
@@ -82,7 +92,7 @@ exports.getNotifications = async (req, res, next) => {
         orderNumber: o.orderNumber,
         read: false,
         createdAt: o.createdAt,
-        navigateTo: '/dashboard#orders',
+        navigateTo: `/orders/${o._id}`,
       });
     });
 
@@ -95,7 +105,22 @@ exports.getNotifications = async (req, res, next) => {
         conversationId: c._id,
         read: false,
         createdAt: c.lastMessageAt,
-        navigateTo: '/dashboard#messages',
+        navigateTo: '/dashboard?tab=messages',
+      });
+    });
+
+    payments.forEach((p) => {
+      items.push({
+        _id: `payment-${p._id}`,
+        type: 'payment',
+        message: `Payment ${p.paymentStatus} for order #${p.order?.orderNumber || 'N/A'} — ${money(p.amount)}`,
+        shortMessage: `Payment ${p.paymentStatus} — ${money(p.amount)}`,
+        paymentId: p._id,
+        orderId: p.order?._id,
+        orderNumber: p.order?.orderNumber,
+        read: false,
+        createdAt: p.createdAt,
+        navigateTo: p.order?._id ? `/orders/${p.order._id}` : '/dashboard?tab=orders',
       });
     });
 
@@ -117,9 +142,9 @@ exports.getNotifications = async (req, res, next) => {
           createdAt: n.createdAt,
           navigateTo:
             n.type === 'promotion'
-              ? '/dashboard#rewards'
+              ? '/dashboard?tab=rewards'
               : n.type === 'order'
-                ? '/dashboard#orders'
+                ? '/dashboard?tab=orders'
                 : '/dashboard',
         });
       });

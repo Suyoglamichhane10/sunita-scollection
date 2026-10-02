@@ -4,9 +4,9 @@ const DeleteModal = ({ isOpen, onClose, onConfirm, title, message, loading }) =>
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-md rounded-3xl border border-gray-200 bg-white p-6 shadow-xl">
+      <div className="relative w-full max-h-[90vh] max-w-md overflow-y-auto rounded-t-3xl border border-gray-200 bg-white p-6 shadow-xl sm:rounded-3xl">
         <div className="flex items-center gap-3 text-red-600">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

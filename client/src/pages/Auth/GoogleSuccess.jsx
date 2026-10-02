@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../Context/Authcontext';
-import toast from 'react-hot-toast';
 
 const GoogleSuccess = () => {
   const navigate = useNavigate();
@@ -17,7 +16,6 @@ const GoogleSuccess = () => {
       loginWithToken(token)
         .then((result) => {
           if (result.success) {
-            toast.success('Welcome! You are now logged in.');
             navigate('/dashboard', { replace: true });
           } else {
             setError('Failed to login with Google');

@@ -5,31 +5,6 @@ import useNotifications from '../../hooks/useNotifications';
 import { useAuth } from '../../Context/Authcontext';
 import toast from 'react-hot-toast';
 
-const playBellSound = () => {
-  try {
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContext) return;
-    const ctx = new AudioContext();
-    const now = ctx.currentTime;
-    const frequencies = [523.25, 659.25, 783.99, 1046.5];
-    frequencies.forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, now + i * 0.08);
-      gain.gain.setValueAtTime(0.0001, now + i * 0.08);
-      gain.gain.exponentialRampToValueAtTime(0.15, now + i * 0.08 + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.08 + 0.6);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(now + i * 0.08);
-      osc.stop(now + i * 0.08 + 0.7);
-    });
-  } catch {
-    // ignore audio errors
-  }
-};
-
 const TYPE_ICONS = {
   enquiry: FaExclamationCircle,
   order: FaShoppingCart,
@@ -82,31 +57,17 @@ const timeAgo = (dateStr) => {
 const NotificationBell = ({ badgeClassName = '' }) => {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const { notifications, unreadCount, loading, markAllRead, markOneRead, clearAll } = useNotifications(isAuthenticated && !false);
+  const {
+    notifications,
+    unreadCount,
+    loading,
+    markAllRead,
+    markOneRead,
+    clearAll,
+    latestArrival,
+  } = useNotifications(isAuthenticated);
   const [open, setOpen] = useState(false);
   const panelRef = useRef(null);
-  const prevCountRef = useRef(0);
-  const [cleared, setCleared] = useState(false);
-
-  useEffect(() => {
-    if (unreadCount > prevCountRef.current && prevCountRef.current > 0) {
-      playBellSound();
-      const latest = notifications.find((n) => !n.read);
-      if (latest) {
-        toast.custom(
-          <div className="flex items-center gap-2 rounded-lg bg-white px-4 py-3 shadow-lg border border-gray-100">
-            <FaBell className="text-primary" />
-            <span className="text-sm font-medium text-gray-800">{latest.shortMessage || latest.message}</span>
-          </div>,
-          { duration: 5000 }
-        );
-      }
-    }
-    prevCountRef.current = unreadCount;
-    if (unreadCount > 0) {
-      setCleared(false);
-    }
-  }, [unreadCount, notifications]);
 
   useEffect(() => {
     const handleClick = (e) => {
@@ -131,7 +92,6 @@ const NotificationBell = ({ badgeClassName = '' }) => {
   };
 
   const handleClearAll = async () => {
-    setCleared(true);
     await clearAll();
     toast.success('All notifications cleared');
     setOpen(false);
@@ -148,7 +108,7 @@ const NotificationBell = ({ badgeClassName = '' }) => {
         aria-label="Notifications"
       >
         <FaBell />
-        {!cleared && unreadCount > 0 && (
+        {unreadCount > 0 && (
           <span className={`absolute -right-1 -top-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-600 px-1.5 text-[11px] font-bold text-white shadow ${badgeClassName}`}>
             {totalDisplay}
           </span>

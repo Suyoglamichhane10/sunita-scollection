@@ -89,8 +89,8 @@ const DangerZone = ({ onDeactivate, onDelete }) => {
 
       {/* Deactivate Modal */}
       {showDeactivateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4">
+          <div className="w-full max-h-[90vh] max-w-md overflow-y-auto rounded-t-3xl bg-white p-6 shadow-xl sm:rounded-3xl">
             <div className="flex items-center gap-2 mb-4">
               <FaExclamationTriangle className="text-xl text-red-600" />
               <h3 className="text-lg font-bold text-ink">Deactivate Account</h3>
@@ -113,8 +113,8 @@ const DangerZone = ({ onDeactivate, onDelete }) => {
 
       {/* Delete Modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4">
+          <div className="w-full max-h-[90vh] max-w-md overflow-y-auto rounded-t-3xl bg-white p-6 shadow-xl sm:rounded-3xl">
             <div className="flex items-center gap-2 mb-4">
               <FaExclamationTriangle className="text-xl text-red-600" />
               <h3 className="text-lg font-bold text-ink">Delete Account Permanently</h3>

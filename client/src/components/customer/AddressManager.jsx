@@ -137,8 +137,8 @@ const AddressManager = ({ user, onUserUpdate }) => {
       )}
 
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-xl max-h-[80vh] overflow-auto">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4">
+          <div className="w-full max-h-[90vh] max-w-md overflow-y-auto rounded-t-3xl bg-white p-6 shadow-xl sm:rounded-3xl max-h-[80vh] overflow-auto">
             <h3 className="text-lg font-bold text-ink mb-4">{editingId ? 'Edit' : 'Add'} Address</h3>
             <form onSubmit={handleSubmit} className="space-y-3">
               <div>

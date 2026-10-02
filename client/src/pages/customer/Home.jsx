@@ -7,7 +7,6 @@ import {
   FaHeadset,
   FaLeaf,
   FaLock,
-  FaStar,
   FaTruck,
 } from 'react-icons/fa';
 import { useAuth } from '../../Context/Authcontext';
@@ -22,57 +21,90 @@ import EsewaLogo from '../../assets/Esewa_logo.webp';
 import FonepayLogo from '../../assets/fonepay.png';
 
 const serviceHighlights = [
-  { icon: FaTruck, title: 'Delivery across Nepal', text: 'Reliable delivery to Kathmandu Valley and nationwide.' },
-  { icon: FaLock, title: 'Secure payments', text: 'Pay safely with COD, eSewa, or FonePay.', logos: [EsewaLogo, FonepayLogo] },
-  { icon: FaHeadset, title: 'Here to help', text: 'Message us whenever you need product or order support.' },
-  { icon: FaLeaf, title: 'Trendy curation', text: 'Fresh styles chosen for quality, comfort, and runway-ready looks.' },
+  { icon: FaTruck, title: 'Delivery all over Nepal', text: 'Kathmandu Valley takes a day or two. Further out takes a little longer.' },
+  { icon: FaLock, title: 'Pay how you want', text: 'Cash on delivery, eSewa, or FonePay.', logos: [EsewaLogo, FonepayLogo] },
+  { icon: FaHeadset, title: 'Message me any time', text: 'Questions about a size or an order, just ask on TikTok or call.' },
+  { icon: FaLeaf, title: 'Small batches', text: 'I list what came in the parcel, not a warehouse full of the same thing.' },
 ];
 
-const ProductSection = ({ title, subtitle, products, isLoading, viewAllLink, onQuickView, typewriter = false, compact = false, variant = 'default' }) => {
+// Homepage merchandising sections. Everything shown here comes from the admin
+// checkboxes (New Arrival / Best Seller / Trending / Recommended For You) —
+// there is no hardcoded content. A product can appear in
+// several sections at once because each flag is independent.
+const MERCH_SECTIONS = [
+  {
+    key: 'newArrivals',
+    eyebrow: 'Just landed',
+    title: 'New Arrival',
+    description: 'The pieces that came in most recently.',
+    viewAllLink: '/shop?sort=newarrival',
+    padding: 'py-6',
+  },
+  {
+    key: 'bestSellers',
+    eyebrow: 'Proven favourite',
+    title: 'Best Seller',
+    description: 'The designs that keep selling out.',
+    viewAllLink: '/shop?sort=bestseller',
+    padding: 'py-10',
+  },
+  {
+    key: 'trending',
+    eyebrow: 'Moving fast right now',
+    title: 'Trending Now',
+    description: 'What people are looking at the most this week.',
+    viewAllLink: '/shop?sort=trending',
+    padding: 'py-6',
+  },
+  {
+    key: 'recommendedForYou',
+    eyebrow: 'Picked by us',
+    title: 'Recommended For You',
+    description: 'Styles we would put you in without hesitation.',
+    viewAllLink: '/shop?sort=recommended',
+    padding: 'py-12',
+  },
+];
+
+const MerchSection = ({ eyebrow, title, description, viewAllLink, products, isLoading, onQuickView, padding }) => {
   if (isLoading) {
     return (
-      <section className="mx-auto max-w-7xl px-4 py-6 lg:px-8">
+      <section className={`mx-auto max-w-7xl px-4 ${padding} lg:px-8`}>
         <div className="mb-4">
-          <h2 className="font-serif text-2xl font-bold text-primary-800">{title}</h2>
-          {subtitle && <p className="mt-1 text-ink-light">{subtitle}</p>}
-        </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-          {Array.from({ length: compact ? 8 : 4 }).map((_, i) => (
-            <div key={i} className={`animate-pulse rounded-xl bg-gray-200 ${compact ? 'h-40' : 'h-72'}`} />
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-600">{eyebrow}</p>
+            <h2 className="font-serif mt-1 text-2xl font-bold text-primary-800 sm:text-3xl"><TypewriterTitle words={[title]} /></h2>
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 xl:grid-cols-5">
+            {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="h-52 animate-pulse rounded-xl bg-gray-200" />
           ))}
         </div>
       </section>
     );
   }
 
+  // Never render an empty section — an unflagged category should just be absent.
   if (!products.length) return null;
 
-  const isTrending = variant === 'trending';
-
   return (
-    <section className={`mx-auto max-w-7xl px-4 py-6 lg:px-8 ${isTrending ? 'relative' : ''}`}>
-      {isTrending && (
-        <div className="absolute -inset-4 -z-10 rounded-[2rem] bg-gradient-to-r from-amber-100 via-orange-50 to-rose-100 opacity-70 blur-2xl" aria-hidden="true" />
-      )}
-      <div className={`mb-4 flex items-end justify-between gap-4 ${isTrending ? 'rounded-2xl border border-amber-200 bg-white/80 px-6 py-5 shadow-[0_10px_40px_rgba(245,158,11,0.12)] backdrop-blur' : ''}`}>
+    <section className={`mx-auto max-w-7xl px-4 ${padding} lg:px-8`}>
+      <div className="mb-4 flex items-end justify-between gap-4">
         <div>
-          <p className={`text-xs font-semibold uppercase tracking-[0.2em] ${isTrending ? 'text-amber-600' : 'text-gold-600'}`}>
-            {isTrending ? '🔥 Most wanted right now' : 'Curated for you'}
-          </p>
-          <h2 className={`font-serif mt-1 text-2xl font-bold sm:text-3xl ${isTrending ? 'bg-gradient-to-r from-amber-500 to-rose-500 bg-clip-text text-transparent' : 'text-primary-800'}`}>
-            {typewriter ? <TypewriterTitle words={[title]} /> : title}
-          </h2>
-          {subtitle && <p className={`mt-1 text-sm ${isTrending ? 'text-amber-700/80' : 'text-ink-light'}`}>{subtitle}</p>}
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-600">{eyebrow}</p>
+          <h2 className="font-serif mt-1 text-2xl font-bold text-primary-800 sm:text-3xl"><TypewriterTitle words={[title]} /></h2>
+          <p className="mt-1 text-sm text-ink-light">{description}</p>
         </div>
-        {viewAllLink && (
-          <Link to={viewAllLink} className={`shrink-0 text-sm font-semibold transition ${isTrending ? 'text-amber-600 hover:text-amber-700' : 'text-gold-600 hover:text-gold-700'}`}>
-            View all <FaArrowRight className="ml-1 inline" />
-          </Link>
-        )}
+        <Link
+          to={viewAllLink}
+          className="shrink-0 whitespace-nowrap text-sm font-semibold text-gold-600 transition hover:text-gold-700"
+        >
+          View all <FaArrowRight className="ml-1 inline" />
+        </Link>
       </div>
-      <div className={`grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 ${compact ? 'gap-2 sm:gap-3' : 'gap-4 sm:gap-6'} ${isTrending ? 'md:gap-5' : ''}`}>
+      {/* Responsive grid: two columns on phones up to five on wide screens. */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 xl:grid-cols-5">
         {products.map((product) => (
-          <ProductCard key={product._id} product={product} onQuickView={onQuickView} compact={compact} />
+          <ProductCard key={product._id} product={product} onQuickView={onQuickView} compact />
         ))}
       </div>
     </section>
@@ -131,15 +163,18 @@ const BrandSection = ({ title, brands }) => {
 
   return (
     <section
-      className="relative mx-auto max-w-7xl px-4 py-16 lg:px-8"
+      className="relative mx-auto max-w-7xl px-4 py-20 lg:px-8 lg:py-28"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
       <div className="absolute -inset-4 -z-10 rounded-[2.5rem] bg-gradient-to-r from-rose-50/80 via-pink-50/60 to-violet-50/80 blur-2xl" aria-hidden="true" />
-      <div className="text-center">
-        <p className="text-sm font-semibold uppercase tracking-[0.25em] text-rose-400">Shop by Brand</p>
-        <h2 className="font-serif mt-2 text-4xl font-bold text-primary-800 sm:text-5xl">{title}</h2>
-        <p className="mx-auto mt-3 max-w-2xl text-sm text-ink-light">Explore your favorite brands and discover their latest collections</p>
+      <div className="max-w-2xl">
+        <p className="text-sm font-semibold uppercase tracking-[0.25em] text-rose-400">Brands</p>
+        <h2 className="font-serif mt-2 text-3xl font-bold text-primary-800 sm:text-4xl">{title}</h2>
+        <p className="mt-3 text-sm leading-7 text-ink-light">
+          Tap a brand to see what came in. I only add these once I have actually held the
+          piece and know how it fits.
+        </p>
       </div>
 
       <div className="relative mt-10">
@@ -238,16 +273,24 @@ const BrandSection = ({ title, brands }) => {
 
 const Home = () => {
   const [newArrivals, setNewArrivals] = useState([]);
-  const [featured, setFeatured] = useState([]);
   const [bestSellers, setBestSellers] = useState([]);
-  const [trending, setTrending] = useState([]);
   const [brands, setBrands] = useState({});
   const [categories, setCategories] = useState([]);
+  const [trending, setTrending] = useState([]);
+  const [recommendedForYou, setRecommendedForYou] = useState([]);
   const [loading, setLoading] = useState(true);
   const [recentlyViewed, setRecentlyViewed] = useState([]);
   const [recommended, setRecommended] = useState([]);
   const [quickViewProduct, setQuickViewProduct] = useState(null);
   const { isAuthenticated } = useAuth();
+
+  // The four merchandising sections read from one lookup keyed by state name.
+  const merchProducts = {
+    newArrivals,
+    bestSellers,
+    trending,
+    recommendedForYou,
+  };
 
   const openQuickView = (product) => {
     setQuickViewProduct(product);
@@ -261,20 +304,21 @@ const Home = () => {
 
     const loadHomeData = async () => {
       try {
-        const [newArrivalsRes, featuredRes, bestSellersRes, trendingRes, brandsRes, categoriesRes] = await Promise.all([
+        // One request per admin-controlled merchandising section.
+        const [newArrivalsRes, bestSellersRes, brandsRes, categoriesRes, trendingRes, recommendedRes] = await Promise.all([
           api.get('/products/featured?type=newArrivals&limit=8'),
-          api.get('/products/home/sections'),
           api.get('/products/featured?type=bestsellers&limit=8'),
-          api.get('/products/featured?type=trending&limit=8'),
           api.get('/products/groups/brands'),
           api.get('/categories'),
+          api.get('/products/featured?type=trending&limit=8'),
+          api.get('/products/featured?type=recommended&limit=8'),
         ]);
 
         if (!active) return;
         setNewArrivals(newArrivalsRes.data.products || []);
         setBestSellers(bestSellersRes.data.products || []);
         setTrending(trendingRes.data.products || []);
-        setFeatured(featuredRes.data.sections?.featured || []);
+        setRecommendedForYou(recommendedRes.data.products || []);
         setBrands(brandsRes.data.groups || {});
         setCategories((categoriesRes.data.categories || []).slice(0, 4));
       } catch (error) {
@@ -319,13 +363,13 @@ const Home = () => {
     <div className="bg-cream text-ink">
       <FullPageHeroSlideshow />
 
-      <section className="mx-auto max-w-7xl px-4 py-10 lg:px-8">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="mx-auto max-w-7xl px-4 pb-10 pt-12 lg:px-8">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {serviceHighlights.map(({ icon: Icon, title, text, logos }) => (
-            <article key={title} className="card-luxury rounded-2xl border border-gold/20 bg-white p-5 shadow-card">
+            <article key={title} className="border-t-2 border-gold/50 bg-white p-5 shadow-card">
               <Icon className="mb-3 text-2xl text-gold-500" />
-              <h2 className="font-serif font-semibold text-primary-800">{title}</h2>
-              <p className="mt-1 text-sm leading-6 text-ink-light">{text}</p>
+              <h2 className="font-serif text-base font-semibold text-primary-800">{title}</h2>
+              <p className="mt-1.5 text-sm leading-6 text-ink-light">{text}</p>
               {logos && (
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   {logos.map((logo, idx) => (
@@ -343,7 +387,7 @@ const Home = () => {
         <section className="mx-auto max-w-7xl px-4 py-6 lg:px-8">
           <div className="mb-4">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-600">Welcome back</p>
-            <h2 className="font-serif mt-1 text-2xl font-bold text-primary-800 sm:text-3xl">Continue Browsing</h2>
+            <h2 className="font-serif mt-1 text-2xl font-bold text-primary-800 sm:text-3xl"><TypewriterTitle words={['New Arrivals']} /></h2>
             <p className="mt-1 text-sm text-ink-light">Pick up where you left off</p>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
@@ -354,25 +398,25 @@ const Home = () => {
         </section>
       )}
 
-      <ProductSection
-        title="New Arrivals"
-        subtitle="Just landed in our collection"
-        products={newArrivals}
-        isLoading={loading}
-        viewAllLink="/shop?sort=newest"
-        onQuickView={openQuickView}
-        typewriter
-        compact
-      />
+      {MERCH_SECTIONS.map((section) => (
+        <MerchSection
+          key={section.key}
+          eyebrow={section.eyebrow}
+          title={section.title}
+          description={section.description}
+          viewAllLink={section.viewAllLink}
+          products={merchProducts[section.key]}
+          isLoading={loading}
+          onQuickView={openQuickView}
+          padding={section.padding}
+        />
+      ))}
 
       {recommended.length > 0 && (
         <section className="mx-auto max-w-7xl px-4 py-6 lg:px-8">
           <div className="mb-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-600">Personalized for you</p>
-            <h2 className="font-serif mt-1 text-2xl font-bold text-primary-800 sm:text-3xl">
-              <TypewriterTitle words={['Recommended For You']} />
-            </h2>
-            <p className="mt-1 text-sm text-ink-light">Handpicked based on your style</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-600">Based on what you looked at</p>
+            <h2 className="font-serif mt-1 text-2xl font-bold text-primary-800 sm:text-3xl"><TypewriterTitle words={['Recommended for You']} /></h2>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {recommended.slice(0, 5).map((product) => (
@@ -382,50 +426,18 @@ const Home = () => {
         </section>
       )}
 
-      <ProductSection
-        title="Featured Picks"
-        subtitle="Handpicked favorites just for you"
-        products={featured}
-        isLoading={loading}
-        viewAllLink="/shop?featured=true"
-        onQuickView={openQuickView}
-        compact
-      />
-
-      <ProductSection
-        title="Best Sellers"
-        subtitle="Most loved by our customers"
-        products={bestSellers}
-        isLoading={loading}
-        viewAllLink="/shop?sort=popular"
-        onQuickView={openQuickView}
-        compact
-      />
-
-      <ProductSection
-        title="Trending Now"
-        subtitle="What everyone is talking about"
-        products={trending}
-        isLoading={loading}
-        viewAllLink="/shop?sort=popular"
-        onQuickView={openQuickView}
-        typewriter
-        compact
-        variant="trending"
-      />
-
       <BrandSection title="Shop by Brand" brands={brands} />
 
       <ProductMarquee categories={categories} />
 
       <section className="mx-auto max-w-7xl px-4 pb-14 lg:px-8">
-        <div className="rounded-3xl border border-gold/20 bg-white p-8 text-center shadow-card sm:p-10">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-600">Trusted Payment Partners</p>
-          <h2 className="mt-2 font-serif text-2xl font-bold text-primary-800 sm:text-3xl">Pay with Confidence</h2>
-          <p className="mx-auto mt-2 max-w-2xl text-sm text-ink-light">
-            We support multiple secure payment methods so you can choose what works best for you.
+        <div className="border border-gold/20 bg-white p-8 sm:p-10">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-600">Paying for it</p>
+          <h2 className="mt-2 font-serif text-2xl font-bold text-primary-800 sm:text-3xl">However suits you</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-light">
+            Cash on delivery if you would rather see it first. eSewa and FonePay work too.
           </p>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-8">
+          <div className="mt-8 flex flex-wrap items-center gap-10">
             <div className="flex flex-col items-center gap-2">
               <img src={EsewaLogo} alt="eSewa" className="h-12 w-auto object-contain" />
               <span className="text-xs font-semibold text-ink-light">eSewa</span>
@@ -438,12 +450,16 @@ const Home = () => {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 pb-14 lg:px-8">
-        <div className="rounded-3xl bg-gradient-to-br from-primary-700 to-primary-900 px-6 py-10 text-center text-white shadow-luxury sm:px-12">
-          <div className="flex justify-center gap-1 text-gold-400">{Array.from({ length: 5 }, (_, index) => <FaStar key={index} />)}</div>
-          <h2 className="font-serif mt-4 text-3xl font-bold text-gold-200">Find the look that feels like you.</h2>
-          <p className="mx-auto mt-3 max-w-2xl text-sm text-white/80 sm:text-base">From everyday essentials to occasion-ready outfits, discover fashion curated with care that celebrates your unique style. Your next favorite piece is just a click away.</p>
-          <Link to="/shop" className="btn-gold mt-6 inline-block rounded-full px-6 py-3 text-sm font-semibold sm:text-base">Explore the collection</Link>
+      <section className="mx-auto max-w-7xl px-4 pb-16 lg:px-8">
+        <div className="rounded-2xl bg-gradient-to-br from-primary-700 to-primary-900 px-6 py-10 text-center text-white shadow-luxury sm:px-12">
+          <h2 className="font-serif text-2xl font-bold text-gold-200 sm:text-3xl">Not sure what to get?</h2>
+          <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-white/80 sm:text-base">
+            Send me a message about what you are looking for, or what you saw on TikTok.
+            I will tell you what I have and what it costs. No pressure either way.
+          </p>
+          <Link to="/shop" className="btn-gold mt-6 inline-block min-h-[44px] rounded-xl px-6 py-3 text-sm font-semibold sm:text-base">
+            Browse the shop
+          </Link>
         </div>
       </section>
 

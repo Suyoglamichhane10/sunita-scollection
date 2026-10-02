@@ -78,22 +78,35 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const establishSession = async (newToken) => {
+    localStorage.setItem('token', newToken);
+    api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+
+    const newRequestId = ++requestIdRef.current;
+    setToken(newToken);
+
+    const freshUser = await fetchCurrentUser();
+
+    if (newRequestId === requestIdRef.current) {
+      setUser(freshUser);
+    }
+
+    return freshUser;
+  };
+
+  const clearSession = () => {
+    ++requestIdRef.current;
+    localStorage.removeItem('token');
+    delete api.defaults.headers.common['Authorization'];
+    setToken(null);
+    setUser(null);
+  };
+
   const login = async (credentials) => {
     try {
       const { data } = await api.post('/auth/login', credentials);
-      const newToken = data.token;
-      const newRequestId = ++requestIdRef.current;
-
-      setToken(newToken);
-      localStorage.setItem('token', newToken);
-
-      const freshUser = await fetchCurrentUser();
-
-      if (newRequestId === requestIdRef.current) {
-        setUser(freshUser);
-      }
-
-      toast.success('Welcome back!');
+      const freshUser = await establishSession(data.token);
+      toast.success('Welcome back!', { id: 'welcome' });
       return { success: true, user: freshUser };
     } catch (error) {
       toast.error(error.response?.data?.message || 'Login failed');
@@ -101,62 +114,32 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const loginWithToken = async (token) => {
+  const loginWithToken = async (newToken) => {
     try {
-      console.log('🔵 loginWithToken called with token:', token ? 'Present' : 'Missing');
-
-      // Store token in localStorage
-      localStorage.setItem('token', token);
-      console.log('✅ Token stored in localStorage');
-
-      // Update api default header (also handled by request interceptor, but set explicitly)
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      console.log('✅ Authorization header set on api');
-
-      // Update state
-      setToken(token);
-      console.log('✅ Token state updated');
-
-      // Fetch user data
-      console.log('🔄 Fetching user data...');
-      const freshUser = await fetchCurrentUser();
-      console.log('✅ User data received:', freshUser);
-
-      // Update user state
-      setUser(freshUser);
-      console.log('✅ User state updated');
-
-      toast.success('Welcome! You are now logged in.');
+      const freshUser = await establishSession(newToken);
+      toast.success('Welcome back!', { id: 'welcome' });
       return { success: true, user: freshUser };
     } catch (error) {
-      console.error('❌ loginWithToken error:', error.response?.data || error.message);
-
-      // Clean up on error
-      localStorage.removeItem('token');
-      delete api.defaults.headers.common['Authorization'];
-      setToken(null);
-      setUser(null);
-
-      toast.error('Failed to authenticate. Please try again.');
-      return { success: false, error: error.response?.data?.message || error.message };
+      clearSession();
+      toast.error(error.response?.data?.message || 'Login failed');
+      return { success: false, error: error.response?.data?.message };
     }
   };
 
-  const googleLogin = async (token) => {
-    return loginWithToken(token);
+  const googleLogin = async (newToken) => {
+    return loginWithToken(newToken);
+  };
+
+  const clearGuestStorage = () => {
+    ['guest_cart', 'cart', 'chat_history', 'rememberedEmail'].forEach((key) =>
+      localStorage.removeItem(key)
+    );
   };
 
   const logout = () => {
-    ++requestIdRef.current;
-    setUser(null);
-    setToken(null);
+    clearSession();
+    clearGuestStorage();
     setLoading(false);
-    localStorage.removeItem('token');
-    localStorage.removeItem('guest_cart');
-    localStorage.removeItem('cart');
-    localStorage.removeItem('chat_history');
-    localStorage.removeItem('rememberedEmail');
-    delete api.defaults.headers.common['Authorization'];
     toast.success('Logged out successfully');
   };
 
@@ -171,15 +154,8 @@ export const AuthProvider = ({ children }) => {
   };
 
   const deleteAccount = async () => {
-    ++requestIdRef.current;
-    setUser(null);
-    setToken(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('guest_cart');
-    localStorage.removeItem('cart');
-    localStorage.removeItem('chat_history');
-    localStorage.removeItem('rememberedEmail');
-    delete api.defaults.headers.common['Authorization'];
+    clearSession();
+    clearGuestStorage();
   };
 
   const value = {

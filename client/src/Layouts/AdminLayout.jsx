@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { FaBoxOpen, FaChartLine, FaComments, FaLayerGroup, FaTruck, FaUsers, FaWarehouse, FaInbox, FaBullhorn, FaUserCircle, FaSignOutAlt, FaMapMarkerAlt, FaImages, FaBars, FaTimes, FaEnvelope } from 'react-icons/fa';
+import { FaBoxOpen, FaChartLine, FaComments, FaLayerGroup, FaTruck, FaUsers, FaWarehouse, FaUserCircle, FaSignOutAlt, FaImages, FaBars, FaTimes, FaEnvelope } from 'react-icons/fa';
 import { useAuth } from '../Context/Authcontext';
 import NotificationCenter from '../components/chat/NotificationCenter';
 import Avatar from '../components/common/Avatar';
@@ -82,15 +82,11 @@ const AdminLayout = () => {
     { to: '/admin/inventory', label: 'Inventory', icon: FaWarehouse },
     { to: '/admin/categories', label: 'Categories', icon: FaLayerGroup },
     { to: '/admin/orders', label: 'Orders', icon: FaTruck },
-    { to: '/admin/delivery', label: 'Delivery Tracking', icon: FaMapMarkerAlt },
     { to: '/admin/enquiries', label: 'Enquiries', icon: FaEnvelope, badge: counts.unread || undefined },
-    { to: '/admin/analytics', label: 'Analytics', icon: FaChartLine },
     { to: '/admin/slideshow', label: 'Slideshow', icon: FaImages },
     { to: '/admin/messages', label: 'Messages', icon: FaComments },
-    { to: '/admin/conversations', label: 'Inbox', icon: FaInbox },
     { to: '/admin/users', label: 'Customers', icon: FaUsers },
     { to: '/admin/reports', label: 'Reports', icon: FaChartLine },
-    { to: '/admin/marketing', label: 'Marketing', icon: FaBullhorn },
     { to: '/admin/profile', label: 'My Profile', icon: FaUserCircle },
   ];
 

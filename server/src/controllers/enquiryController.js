@@ -47,30 +47,78 @@ const notifyCustomer = async (enquiry, product, subject, html) => {
   }
 };
 
+// Customer actions that need a human on our side: a callback request or a
+// counter offer. Pushes into the admin notification bell both live (socket)
+// and on reload (persisted on each admin's user record).
+const notifyAdminsOfCustomerAction = async (req, enquiry, actionLabel) => {
+  const productName = enquiry.productId?.name || enquiry.productName || 'a product';
+  const message = `${actionLabel} — ${enquiry.name} (${enquiry.phone}) about ${productName}`;
+  // One timestamp for both the live push and the persisted copy so the admin
+  // bell can recognise them as the same notification and not show it twice.
+  const at = new Date();
+
+  try {
+    const io = req.app && req.app.get('io');
+    if (io) {
+      io.to('admins').emit('notification:new', {
+        id: `enquiry-${actionLabel.toLowerCase().replace(/\s+/g, '-')}-${enquiry._id}`,
+        message,
+        type: 'enquiry',
+        action: actionLabel,
+        enquiryId: enquiry._id,
+        navigateTo: '/admin/enquiries',
+        createdAt: at.getTime(),
+      });
+    }
+  } catch (error) {
+    console.error('Admin enquiry notification failed:', error.message);
+  }
+
+  try {
+    await User.updateMany(
+      { role: 'admin' },
+      {
+        $push: {
+          notifications: { message, type: 'enquiry', read: false, createdAt: at },
+        },
+      }
+    );
+  } catch (error) {
+    console.error('Admin enquiry notification persist failed:', error.message);
+  }
+};
+
 const getAdminUnreadFilter = () => ({ readByAdmin: { $ne: true } });
 
 exports.createEnquiry = async (req, res, next) => {
   try {
-    const { productId, name, phone, email, message } = req.body;
-    if (!productId || !name || !phone || !message) {
+    const { productId, productName, name, phone, email, message } = req.body;
+    if (!name || !phone || !message) {
       return res.status(400).json({ success: false, message: 'Please fill in all required fields' });
     }
 
-    const product = await Product.findById(productId);
-    if (!product) {
-      return res.status(404).json({ success: false, message: 'Product not found' });
+    // A product is optional so the same endpoint serves the general enquiry
+    // form in the footer, which has no product context.
+    let product = null;
+    if (productId) {
+      product = await Product.findById(productId);
+      if (!product) {
+        return res.status(404).json({ success: false, message: 'Product not found' });
+      }
     }
 
     const userId = req.user?.id || null;
-    const existing = await Enquiry.findOne({ productId, userId }).sort({ createdAt: -1 });
-    if (existing && ['pending', 'price_shared', 'negotiating', 'customer_agreed'].includes(existing.status)) {
-      return res.status(400).json({ success: false, message: 'You already have an active enquiry for this product' });
+    if (productId) {
+      const existing = await Enquiry.findOne({ productId, userId }).sort({ createdAt: -1 });
+      if (existing && ['pending', 'price_shared', 'negotiating', 'customer_agreed'].includes(existing.status)) {
+        return res.status(400).json({ success: false, message: 'You already have an active enquiry for this product' });
+      }
     }
 
     const enquiry = await Enquiry.create({
-      productId,
+      productId: productId || null,
       userId,
-      productName: product.name,
+      productName: product?.name || (productName || '').trim() || null,
       name,
       phone,
       email: email || null,
@@ -91,6 +139,7 @@ exports.createEnquiry = async (req, res, next) => {
 
     const populated = await populateEnquiry(Enquiry.findById(enquiry._id));
     emitEnquiry(req, 'enquiry:new', populated);
+    await notifyAdminsOfCustomerAction(req, populated, 'New enquiry');
     await notifyAdmins(populated, product);
 
     res.status(201).json({ success: true, enquiry: populated });
@@ -430,8 +479,11 @@ exports.customerCounterOffer = async (req, res, next) => {
     enquiry.readByCustomer = true;
     await enquiry.save();
     const updated = await populateEnquiry(Enquiry.findById(enquiry._id));
-    emitEnquiry(req, 'enquiry:counter', updated);
+    // Keep the customer's own open tabs in sync with the thread.
+    emitEnquiry(req, 'enquiry:reply', updated, enquiry.userId?.toString());
     emitEnquiry(req, 'enquiry:new', updated);
+    // A revised offer needs a human, so raise it in the admin bell too.
+    await notifyAdminsOfCustomerAction(req, updated, 'Counter offer');
 
     res.status(200).json({ success: true, enquiry: updated });
   } catch (error) {
@@ -458,8 +510,11 @@ exports.customerRequestCall = async (req, res, next) => {
     enquiry.readByCustomer = true;
     await enquiry.save();
     const updated = await populateEnquiry(Enquiry.findById(enquiry._id));
+    // Keep the customer's own open tabs in sync with the thread.
     emitEnquiry(req, 'enquiry:reply', updated, enquiry.userId?.toString());
     emitEnquiry(req, 'enquiry:new', updated);
+    // A callback request needs a human, so raise it in the admin bell too.
+    await notifyAdminsOfCustomerAction(req, updated, 'Call request');
 
     res.status(200).json({ success: true, enquiry: updated });
   } catch (error) {
@@ -624,9 +679,12 @@ exports.getApprovedProducts = async (req, res, next) => {
       userId: req.user.id,
       status: { $in: ['deal_closed', 'customer_agreed', 'converted'] },
       dealPrice: { $ne: null },
+      productId: { $ne: null },
     }).select('productId dealPrice quotedPrice status');
 
-    const productIds = enquiries.map((enquiry) => enquiry.productId.toString());
+    const productIds = enquiries
+      .filter((enquiry) => enquiry.productId)
+      .map((enquiry) => enquiry.productId.toString());
     res.status(200).json({ success: true, productIds, enquiries });
   } catch (error) {
     next(error);
@@ -660,6 +718,24 @@ exports.updateEnquiryStatus = async (req, res, next) => {
     emitEnquiry(req, 'enquiry:reply', updated, enquiry.userId?.toString());
     emitEnquiry(req, 'enquiry:new', updated);
     res.status(200).json({ success: true, enquiry: updated });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.incrementAgreeCount = async (req, res, next) => {
+  try {
+    const enquiry = await Enquiry.findByIdAndUpdate(
+      req.params.id,
+      { $inc: { agreeCount: 1 } },
+      { new: true }
+    );
+    if (!enquiry) {
+      return res.status(404).json({ success: false, message: 'Enquiry not found' });
+    }
+    const updated = await populateEnquiry(Enquiry.findById(enquiry._id));
+    emitEnquiry(req, 'enquiry:new', updated);
+    res.status(200).json({ success: true, agreeCount: updated.agreeCount, enquiry: updated });
   } catch (error) {
     next(error);
   }

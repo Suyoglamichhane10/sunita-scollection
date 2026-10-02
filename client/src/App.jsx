@@ -6,12 +6,13 @@ import { CartProvider } from './Context/CartContext';
 import { ChatProvider } from './Context/ChatContext';
 import { WishlistProvider } from './Context/WishlistContext';
 import { CompareProvider } from './Context/CompareContext';
+import { EnquiryDataProvider } from './Context/EnquiryDataContext';
 import { EnquiryProvider } from './Context/EnquiryContext';
-import WhatsAppChatWidget from './components/chat/WhatsAppChatWidget';
 import EnquiryModal from './components/common/EnquiryModal';
+import WhatsAppChatWidget from './components/chat/WhatsAppChatWidget';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import ScrollToTop from './components/common/ScrollToTop';
-import { Toaster } from 'react-hot-toast';
+import CustomToaster from './components/common/CustomToaster';
 
 function AppContent() {
   const location = useLocation();
@@ -31,18 +32,14 @@ function AppContent() {
         inventory: 'Inventory',
         categories: 'Categories',
         orders: 'Orders',
-        delivery: 'Delivery Tracking',
         enquiries: 'Enquiries',
-        analytics: 'Analytics',
         slideshow: 'Slideshow',
         messages: 'Messages',
-        conversations: 'Inbox',
         users: 'Customers',
         reports: 'Reports',
-        marketing: 'Marketing',
         profile: 'My Profile',
       };
-      title = `${labels[adminLabel] || 'Admin'} | Sunita\'z Collection Admin`;
+      title = `${labels[adminLabel] || 'Admin'} | Sunita'z Collection Admin`;
     } else if (path === '/dashboard') {
       title = 'Dashboard | Sunita\'z Collection';
     } else if (path === '/cart') {
@@ -70,17 +67,7 @@ function AppContent() {
       <ScrollToTop />
       <AppRoutes />
       {!isAdminRoute && !isAuthRoute && <WhatsAppChatWidget />}
-      <EnquiryModal />
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 4000,
-          style: {
-            background: '#363636',
-            color: '#fff',
-          },
-        }}
-      />
+      <CustomToaster />
     </>
   );
 }
@@ -89,22 +76,25 @@ function App() {
   return (
     <ErrorBoundary>
       <BrowserRouter>
-          <AuthProvider>
-            <CartProvider>
-              <ChatProvider>
+        <AuthProvider>
+          <CartProvider>
+            <ChatProvider>
+              <EnquiryDataProvider>
                 <WishlistProvider>
                   <CompareProvider>
                     <EnquiryProvider>
                       <AppContent />
+                      <EnquiryModal />
                     </EnquiryProvider>
                   </CompareProvider>
                 </WishlistProvider>
-              </ChatProvider>
-            </CartProvider>
-          </AuthProvider>
+              </EnquiryDataProvider>
+            </ChatProvider>
+          </CartProvider>
+        </AuthProvider>
       </BrowserRouter>
     </ErrorBoundary>
   );
 }
 
-export default App;
+export default App;

@@ -37,13 +37,9 @@ const AdminUsers = lazy(() => import('../pages/admin/AdminUsers'));
 const AdminCategories = lazy(() => import('../pages/admin/AdminCategories'));
 const AdminInventory = lazy(() => import('../pages/admin/AdminInventory'));
 const AdminReports = lazy(() => import('../pages/admin/AdminReports'));
-const AdminConversations = lazy(() => import('../pages/admin/AdminConversations'));
-const AdminMarketing = lazy(() => import('../pages/admin/AdminMarketing'));
-const AdminProfile = lazy(() => import('../pages/admin/AdminProfile'));
-const AdminDelivery = lazy(() => import('../pages/admin/AdminDelivery'));
 const AdminSlideshow = lazy(() => import('../pages/admin/AdminSlideshow'));
 const AdminEnquiries = lazy(() => import('../pages/admin/AdminEnquiries'));
-const AdminAnalytics = lazy(() => import('../pages/admin/AdminAnalytics'));
+const AdminProfile = lazy(() => import('../pages/admin/AdminProfile'));
 
 // Layouts
 import CustomerLayout from '../Layouts/Customerlayout';
@@ -63,7 +59,6 @@ const AppRoutes = () => {
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password/:resetToken" element={<ResetPassword />} />
-      <Route path="/auth/google/success" element={<GoogleSuccess />} />
 
        {/* Public Customer Routes */}
        <Route element={<CustomerLayout />}>
@@ -72,7 +67,8 @@ const AppRoutes = () => {
          <Route path="/product/:id" element={<ProductDetail />} />
          <Route path="/about" element={<AboutUs />} />
          <Route path="/contact" element={<Contact />} />
-         <Route path="/r/:code" element={<ReferralRedirect />} />
+          <Route path="/r/:code" element={<ReferralRedirect />} />
+          <Route path="/auth/google/success" element={<GoogleSuccess />} />
        </Route>
 
       {/* Protected Customer Routes — require authentication */}
@@ -189,15 +185,11 @@ const AppRoutes = () => {
         <Route path="categories" element={<AdminCategories />} />
         <Route path="inventory" element={<AdminInventory />} />
         <Route path="orders" element={<AdminOrders />} />
-        <Route path="delivery" element={<AdminDelivery />} />
         <Route path="messages" element={<AdminMessages />} />
         <Route path="slideshow" element={<AdminSlideshow />} />
         <Route path="users" element={<AdminUsers />} />
         <Route path="reports" element={<AdminReports />} />
-        <Route path="analytics" element={<AdminAnalytics />} />
         <Route path="enquiries" element={<AdminEnquiries />} />
-        <Route path="conversations" element={<AdminConversations />} />
-        <Route path="marketing" element={<AdminMarketing />} />
         <Route path="profile" element={<AdminProfile />} />
       </Route>
 

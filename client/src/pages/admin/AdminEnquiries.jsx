@@ -203,7 +203,9 @@ const AdminEnquiries = () => {
                                 {enquiry.productId.name || 'Unknown'}
                               </Link>
                             ) : (
-                              'Unknown'
+                              <span className="text-sm text-gray-700">
+                                {enquiry.productName || 'General enquiry'}
+                              </span>
                             )}
                           </td>
                           <td className="py-3 pr-4 text-gray-700">{enquiry.phone}</td>

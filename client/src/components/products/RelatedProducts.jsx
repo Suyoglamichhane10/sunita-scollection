@@ -10,12 +10,12 @@ import EnquiryModal from '../common/EnquiryModal';
 const RelatedProducts = ({ productId }) => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showEnquiry, setShowEnquiry] = useState(false);
-  const [enquiryProduct, setEnquiryProduct] = useState(null);
   const { addToCart } = useCart();
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const { isApproved, loading: approvedLoading } = useApprovedProducts();
+  const [showEnquiry, setShowEnquiry] = useState(false);
+  const [enquiryProduct, setEnquiryProduct] = useState(null);
 
   useEffect(() => {
     let active = true;

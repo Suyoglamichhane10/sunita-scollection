@@ -185,8 +185,8 @@ const ProductCard = ({ product, onQuickView, compact = false }) => {
 
   if (compact) {
     return (
-      <div className="group flex h-full flex-col overflow-hidden rounded-xl bg-white shadow-sm transition-shadow hover:shadow-md" onMouseEnter={() => setIsHovering(true)} onMouseLeave={() => setIsHovering(false)}>
-        <Link to={`/product/${product._id}`} className="relative block aspect-[4/5] overflow-hidden bg-gray-100">
+      <div className="group flex h-full min-h-[380px] flex-col overflow-hidden rounded-xl bg-white shadow-sm transition-shadow hover:shadow-md" onMouseEnter={() => setIsHovering(true)} onMouseLeave={() => setIsHovering(false)}>
+        <Link to={`/product/${product._id}`} className="relative block aspect-square overflow-hidden bg-gray-100 flex-shrink-0">
           {displayImage?.url ? (
             <img src={getCloudinaryOptimizedUrl(displayImage.url, 400)} alt={product.name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" onError={handleImageError} />
           ) : (
@@ -199,29 +199,29 @@ const ProductCard = ({ product, onQuickView, compact = false }) => {
             ))}
             {discount > 0 && <span className="rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white shadow">-{discount}%</span>}
           </div>
-          <div className="absolute right-2 top-2 flex flex-col gap-1 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-            <button type="button" onClick={handleWishlistToggle} className={`rounded-full bg-white p-2 shadow transition ${inWishlist ? 'bg-red-500 text-white' : 'hover:bg-gold-50 text-gray-600'}`} title={inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}>
-              <svg className="h-4 w-4" fill={inWishlist ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364 6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
+          <div className="absolute right-2 top-2 flex flex-col gap-1">
+            <button type="button" onClick={handleWishlistToggle} className={`rounded-full bg-white p-3 shadow transition min-h-[44px] min-w-[44px] flex items-center justify-center ${inWishlist ? 'bg-red-500 text-white' : 'hover:bg-gold-50 text-gray-600'}`} title={inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}>
+              <svg className="h-5 w-5" fill={inWishlist ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364 6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
             </button>
-            <button type="button" onClick={() => inCompare ? removeFromCompare(product._id) : addToCompare(product)} className={`rounded-full bg-white p-2 shadow transition ${inCompare ? 'bg-gold-500 text-white' : 'hover:bg-gray-50 text-gray-600'}`} title={inCompare ? 'Remove from compare' : 'Add to compare'}>
-              <FaArrowsAltH className="h-4 w-4" />
+            <button type="button" onClick={() => inCompare ? removeFromCompare(product._id) : addToCompare(product)} className={`rounded-full bg-white p-3 shadow transition min-h-[44px] min-w-[44px] flex items-center justify-center ${inCompare ? 'bg-gold-500 text-white' : 'hover:bg-gray-50 text-gray-600'}`} title={inCompare ? 'Remove from compare' : 'Add to compare'}>
+              <FaArrowsAltH className="h-5 w-5" />
             </button>
           </div>
           {cardOutOfStock && <div className="absolute inset-0 flex items-center justify-center bg-black/50"><span className="rounded-md bg-white px-3 py-1.5 text-xs font-bold text-gray-900">Out of Stock</span></div>}
         </Link>
         <div className="flex flex-1 flex-col p-3">
-          {product.category && <p className="mb-1 text-xs font-medium uppercase tracking-wider text-gray-500">{product.category.name}</p>}
+          {product.category && <p className="mb-1.5 text-xs font-medium uppercase tracking-wider text-gray-500">{product.category.name}</p>}
           <Link to={`/product/${product._id}`}><h3 className="line-clamp-2 text-sm font-bold text-gray-900 transition-colors hover:text-primary-600">{product.name}</h3></Link>
           <div className="mt-auto flex gap-2 pt-2">{renderButton()}</div>
-          <button type="button" onClick={handleDetails} className="flex items-center justify-center rounded-lg border border-primary-600 px-3 py-2 text-xs font-semibold text-primary-700 transition hover:bg-primary-50" title="View product details">Details</button>
+          <button type="button" onClick={handleDetails} className="flex items-center justify-center rounded-lg border border-primary-600 px-3 py-2 text-xs font-semibold text-primary-700 transition hover:bg-primary-50 min-h-[44px]" title="View product details">Details</button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="group relative overflow-hidden rounded-xl bg-white shadow-sm transition-all duration-300 hover:shadow-xl flex flex-col" onMouseEnter={() => setIsHovering(true)} onMouseLeave={() => setIsHovering(false)}>
-      <Link to={`/product/${product._id}`} className="relative block aspect-[3/4] overflow-hidden bg-gray-100 flex-shrink-0">
+    <div className="group relative overflow-hidden rounded-xl bg-white shadow-sm transition-all duration-300 hover:shadow-xl flex flex-col min-h-[480px]" onMouseEnter={() => setIsHovering(true)} onMouseLeave={() => setIsHovering(false)}>
+      <Link to={`/product/${product._id}`} className="relative block aspect-square overflow-hidden bg-gray-100 flex-shrink-0">
         {displayImage?.url ? (
           <img src={getCloudinaryOptimizedUrl(displayImage.url, 600)} alt={product.name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" onError={handleImageError} />
         ) : (
@@ -233,11 +233,11 @@ const ProductCard = ({ product, onQuickView, compact = false }) => {
           {product.isFeatured && <span className="rounded-full bg-gold-500 px-2 py-0.5 text-[10px] font-bold text-white shadow-lg sm:px-3 sm:py-1 sm:text-xs">★ Featured</span>}
           {discount > 0 && <span className="rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white shadow-lg sm:px-3 sm:py-1 sm:text-xs">-{discount}%</span>}
         </div>
-        <div className="absolute right-3 top-3 flex flex-col gap-2 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-          <button type="button" onClick={handleWishlistToggle} className={`rounded-full bg-white p-2 shadow-lg transition ${inWishlist ? 'bg-red-500 text-white' : 'hover:bg-gold-50 text-gray-600'}`} title={inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}>
+        <div className="absolute right-3 top-3 flex flex-col gap-2">
+          <button type="button" onClick={handleWishlistToggle} className={`rounded-full bg-white p-3 shadow-lg transition min-h-[44px] min-w-[44px] flex items-center justify-center ${inWishlist ? 'bg-red-500 text-white' : 'hover:bg-gold-50 text-gray-600'}`} title={inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}>
             <svg className="h-5 w-5" fill={inWishlist ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364 6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
           </button>
-          <button type="button" onClick={() => inCompare ? removeFromCompare(product._id) : addToCompare(product)} className={`rounded-full bg-white p-2 shadow-lg transition ${inCompare ? 'bg-gold-500 text-white' : 'hover:bg-gray-50 text-gray-600'}`} title={inCompare ? 'Remove from compare' : 'Add to compare'}><FaArrowsAltH /></button>
+          <button type="button" onClick={() => inCompare ? removeFromCompare(product._id) : addToCompare(product)} className={`rounded-full bg-white p-3 shadow-lg transition min-h-[44px] min-w-[44px] flex items-center justify-center ${inCompare ? 'bg-gold-500 text-white' : 'hover:bg-gray-50 text-gray-600'}`} title={inCompare ? 'Remove from compare' : 'Add to compare'}><FaArrowsAltH className="h-5 w-5" /></button>
         </div>
         {cardOutOfStock && <div className="absolute inset-0 flex items-center justify-center bg-black/50"><span className="rounded-lg bg-white px-4 py-2 text-sm font-bold text-gray-900">Out of Stock</span></div>}
       </Link>
@@ -268,7 +268,7 @@ const ProductCard = ({ product, onQuickView, compact = false }) => {
         )}
         <div className="mt-auto grid grid-cols-1 gap-2 sm:grid-cols-2">
           {renderButton()}
-          <button type="button" onClick={handleDetails} className="flex items-center justify-center gap-1.5 rounded-lg border border-primary-600 px-4 py-2 text-sm font-semibold text-primary-700 transition hover:bg-primary-50" title="View product details">Details</button>
+          <button type="button" onClick={handleDetails} className="flex items-center justify-center gap-1.5 rounded-lg border border-primary-600 px-4 py-2 text-sm font-semibold text-primary-700 transition hover:bg-primary-50 min-h-[44px]" title="View product details">Details</button>
         </div>
       </div>
     </div>

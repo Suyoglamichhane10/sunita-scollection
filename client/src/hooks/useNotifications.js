@@ -3,43 +3,71 @@ import { useAuth } from '../Context/Authcontext';
 import { useChat } from '../Context/ChatContext';
 import api from '../Services/api';
 
+const CLEARED_KEY = 'notificationLastClearedAt';
+
+const EMPTY_COUNTS = {
+  total: 0,
+  enquiries: 0,
+  orders: 0,
+  messages: 0,
+  wishlist: 0,
+  rewards: 0,
+};
+
+// A short, subtle two-note chime via Web Audio so no audio asset is needed.
+const playNotificationChime = () => {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    const now = ctx.currentTime;
+    [880, 1174.66].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + i * 0.1);
+      gain.gain.setValueAtTime(0.0001, now + i * 0.1);
+      gain.gain.exponentialRampToValueAtTime(0.12, now + i * 0.1 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.1 + 0.5);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + i * 0.1);
+      osc.stop(now + i * 0.1 + 0.6);
+    });
+    setTimeout(() => ctx.close().catch(() => {}), 1200);
+  } catch {
+    // ignore audio errors
+  }
+};
+
 const useNotifications = (active = false) => {
-  const [counts, setCounts] = useState({
-    total: 0,
-    enquiries: 0,
-    orders: 0,
-    messages: 0,
-    wishlist: 0,
-    rewards: 0,
-  });
+  const [counts, setCounts] = useState(EMPTY_COUNTS);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [clearedAt, setClearedAt] = useState(() => localStorage.getItem(CLEARED_KEY) || null);
+  const [latestArrival, setLatestArrival] = useState(null);
   const { isAuthenticated } = useAuth();
   const { socketRef } = useChat();
   const pollRef = useRef(null);
-  const lastClearedAtRef = useRef(localStorage.getItem('notificationLastClearedAt') || null);
+  const clearedAtRef = useRef(clearedAt);
 
-  // ── Fetch unread counts from GET /api/notifications/unread-count ──
+  // Remember which notifications have already been announced so the chime
+  // only fires for genuinely new arrivals, never on the first load.
+  const seenKeysRef = useRef(null);
+
+  const readClearedAt = useCallback(() => localStorage.getItem(CLEARED_KEY) || null, []);
+
+  const isNewerThanClear = useCallback((item) => {
+    const cleared = clearedAtRef.current;
+    if (!cleared) return true;
+    return new Date(item?.createdAt || 0).getTime() > new Date(cleared).getTime();
+  }, []);
+
+  // ── Unread counts from the server (authoritative once nothing is cleared) ──
   const fetchCounts = useCallback(async () => {
     if (!active || !isAuthenticated) return;
     try {
       const { data } = await api.get('/notifications/unread-count');
-      const lastClearedAt = lastClearedAtRef.current;
-      if (lastClearedAt) {
-        const clearedTime = new Date(lastClearedAt).getTime();
-        if (clearedTime > 0) {
-          setCounts((prev) => ({
-            ...prev,
-            total: 0,
-            enquiries: 0,
-            orders: 0,
-            messages: 0,
-            wishlist: 0,
-            rewards: 0,
-          }));
-          return;
-        }
-      }
       setCounts({
         total: data.total ?? 0,
         enquiries: data.enquiries ?? 0,
@@ -53,32 +81,62 @@ const useNotifications = (active = false) => {
     }
   }, [active, isAuthenticated]);
 
-  // ── Fetch notification list from GET /api/notifications ──
+  // ── Notification list, filtered by the clear timestamp ──
   const fetchNotifications = useCallback(async () => {
     if (!active || !isAuthenticated) return;
     try {
       setLoading(true);
       const { data } = await api.get('/notifications');
-      setNotifications(data.notifications || []);
+      const items = (data.notifications || []).filter(isNewerThanClear);
+      setNotifications(items);
     } catch (error) {
       console.error('Fetch notifications failed:', error);
       setNotifications([]);
     } finally {
       setLoading(false);
     }
-  }, [active, isAuthenticated]);
+  }, [active, isAuthenticated, isNewerThanClear]);
 
   // ── Combined refetch for explicit refresh (e.g. on bell open) ──
   const refetch = useCallback(async () => {
     await Promise.all([fetchCounts(), fetchNotifications()]);
   }, [fetchCounts, fetchNotifications]);
 
+  // ── Announce only genuinely new notifications ──
+  useEffect(() => {
+    const keys = notifications.map((n) => `${n._id || n.id || ''}|${n.message || ''}|${n.createdAt || ''}`);
+    if (seenKeysRef.current === null) {
+      // First load after mount: record what exists, but stay silent.
+      seenKeysRef.current = new Set(keys);
+      return;
+    }
+    const previous = seenKeysRef.current;
+    seenKeysRef.current = new Set(keys);
+    if (keys.some((key) => !previous.has(key))) {
+      playNotificationChime();
+      const newest = [...notifications].sort(
+        (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+      )[0];
+      if (newest) setLatestArrival(newest);
+    }
+  }, [notifications]);
+
+  // Reset the "already seen" memory whenever the user clears or logs out,
+  // so the next arrival is treated as new.
+  useEffect(() => {
+    if (!isAuthenticated) {
+      seenKeysRef.current = null;
+      setNotifications([]);
+      setCounts(EMPTY_COUNTS);
+    }
+  }, [isAuthenticated]);
+
   // ── Mark all as read ──
   const markAllRead = useCallback(async () => {
     if (!active || !isAuthenticated) return;
     try {
       await api.put('/notifications/read-all');
-      setCounts((c) => ({ total: 0, enquiries: 0, orders: 0, messages: 0, wishlist: 0, rewards: 0 }));
+      setCounts(EMPTY_COUNTS);
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
     } catch (error) {
       console.error('Mark all read failed:', error);
@@ -91,7 +149,7 @@ const useNotifications = (active = false) => {
       if (!active || !isAuthenticated) return;
       try {
         await api.put(`/notifications/${notification._id}/read?type=${notification.type || 'system'}`);
-      } catch (error) {
+      } catch {
         if (notification.type === 'enquiry' && notification.enquiryId) {
           try {
             await api.put(`/enquiries/${notification.enquiryId}/read-customer`);
@@ -106,46 +164,42 @@ const useNotifications = (active = false) => {
     [active, isAuthenticated, fetchCounts]
   );
 
-  // ── Clear all notifications (delete permanently) ──
+  // ── Clear all: hide everything that existed at this moment. The server
+  // synthesises enquiry/order rows at read time, so deleting is not enough —
+  // the timestamp is what actually keeps them out of the panel and the badge. ──
   const clearAll = useCallback(async () => {
     if (!active || !isAuthenticated) return;
+    const now = new Date().toISOString();
+    localStorage.setItem(CLEARED_KEY, now);
+    clearedAtRef.current = now;
+    setClearedAt(now);
+    setNotifications([]);
+    setCounts(EMPTY_COUNTS);
+    seenKeysRef.current = new Set();
     try {
-      const now = new Date().toISOString();
-      lastClearedAtRef.current = now;
-      localStorage.setItem('notificationLastClearedAt', now);
       await api.delete('/notifications');
-      setNotifications([]);
-      setCounts((c) => ({ total: 0, enquiries: 0, orders: 0, messages: 0, wishlist: 0, rewards: 0 }));
-      setTimeout(() => {
-        refetch();
-      }, 2000);
     } catch (error) {
       console.error('Clear all notifications failed:', error);
     }
-  }, [active, isAuthenticated, refetch]);
+  }, [active, isAuthenticated]);
 
-  // ── Initial fetch + 15-second polling for counts ──
+  // ── Initial fetch + 15-second polling ──
   useEffect(() => {
     if (!active || !isAuthenticated) return;
 
+    clearedAtRef.current = readClearedAt();
     refetch();
 
     if (pollRef.current) clearInterval(pollRef.current);
     pollRef.current = setInterval(() => {
-      const lastClearedAt = lastClearedAtRef.current || localStorage.getItem('notificationLastClearedAt');
-      if (lastClearedAt) {
-        const clearedTime = new Date(lastClearedAt).getTime();
-        if (clearedTime > Date.now() - 86400000) {
-          return;
-        }
-      }
       fetchCounts();
+      fetchNotifications();
     }, 15000);
 
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
-  }, [active, isAuthenticated, refetch, fetchCounts]);
+  }, [active, isAuthenticated, refetch, fetchCounts, fetchNotifications, readClearedAt]);
 
   // ── Socket.IO real-time events ──
   useEffect(() => {
@@ -176,18 +230,24 @@ const useNotifications = (active = false) => {
     };
   }, [socketRef, isAuthenticated, fetchCounts, fetchNotifications]);
 
-  // backward-compatible alias used by NotificationBell
-  const unreadCount = counts.total;
+  // ── Badge source of truth ──
+  // Before any clear the server count is authoritative. After a clear, only
+  // unread rows newer than the clear timestamp may badge, so the count comes
+  // from the filtered list instead.
+  const visibleUnread = notifications.filter((n) => !n.read).length;
+  const effectiveTotal = clearedAt ? visibleUnread : Math.max(counts.total, visibleUnread);
 
   return {
-    total: counts.total,
+    total: clearedAt ? visibleUnread : counts.total,
     enquiries: counts.enquiries,
     orders: counts.orders,
     messages: counts.messages,
     wishlist: counts.wishlist,
     rewards: counts.rewards,
     notifications,
-    unreadCount,
+    unreadCount: effectiveTotal,
+    clearedAt,
+    latestArrival,
     loading,
     fetchNotifications,
     markAllRead,

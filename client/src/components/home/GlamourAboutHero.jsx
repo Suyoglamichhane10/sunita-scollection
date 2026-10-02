@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import aboutImage from '../../assets/Aboutimage.png';
 
-const Sparkle = ({ delay, left, top, size, color = '#fbbf24' }) => (
+const Sparkle = ({ delay, left, top, size }) => (
   <motion.span
-    className="absolute"
-    style={{ left, top, fontSize: size, color }}
+    className="absolute text-gold-200"
+    style={{ left, top, fontSize: size }}
     initial={{ opacity: 0, scale: 0, rotate: 0 }}
     animate={{ opacity: [0, 1, 0], scale: [0, 1.2, 0], rotate: [0, 180, 360] }}
     transition={{
@@ -21,8 +20,8 @@ const Sparkle = ({ delay, left, top, size, color = '#fbbf24' }) => (
 
 const HeartParticle = ({ delay, left }) => (
   <motion.span
-    className="absolute text-pink-300"
-    style={{ left, bottom: '5%', fontSize: '16px' }}
+    className="absolute h-2 w-2 rotate-45 rounded-[2px] bg-pink-200/50"
+    style={{ left, bottom: '5%' }}
     initial={{ opacity: 0, y: 0, scale: 0.5 }}
     animate={{ opacity: [0, 1, 0], y: [0, -80, -160], scale: [0.5, 1, 0.5] }}
     transition={{
@@ -31,15 +30,13 @@ const HeartParticle = ({ delay, left }) => (
       repeat: Infinity,
       ease: 'easeOut',
     }}
-  >
-    ♥
-  </motion.span>
+  />
 );
 
-const RoseParticle = ({ delay, left }) => (
+const PetalParticle = ({ delay, left }) => (
   <motion.span
-    className="absolute text-rose-300"
-    style={{ left, bottom: '8%', fontSize: '18px' }}
+    className="absolute h-1.5 w-3 rounded-full bg-rose-200/50"
+    style={{ left, bottom: '8%' }}
     initial={{ opacity: 0, y: 0, rotate: 0 }}
     animate={{ opacity: [0, 0.9, 0], y: [0, -60, -140], rotate: [0, 180, 360] }}
     transition={{
@@ -48,9 +45,7 @@ const RoseParticle = ({ delay, left }) => (
       repeat: Infinity,
       ease: 'easeOut',
     }}
-  >
-    🌹
-  </motion.span>
+  />
 );
 
 const GlamourAboutHero = () => {
@@ -62,11 +57,22 @@ const GlamourAboutHero = () => {
 
   return (
     <section className="glamour-about-hero relative flex h-screen w-full items-center justify-center overflow-hidden">
-      {/* Full background image */}
-      <div
-        className="absolute inset-0 bg-cover bg-center"
-        style={{ backgroundImage: `url(${aboutImage})` }}
-      />
+      {/* Full background image, served at the size it is actually shown at */}
+      <picture>
+        <source
+          media="(min-width: 1536px)"
+          srcSet="/img/about-hero-1920.webp"
+          type="image/webp"
+        />
+        <source media="(min-width: 1024px)" srcSet="/img/about-hero-1440.webp" type="image/webp" />
+        <source media="(min-width: 640px)" srcSet="/img/about-hero-1024.webp" type="image/webp" />
+        <img
+          src="/img/about-hero-640.webp"
+          alt=""
+          fetchPriority="high"
+          className="absolute inset-0 h-full w-full object-cover object-center"
+        />
+      </picture>
       <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/70" />
 
       {/* Animated luxury orbs */}
@@ -113,18 +119,17 @@ const GlamourAboutHero = () => {
         <HeartParticle key={`h-${i}`} delay={d} left={`${18 + i * 20}%`} />
       ))}
       {[0.8, 2.3, 3.8, 5.3].map((d, i) => (
-        <RoseParticle key={`r-${i}`} delay={d} left={`${12 + i * 22}%`} />
+        <PetalParticle key={`r-${i}`} delay={d} left={`${12 + i * 22}%`} />
       ))}
 
       {/* Centered text content */}
       <div className="relative z-10 max-w-4xl px-6 text-center">
         <motion.p
-          className="mb-3 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-[0.28em] text-gold-300 sm:text-sm"
+          className="mb-3 text-xs font-bold uppercase tracking-[0.28em] text-gold-300 sm:text-sm"
           initial={{ opacity: 0, y: 20 }}
           animate={mounted ? { opacity: 1, y: 0 } : {}}
           transition={{ delay: 0.2, duration: 0.6 }}
         >
-          <span className="text-gold-400">◆</span>
           Sunita&apos;z Collection
         </motion.p>
 
@@ -143,7 +148,8 @@ const GlamourAboutHero = () => {
           animate={mounted ? { opacity: 1, y: 0 } : {}}
           transition={{ delay: 0.5, duration: 0.7 }}
         >
-          Built with love by Sunita Lamichhane — a Nepali brand growing with heart, style, and a promise to look good while doing good.
+          A Nepali brand run out of Bharatpur. Everything you see here was filmed, checked
+          and packed by me.
         </motion.p>
 
         <motion.div
@@ -154,15 +160,15 @@ const GlamourAboutHero = () => {
         >
           <a
             href="#story"
-            className="inline-flex items-center gap-2 rounded-full bg-gold-500 px-6 py-2.5 text-sm font-semibold text-primary-900 shadow-lg transition hover:scale-105 hover:bg-gold-400 hover:shadow-xl"
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-lg bg-gold-500 px-6 py-2.5 text-sm font-semibold text-primary-900 shadow-lg transition hover:bg-gold-400"
           >
-            ✦ Discover Our Story
+            How it started
           </a>
           <a
             href="#values"
-            className="inline-flex items-center gap-2 rounded-full border-2 border-white/40 px-6 py-2.5 text-sm font-semibold text-white transition hover:scale-105 hover:bg-white/10"
+              className="inline-flex min-h-[44px] items-center gap-2 rounded-lg border-2 border-white/40 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10"
           >
-            Our Values
+            What we stand for
           </a>
         </motion.div>
       </div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../Services/api';
 import { useAuth } from '../../Context/Authcontext';
-import useEnquiry from '../../hooks/useEnquiry';
+import { useEnquiry } from '../../Context/EnquiryContext';
 import toast from 'react-hot-toast';
 import { FaTimes } from 'react-icons/fa';
 
@@ -14,7 +14,6 @@ const EnquiryModal = ({ product: propProduct, isOpen: propIsOpen, onClose: propO
   const isOpen = propIsOpen ?? contextOpen;
   const product = propProduct ?? contextProduct;
   const close = propOnClose ?? enquiryContext?.closeEnquiry ?? (() => {});
-
   const [form, setForm] = useState({ name: '', phone: '', email: '', message: '' });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -65,11 +64,11 @@ const EnquiryModal = ({ product: propProduct, isOpen: propIsOpen, onClose: propO
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4"
       onClick={close}
     >
       <div
-        className="relative max-w-lg w-full rounded-3xl bg-white p-8 shadow-2xl"
+        className="relative max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-white p-8 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <button

@@ -1,53 +1,19 @@
-import { useState, useEffect, useCallback } from 'react';
-import api from '../Services/api';
-import { useAuth } from '../Context/Authcontext';
-import { useChat } from '../Context/ChatContext';
+import { useCallback, useMemo } from 'react';
+import { useEnquiryData } from '../Context/EnquiryDataContext';
 
 const useCustomerEnquiry = (productId) => {
-  const { isAuthenticated } = useAuth();
-  const { socketRef } = useChat();
-  const [enquiry, setEnquiry] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const { getEnquiryForProduct, refetchEnquiries } = useEnquiryData();
 
-  const fetchEnquiry = useCallback(async () => {
-    if (!isAuthenticated || !productId) return;
-    setLoading(true);
-    try {
-      const { data } = await api.get('/enquiries/my');
-      const found = (data.enquiries || []).find(
-        (e) => e.productId?._id === productId || e.productId === productId
-      );
-      setEnquiry(found || null);
-    } catch {
-      setEnquiry(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [isAuthenticated, productId]);
+  const enquiry = useMemo(
+    () => getEnquiryForProduct(productId),
+    [getEnquiryForProduct, productId]
+  );
 
-  useEffect(() => {
-    fetchEnquiry();
-  }, [fetchEnquiry]);
+  const refetch = useCallback(() => {
+    if (refetchEnquiries) refetchEnquiries();
+  }, [refetchEnquiries]);
 
-  useEffect(() => {
-    if (!socketRef?.current) return;
-    const socket = socketRef.current;
-    const handler = () => {
-      fetchEnquiry();
-    };
-    socket.on('enquiry:reply', handler);
-    socket.on('enquiry:new', handler);
-    socket.on('enquiry:counter', handler);
-    socket.on('enquiry:deal_closed', handler);
-    return () => {
-      socket.off('enquiry:reply', handler);
-      socket.off('enquiry:new', handler);
-      socket.off('enquiry:counter', handler);
-      socket.off('enquiry:deal_closed', handler);
-    };
-  }, [socketRef, fetchEnquiry]);
-
-  return { enquiry, loading, refetch: fetchEnquiry };
+  return { enquiry, loading: false, refetch };
 };
 
 export default useCustomerEnquiry;

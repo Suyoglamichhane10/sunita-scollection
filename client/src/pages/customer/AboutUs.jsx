@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { FaHeart, FaGem, FaUsers, FaLeaf, FaTruck, FaStar, FaShoppingBag, FaCrown, FaEnvelope, FaPhoneAlt, FaMapMarkerAlt, FaFacebookF, FaInstagram, FaTiktok, FaClock } from 'react-icons/fa';
+import { FaHeart, FaGem, FaUsers, FaLeaf, FaTruck, FaStar, FaCrown, FaShoppingBag, FaEnvelope, FaPhoneAlt, FaMapMarkerAlt, FaFacebookF, FaInstagram, FaTiktok, FaClock } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
 import GlamourAboutHero from '../../components/home/GlamourAboutHero';
 import TrendingBanner from '../../components/home/TrendingBanner';
-import ownerPhoto from '../../assets/sunu.jpg';
 import QRCode from '../../assets/QR.png';
 
 const ContinuousTypewriter = ({ words = [], speed = 100, deleteSpeed = 60, pause = 1500, className = '' }) => {
@@ -47,6 +46,28 @@ const ContinuousTypewriter = ({ words = [], speed = 100, deleteSpeed = 60, pause
   );
 };
 
+const values = [
+  {
+    icon: FaCrown,
+    title: 'How It Started',
+    text: 'I never planned a business. I just opened TikTok and posted whatever I wanted, with no strategy at all. Some videos did nothing, some did better than I expected, and slowly a real following built up until people were waiting to see what I posted next.',
+  },
+  {
+    icon: FaShoppingBag,
+    title: 'Where We Are Now',
+    text: 'Sunita\'z Collection is now a growing name in Nepal\'s fashion scene, loved for its styles, its quality, and the personal touch I put into every piece. I film the new stuff, answer the messages and pack the orders myself.',
+  },
+];
+
+const promises = [
+  { icon: FaHeart, text: 'Styles picked by hand, not a warehouse list' },
+  { icon: FaGem, text: 'Quality checked before it goes up' },
+  { icon: FaUsers, text: 'A real person replies to your messages' },
+  { icon: FaLeaf, text: 'Suppliers we have actually dealt with' },
+  { icon: FaTruck, text: 'Delivery across Nepal you can track' },
+  { icon: FaStar, text: 'Honest prices, secure payment' },
+];
+
 const AboutUs = () => {
   return (
     <div className="bg-cream text-ink">
@@ -79,40 +100,51 @@ const AboutUs = () => {
         </div>
         <div className="moving-rect-border">
           <div className="moving-rect-border-inner grid items-center gap-8 lg:grid-cols-2 lg:gap-12">
-            <div className="flex flex-col items-center justify-center px-6 py-10 text-center lg:px-10 order-2 lg:order-1">
+            <div className="order-2 flex flex-col items-center justify-center px-6 py-10 text-center lg:order-1 lg:px-10">
               <h3 className="font-serif text-2xl font-bold text-primary-800">
                 <ContinuousTypewriter words={['Sunita Lamichhane']} speed={100} deleteSpeed={50} pause={2000} />
               </h3>
               <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-gold-600">Founder & Creative Head</p>
               <p className="mt-4 text-sm leading-7 text-ink-light">
-                Sunita Lamichhane started Sunita&apos;z Collection with a big dream: to build a brand that young women across Nepal would love and remember. Every outfit she chooses carries her promise of quality, comfort, and a touch of confidence — because she believes fashion should make you feel good from the inside out.
+                I run Sunita&apos;z Collection from Bharatpur. Most days that means filming,
+                packing, replying to messages, and working out what is actually in stock
+                before somebody orders it.
               </p>
               <p className="mt-3 text-sm leading-7 text-ink-light">
-                She is building this brand with love, aiming to make Sunita&apos;z Collection a name everyone recognizes and trusts — while staying kind to nature by choosing thoughtfully and encouraging a greener, more mindful way to dress.
+                I pick what goes up here myself. If a piece is not something I would wear,
+                it does not go on the site. That is the whole idea behind it.
+              </p>
+              <p className="mt-3 text-sm leading-7 text-ink-light">
+                I would rather tell you honestly that something is not in stock than take
+                your order and let you wait. That is how I would want to be treated, so it
+                is how I run this.
               </p>
               <div className="mt-6 flex flex-wrap justify-center gap-3">
                 <a
                   href="https://www.tiktok.com/@sunitalamichhane27?_r=1&_t=ZS-98yy5adPc8O"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-full bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:scale-105 hover:bg-primary-700"
+                  className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-primary-700"
                 >
                   Follow on TikTok
                 </a>
                 <Link
                   to="/shop"
-                  className="inline-flex items-center gap-2 rounded-full border-2 border-primary-600 px-5 py-2.5 text-sm font-semibold text-primary-700 transition hover:bg-primary-50"
+                  className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border-2 border-primary-600 px-5 py-2.5 text-sm font-semibold text-primary-700 transition hover:bg-primary-50"
                 >
                   Shop Now
                 </Link>
               </div>
             </div>
-            <div className="flex justify-center px-6 pb-10 lg:px-10 lg:pb-0 order-1 lg:order-2">
+            <div className="order-1 flex justify-center px-6 pb-10 lg:order-2 lg:px-10 lg:pb-0">
               <div className="moving-rect-border">
-                <div className="moving-rect-border-inner overflow-hidden rounded-2xl bg-gray-100 h-72 sm:h-80 lg:h-[28rem] w-full">
+                <div className="moving-rect-border-inner h-72 w-full overflow-hidden rounded-2xl bg-gray-100 sm:h-80 lg:h-[28rem]">
                   <img
-                    src={ownerPhoto}
-                    alt="Sunita Lamichhane - Owner"
+                    src="/img/owner-900.webp"
+                    alt="Sunita Lamichhane, founder of Sunita'z Collection"
+                    loading="lazy"
+                    width="900"
+                    height="1125"
                     className="h-full w-full object-cover"
                   />
                 </div>
@@ -122,34 +154,64 @@ const AboutUs = () => {
         </div>
       </section>
 
-      {/* Brand Story - Split Cards */}
+      {/* How It Started + How We Work, all in one card */}
       <section id="story" className="mx-auto max-w-7xl px-4 py-8 lg:px-8">
         <div className="mb-8 text-center">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-gold-600">Our Journey</p>
           <h2 className="mt-2 font-serif text-2xl font-bold text-primary-800 sm:text-3xl">The Story Behind the Collection</h2>
         </div>
-        <div className="grid gap-6 lg:grid-cols-2 lg:gap-8">
-          <div className="group relative overflow-hidden rounded-2xl border border-gold/20 bg-white p-6 shadow-card transition hover:shadow-luxury">
-            <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-pink-100/50 blur-2xl transition group-hover:scale-150" />
-            <div className="relative">
-              <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 text-white shadow-lg">
-                <FaCrown />
+
+        <div className="rounded-2xl border border-gold/20 bg-white p-6 shadow-luxury sm:p-8">
+          <div className="grid gap-6 lg:grid-cols-[1.7fr_1fr] lg:gap-8">
+            <div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {values.map(({ icon: Icon, title, text }) => (
+                  <div
+                    key={title}
+                    className="group relative overflow-hidden rounded-2xl border border-gold/20 bg-white p-5 shadow-card transition hover:shadow-luxury"
+                  >
+                    <div className="absolute -right-3 -top-3 h-16 w-16 rounded-full bg-pink-50/60 blur-xl transition group-hover:scale-150" />
+                    <div className="relative">
+                      <div className="mb-2.5 inline-flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-gold-400 to-gold-600 text-white shadow-lg">
+                        <Icon className="text-sm" />
+                      </div>
+                      <h3 className="font-serif text-base font-bold text-primary-800">{title}</h3>
+                      <p className="mt-1.5 text-sm leading-6 text-ink-light">{text}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <h3 className="font-serif text-lg font-bold text-primary-800">How It Started</h3>
-              <p className="mt-3 text-sm leading-6 text-ink-light">
-                Sunita&apos;z Collection began with a simple dream: to build a fashion brand that young women across Nepal would recognize, trust, and love. What started as a small boutique with handpicked pieces has grown into an e-commerce experience — but Sunita&apos;s heart remains the same: quality over quantity, style with a conscience, and a commitment to building a brand that makes Nepal proud.
+
+              <ul className="mt-5 grid gap-2.5 border-t border-gold/20 pt-5 sm:grid-cols-2" id="values">
+                {promises.map(({ icon: Icon, text }) => (
+                  <li key={text} className="flex items-start gap-2.5 text-sm text-ink-light">
+                    <Icon className="mt-0.5 shrink-0 text-gold-500" />
+                    <span className="leading-6">{text}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <p className="mt-5 border-t border-gold/20 pt-4 text-sm leading-6 text-ink-light">
+                Stock moves fast, so when something is gone I take it down rather than leave
+                it sitting there. I quote you the real price before you pay anything, and you
+                can pay cash on delivery, eSewa or FonePay. If it is not right, message me
+                and we will sort it out.
               </p>
             </div>
-          </div>
-          <div className="group relative overflow-hidden rounded-2xl border border-gold/20 bg-white p-6 shadow-card transition hover:shadow-luxury">
-            <div className="absolute -left-6 -bottom-6 h-24 w-24 rounded-full bg-gold-100/50 blur-2xl transition group-hover:scale-150" />
-            <div className="relative">
-              <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-gold-400 to-gold-600 text-white shadow-lg">
-                <FaShoppingBag />
+
+            <div className="lg:sticky lg:top-24 lg:self-start">
+              <div className="flex justify-center overflow-hidden rounded-2xl bg-cream shadow-card">
+                <img
+                  src="/img/sister-full-700.webp"
+                  alt="Sunita Lamichhane with her sisters, who help run Sunita'z Collection"
+                  loading="lazy"
+                  width="700"
+                  height="1515"
+                  className="h-auto max-h-[26rem] w-auto object-contain"
+                />
               </div>
-              <h3 className="font-serif text-lg font-bold text-primary-800">Where We Are Now</h3>
-              <p className="mt-3 text-sm leading-6 text-ink-light">
-                Today, Sunita&apos;z Collection is a growing name in Nepal&apos;s fashion scene — loved for its trendy styles, reliable quality, and the personal touch Sunita puts into every piece. She dreams big: to turn this brand into a household name while inspiring others to dress with purpose and kindness toward the planet.
+              <p className="mt-2.5 text-center text-xs text-ink-light">
+                The people behind Sunita&apos;z Collection.
               </p>
             </div>
           </div>
@@ -163,7 +225,7 @@ const AboutUs = () => {
           <h2 className="mt-2 font-serif text-2xl font-bold text-primary-800 sm:text-3xl">
             <ContinuousTypewriter words={['Contact Us']} speed={120} />
           </h2>
-          <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-ink-light">
+          <p className="mx-auto mt-2 max-w-2xl text-sm text-ink-light">
             Have a question, need styling advice, or want to place a bulk order? We would love to hear from you.
           </p>
         </div>
@@ -233,63 +295,11 @@ const AboutUs = () => {
         </div>
       </section>
 
-      {/* Product Highlights */}
-      <section className="mx-auto max-w-7xl px-4 py-8 lg:px-8">
-        <div className="mb-6 text-center">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-gold-600">What We Offer</p>
-          <h2 className="mt-2 font-serif text-2xl font-bold text-primary-800 sm:text-3xl">Wear the Trend</h2>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            { icon: '👚', title: 'Trendy Tops', text: 'Crop tops, t-shirts, blouses & more — the foundation of every chic outfit.' },
-            { icon: '👗', title: 'Chic Dresses', text: 'Mini, maxi, and bodycon dresses that turn heads everywhere you go.' },
-            { icon: '👟', title: 'Stylish Footwear', text: 'Sneakers, heels, flats, sandals, and boots to complete your look.' },
-            { icon: '👜', title: 'Fashion Accessories', text: 'Handbags, belts, sunglasses, scarves, and hats — the perfect finishing touches.' },
-          ].map(({ icon, title, text }) => (
-            <div key={title} className="group relative overflow-hidden rounded-2xl border border-gold/20 bg-white p-5 shadow-card transition hover:shadow-luxury">
-              <div className="absolute -right-4 -top-4 h-20 w-20 rounded-full bg-pink-50/60 blur-xl transition group-hover:scale-125" />
-              <div className="relative text-center">
-                <span className="mb-3 block text-4xl drop-shadow">{icon}</span>
-                <h3 className="font-serif text-base font-bold text-primary-800">{title}</h3>
-                <p className="mt-1 text-xs leading-5 text-ink-light">{text}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Values */}
-      <section id="values" className="mx-auto max-w-7xl px-4 py-8 lg:px-8">
-        <div className="mb-6 text-center">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-gold-600">What drives us</p>
-          <h2 className="mt-2 font-serif text-2xl font-bold text-primary-800 sm:text-3xl">Our Values</h2>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[
-            { icon: FaHeart, title: 'Passion for Fashion', text: 'We carefully curate every trendy piece, selecting styles that celebrate the modern young woman.' },
-            { icon: FaGem, title: 'Quality First', text: 'Premium materials, attention to detail, and lasting craftsmanship in every product.' },
-            { icon: FaUsers, title: 'Customer Love', text: 'Your satisfaction is our success. We listen, adapt, and strive to exceed expectations.' },
-            { icon: FaLeaf, title: 'Ethical Sourcing', text: 'We work with trusted suppliers who share our commitment to fairness and sustainability.' },
-            { icon: FaTruck, title: 'Reliable Delivery', text: 'Fast, trackable delivery across Nepal so you can enjoy your purchases sooner.' },
-            { icon: FaStar, title: 'Trusted Experience', text: 'Transparent pricing, secure payments, and genuine care at every step.' },
-          ].map(({ icon: Icon, title, text }) => (
-            <div key={title} className="group relative overflow-hidden rounded-2xl border border-gold/20 bg-white p-5 shadow-card transition hover:shadow-luxury">
-              <div className="absolute -right-3 -top-3 h-16 w-16 rounded-full bg-pink-50/60 blur-xl transition group-hover:scale-150" />
-              <div className="relative">
-                <Icon className="mb-3 text-2xl text-gold-500" />
-                <h3 className="font-serif text-base font-bold text-primary-800">{title}</h3>
-                <p className="mt-1 text-xs leading-5 text-ink-light">{text}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
       {/* CTA */}
       <section className="mx-auto max-w-7xl px-4 pb-10 lg:px-8">
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary-700 via-primary-800 to-primary-900 px-6 py-10 text-center text-white shadow-luxury sm:px-10">
           <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-gold-400/20 blur-3xl" />
-          <div className="pointer-events-none absolute -left-8 -bottom-8 h-32 w-32 rounded-full bg-pink-500/20 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-8 -left-8 h-32 w-32 rounded-full bg-pink-500/20 blur-3xl" />
           <div className="relative">
             <h2 className="font-serif text-2xl font-bold text-gold-200 sm:text-3xl">Be part of our story.</h2>
             <p className="mx-auto mt-2 max-w-2xl text-sm text-white/80">Explore our latest collection and find pieces that match your style and personality.</p>

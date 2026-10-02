@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import api from '../../Services/api';
 import DeleteModal from '../../components/admin/DeleteModal';
+import { getFallbackImage } from '../../utils/imageOptimizer';
 
 const blankProduct = {
   name: '',
@@ -147,7 +148,7 @@ const FeaturedCategoryManager = ({ products, setProducts, onEditProduct }) => {
                       alt={product.name}
                       className="h-full w-full object-cover"
                       onError={(e) => {
-                        e.currentTarget.src = 'https://via.placeholder.com/200x200?text=No+Image';
+                        e.currentTarget.src = getFallbackImage('No Image');
                       }}
                     />
                   );
@@ -155,7 +156,7 @@ const FeaturedCategoryManager = ({ products, setProducts, onEditProduct }) => {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium text-gray-900">{product.name}</p>
-                <p className="text-xs text-gray-500">Rs. {product.price}</p>
+                <p className="text-xs text-gray-500">{product.price != null ? `Rs. ${product.price}` : 'Price on request'}</p>
               </div>
               <button
                 type="button"
@@ -392,10 +393,6 @@ const AdminCatalog = () => {
     if (!form.category) {
       return toast.error('Please choose a category');
     }
-    if (!form.price) {
-      return toast.error('Please enter a price');
-    }
-
     const parsedVariants = buildVariants();
 
     setSaving(true);
@@ -411,7 +408,7 @@ const AdminCatalog = () => {
         name: form.name,
         brand: form.brand || '',
         description: form.description,
-        price: Number(form.price),
+        price: form.price === '' || form.price === null ? null : Number(form.price),
         stock: Number(form.stock) || 0,
         category: form.category,
         isActive: form.isActive,
@@ -426,7 +423,7 @@ const AdminCatalog = () => {
           .split(',')
           .map((s) => s.trim())
           .filter(Boolean),
-        images: allImages.length ? allImages : [{ url: 'https://via.placeholder.com/400x400?text=Product', isMain: true }],
+        images: allImages.length ? allImages : [{ url: getFallbackImage('Product'), isMain: true }],
         variants: parsedVariants,
       };
 
@@ -598,14 +595,15 @@ const AdminCatalog = () => {
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-sm font-semibold text-gray-700">Base Price (Rs.) *</label>
+                <label className="mb-1 block text-sm font-semibold text-gray-700">
+                  Base Price (Rs.) <span className="font-normal text-gray-400">(optional)</span>
+                </label>
                 <input
-                  required
                   min="0"
                   type="number"
                   value={form.price}
                   onChange={(e) => change('price', e.target.value)}
-                  placeholder="e.g. 1500"
+                  placeholder="Leave empty if not priced yet"
                   className="w-full rounded-2xl border border-gray-300 px-4 py-3 outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-100"
                 />
               </div>
@@ -736,7 +734,7 @@ const AdminCatalog = () => {
                         alt={`product-${idx}`}
                         className="h-24 w-full rounded-lg object-cover"
                         onError={(e) => {
-                          e.currentTarget.src = 'https://via.placeholder.com/200x200?text=No+Image';
+                          e.currentTarget.src = getFallbackImage('No Image');
                         }}
                       />
                       <button
@@ -865,7 +863,7 @@ const AdminCatalog = () => {
                                 alt={`color-${index}-${imgIdx}`}
                                 className="h-full w-full rounded object-cover"
                                 onError={(e) => {
-                                  e.currentTarget.src = 'https://via.placeholder.com/200x200?text=No+Image';
+                                  e.currentTarget.src = getFallbackImage('No Image');
                                 }}
                               />
                               <button
@@ -972,7 +970,7 @@ const AdminCatalog = () => {
                                 className="h-full w-full object-cover"
                                 onClick={() => onEditProduct && onEditProduct(product)}
                                 onError={(e) => {
-                                  e.currentTarget.src = 'https://via.placeholder.com/200x200?text=No+Image';
+                                  e.currentTarget.src = getFallbackImage('No Image');
                                 }}
                               />
                             );
@@ -981,7 +979,7 @@ const AdminCatalog = () => {
                       </td>
                       <td className="p-2 sm:p-3">
                         <p className="font-medium text-gray-900 line-clamp-2">{product.name}</p>
-                        <p className="text-xs text-gray-500">Rs. {product.price}</p>
+<p className="text-xs text-gray-500">{product.price != null ? `Rs. ${product.price}` : 'Price on request'}</p>
                       </td>
                       <td className="hidden sm:table-cell p-2 sm:p-3 whitespace-nowrap">{product.category?.name || '-'}</td>
                       <td className="hidden md:table-cell p-2 sm:p-3">

@@ -186,7 +186,7 @@ const userSchema = new mongoose.Schema(
         message: String,
         type: {
           type: String,
-          enum: ['order', 'promotion', 'system'],
+          enum: ['order', 'promotion', 'system', 'enquiry'],
         },
         read: {
           type: Boolean,

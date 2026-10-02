@@ -118,8 +118,8 @@ const sendEnquiryNotification = async (admin, enquiry, product) => {
         <p style="margin:4px 0 0;opacity:0.9;">New Enquiry Notification</p>
       </div>
       <div style="padding:24px;color:#111827;">
-        <h2 style="margin-top:0;">New Product Enquiry</h2>
-        <p>A customer has enquired about <strong>${product?.name || 'a product'}</strong>.</p>
+        <h2 style="margin-top:0;">New Enquiry</h2>
+        <p>A customer has enquired about <strong>${product?.name || enquiry.productName || 'a product'}</strong>.</p>
         <table style="width:100%;border-collapse:collapse;margin:16px 0;">
           <tr><td style="padding:8px;border:1px solid #e5e7eb;font-weight:600;">Name</td><td style="padding:8px;border:1px solid #e5e7eb;">${enquiry.name}</td></tr>
           <tr><td style="padding:8px;border:1px solid #e5e7eb;font-weight:600;">Phone</td><td style="padding:8px;border:1px solid #e5e7eb;">${enquiry.phone}</td></tr>
@@ -134,8 +134,8 @@ const sendEnquiryNotification = async (admin, enquiry, product) => {
 
   return sendEmail({
     to: admin.email,
-    subject: `New Enquiry: ${product?.name || 'Product'} - Sunita'z Collection`,
-    text: `New enquiry from ${enquiry.name} (${enquiry.phone}) about ${product?.name}. Message: ${enquiry.message}`,
+    subject: `New Enquiry: ${product?.name || enquiry.productName || 'Product'} - Sunita'z Collection`,
+    text: `New enquiry from ${enquiry.name} (${enquiry.phone}) about ${product?.name || enquiry.productName || 'a product'}. Message: ${enquiry.message}`,
     html,
   });
 };

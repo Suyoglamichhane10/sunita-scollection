@@ -34,7 +34,7 @@ const enquirySchema = new mongoose.Schema(
     productId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Product',
-      required: true,
+      default: null,
     },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -109,6 +109,11 @@ const enquirySchema = new mongoose.Schema(
     adminNote: {
       type: String,
       default: '',
+    },
+    agreeCount: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
   },
   {

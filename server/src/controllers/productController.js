@@ -4,6 +4,12 @@ const ProductView = require('../Models/ProductView');
 const User = require('../Models/User');
 const { decrementStock, restoreStock } = require('../services/stockService');
 
+const normalizePrice = (value) => {
+  if (value === undefined || value === null || value === '') return null;
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+};
+
 // @desc    Get all products (public)
 // @route   GET /api/products
 // @access  Public
@@ -64,6 +70,19 @@ exports.getProducts = async (req, res, next) => {
           break;
         case 'popular':
           sort = { views: -1 };
+          break;
+        case 'trending':
+          sort = { trendingScore: -1, views: -1, createdAt: -1 };
+          break;
+        case 'recommended':
+          sort = { isRecommended: -1, featuredOrder: 1, createdAt: -1 };
+          break;
+        case 'newarrival':
+          sort = { isNewArrival: -1, featuredOrder: 1, createdAt: -1 };
+          break;
+        case 'bestseller':
+        case 'bestsellers':
+          sort = { isBestSeller: -1, soldCount: -1 };
           break;
         default:
           sort = { createdAt: -1 };
@@ -311,6 +330,7 @@ exports.createProduct = async (req, res, next) => {
 
     const payload = {
       ...req.body,
+      price: normalizePrice(req.body.price),
       images,
       variants,
       trendingScore: 0,
@@ -377,6 +397,9 @@ exports.updateProduct = async (req, res, next) => {
     const updatePayload = { ...req.body };
     if (Array.isArray(updatePayload.images)) {
       updatePayload.images = updatePayload.images.filter((img) => img && img.url);
+    }
+    if ('price' in updatePayload) {
+      updatePayload.price = normalizePrice(updatePayload.price);
     }
     if (Array.isArray(updatePayload.variants)) {
       updatePayload.variants = updatePayload.variants

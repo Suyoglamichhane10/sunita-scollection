@@ -17,6 +17,10 @@ const SortDropdown = ({ sort, onChange }) => {
           <option value="price-high">Price: High to Low</option>
           <option value="rating">Top Rated</option>
           <option value="popular">Most Popular</option>
+          <option value="trending">Trending Now</option>
+          <option value="recommended">Recommended For You</option>
+          <option value="newarrival">New Arrival</option>
+          <option value="bestseller">Best Seller</option>
         </select>
         <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-gold-500">
           ▾

@@ -96,10 +96,18 @@ const Contact = () => {
             </div>
             <h3 className="font-serif text-lg font-bold text-primary-800">Call Us</h3>
             <p className="mt-2 text-sm text-ink-light">Instant support</p>
-            <div className="mt-3 space-y-1 text-sm">
-              <a href="tel:9768562128" className="block text-primary-600 hover:underline">9768562128</a>
-              <a href="tel:9845423800" className="block text-primary-600 hover:underline">9845423800</a>
+            <div className="mt-3 space-y-2">
+              {['9768562128', '9845423800'].map((number) => (
+                <a
+                  key={number}
+                  href={`tel:${number}`}
+                  className="flex w-full items-center justify-center gap-2 rounded-full bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:scale-105 hover:bg-primary-700"
+                >
+                  <FaPhoneAlt className="text-xs" /> {number}
+                </a>
+              ))}
             </div>
+            <p className="mt-2 text-center text-xs text-ink-light">Tap a number to call</p>
           </div>
 
           <div className="group rounded-2xl border border-gold/20 bg-white p-6 text-center shadow-card transition hover:shadow-luxury">

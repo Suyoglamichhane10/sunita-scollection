@@ -26,13 +26,16 @@ const {
   updateEnquiryStatus,
   getEnquiryStats,
   sendFollowUp,
+  incrementAgreeCount,
 } = require('../controllers/enquiryController');
 const { protect, authorize } = require('../Middleware/auth');
 
-// Polling limiter for read-only endpoints - higher limit for frequent polling
+// Polling limiter for read-only endpoints. These are fetched by a single shared
+// provider for the whole app, so the ceiling only needs to cover that plus
+// socket-driven refreshes.
 const pollLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 60,
+  max: 120,
 });
 
 // Standard limiter for write operations on this resource
@@ -44,7 +47,9 @@ const enquiryLimiter = rateLimit({
 router.post('/', protect, enquiryLimiter, createEnquiry);
 router.get('/my', protect, pollLimiter, getMyEnquiries);
 router.get('/', protect, authorize('admin'), enquiryLimiter, getAllEnquiries);
-router.get('/approved-products', protect, enquiryLimiter, getApprovedProducts);
+// Read-only endpoint; served from the shared provider, so keep it on the
+// polling limiter rather than the stricter write limiter.
+router.get('/approved-products', protect, pollLimiter, getApprovedProducts);
 router.get('/unread-count', protect, pollLimiter, getUnreadCount);
 router.get('/admin-unread-count', protect, authorize('admin'), pollLimiter, getAdminUnreadCount);
 router.get('/stats', protect, authorize('admin'), enquiryLimiter, getEnquiryStats);
@@ -53,6 +58,7 @@ router.put('/:id/read-admin', protect, authorize('admin'), enquiryLimiter, markO
 router.put('/:id/read-customer', protect, enquiryLimiter, markOneReadAsCustomer);
 router.put('/read-all', protect, enquiryLimiter, markAllRead);
 router.put('/:id/status', protect, authorize('admin'), enquiryLimiter, updateEnquiryStatus);
+router.post('/:id/agree', protect, authorize('admin'), enquiryLimiter, incrementAgreeCount);
 
 // Admin actions
 router.post('/:id/share-price', protect, authorize('admin'), enquiryLimiter, adminSharePrice);
