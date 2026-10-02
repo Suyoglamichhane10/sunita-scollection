@@ -55,6 +55,8 @@ const CLOSED_ENQUIRY_STATUSES = ['customer_agreed', 'deal_closed', 'rejected', '
 // Instant-support numbers shown on every open enquiry, tappable to dial.
 const SUPPORT_PHONE_NUMBERS = ['9768562128', '9845423800'];
 
+const MARQUEE_DURATION = 26;
+
 const DASHBOARD_SECTIONS = [
   { id: 'overview', label: 'Overview', icon: FaStar },
   { id: 'orders', label: 'Orders', icon: FaBoxOpen },
@@ -140,6 +142,8 @@ const Dashboard = () => {
   const [editProfile, setEditProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [enquiriesLoading, setEnquiriesLoading] = useState(false);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersError, setOrdersError] = useState(false);
   const [actionLoading, setActionLoading] = useState(null);
   const [counterId, setCounterId] = useState(null);
   const [counterPrice, setCounterPrice] = useState('');
@@ -153,73 +157,178 @@ const Dashboard = () => {
   const [deleteOrderId, setDeleteOrderId] = useState(null);
   const [enquiryUnreadCount, setEnquiryUnreadCount] = useState(0);
   const fileInputRef = useRef(null);
-  const activeTabRef = useRef(null);
   const tabStripRef = useRef(null);
+  const trackRef = useRef(null);
   const touchStartXRef = useRef(null);
+  const resumeTimerRef = useRef(null);
+  const [marqueePaused, setMarqueePaused] = useState(false);
+  const [wideScreen, setWideScreen] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
+  const [viewportTick, setViewportTick] = useState(0);
+
   const activeIndex = Math.max(
     0,
     DASHBOARD_SECTIONS.findIndex((s) => s.id === active)
   );
 
-  // On a phone the 7 tabs overflow, so keep the selected one on screen.
+  // The marquee only earns its keep below lg, where tabs are actually cut off,
+  // and never when the reader has asked for less motion.
+  const useMarquee = !wideScreen && !reducedMotion;
+
   useEffect(() => {
-    activeTabRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-  }, [active]);
+    const mqWide = window.matchMedia('(min-width: 1024px)');
+    const mqReduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const sync = () => {
+      setWideScreen(mqWide.matches);
+      setReducedMotion(mqReduce.matches);
+    };
+    sync();
+    mqWide.addEventListener('change', sync);
+    mqReduce.addEventListener('change', sync);
+    return () => {
+      mqWide.removeEventListener('change', sync);
+      mqReduce.removeEventListener('change', sync);
+    };
+  }, []);
+
+  useEffect(() => {
+    let frame;
+    const onResize = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => setViewportTick((t) => t + 1));
+    };
+    window.addEventListener('resize', onResize);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('resize', onResize);
+    };
+  }, []);
+
+  useEffect(() => () => clearTimeout(resumeTimerRef.current), []);
+
+  useEffect(() => {
+    if (!useMarquee) return undefined;
+    clearTimeout(resumeTimerRef.current);
+    setMarqueePaused(true);
+    resumeTimerRef.current = setTimeout(() => setMarqueePaused(false), 1400);
+    return () => clearTimeout(resumeTimerRef.current);
+  }, [active, useMarquee, viewportTick]);
+
+  // Centre the active tab without touching scrollLeft, which a transform
+  // driven marquee does not use. A negative animation-delay picks the point
+  // in the 26s cycle at which that tab sits in the middle of the window.
+  useEffect(() => {
+    const track = trackRef.current;
+    const window_ = tabStripRef.current;
+    if (!useMarquee || !track || !window_) return;
+
+    const tab = track.querySelector(`[data-tab-id="${active}"]`);
+    if (!tab) return;
+
+    const half = track.scrollWidth / 2;
+    if (!half) return;
+
+    let offset = tab.offsetLeft + tab.offsetWidth / 2 - window_.clientWidth / 2;
+    offset = ((offset % half) + half) % half;
+
+    track.style.animation = 'none';
+    void track.offsetWidth;
+    track.style.animation = '';
+    track.style.animationDelay = `-${(offset / half) * MARQUEE_DURATION}s`;
+  }, [active, useMarquee, viewportTick]);
+
+  // Without the marquee the strip scrolls natively, so centre by scrollLeft.
+  // scrollIntoView is avoided here because it also scrolls every scrollable
+  // ancestor, including the document, which parks the top of the dashboard
+  // underneath the sticky navbar on load.
+  useEffect(() => {
+    if (useMarquee) return;
+    const strip = tabStripRef.current;
+    const tab = strip?.querySelector(`[data-tab-id="${active}"]`);
+    if (!strip || !tab) return;
+    const target = tab.offsetLeft - (strip.clientWidth - tab.offsetWidth) / 2;
+    const max = strip.scrollWidth - strip.clientWidth;
+    strip.scrollTo({ left: Math.max(0, Math.min(target, max)), behavior: 'smooth' });
+  }, [active, loading, useMarquee]);
 
   const stepSection = (delta) => {
     const next = DASHBOARD_SECTIONS[activeIndex + delta];
     if (next) switchSection(next.id);
   };
 
-  // A deliberate horizontal flick moves one section along, which is what
-  // people expect from a carousel on a phone.
+  const holdMarquee = () => {
+    clearTimeout(resumeTimerRef.current);
+    setMarqueePaused(true);
+  };
+
+  const releaseMarquee = () => {
+    clearTimeout(resumeTimerRef.current);
+    resumeTimerRef.current = setTimeout(() => setMarqueePaused(false), 1200);
+  };
+
   const onTouchStart = (e) => {
     touchStartXRef.current = e.touches[0].clientX;
+    holdMarquee();
   };
 
   const onTouchEnd = (e) => {
     const startX = touchStartXRef.current;
     touchStartXRef.current = null;
+    releaseMarquee();
     if (startX == null) return;
     const deltaX = e.changedTouches[0].clientX - startX;
     if (Math.abs(deltaX) < 48) return;
     stepSection(deltaX < 0 ? 1 : -1);
   };
 
+const loadDashboard = useCallback(async (signal) => {
+    const settled = await Promise.allSettled([
+      api.get('/dashboard', { signal }).catch(() => null),
+      api.get('/orders/my-orders', { signal }).then((r) => r?.data?.orders ?? []).catch((err) => {
+        if (err?.name !== 'CanceledError' && err?.name !== 'AbortError') setOrdersError(true);
+        return [];
+      }),
+      api.get('/enquiries/my', { signal }).catch(() => null),
+      wishlistApi.getWishlist().catch(() => null),
+      api.get('/conversations', { signal }).catch(() => null),
+      api.get('/loyalty', { signal }).catch(() => null),
+      api.get('/loyalty/referral', { signal }).catch(() => null),
+      api.get('/users/profile', { signal }).catch(() => null),
+    ]);
+    if (signal?.aborted) return;
+    const [d, o, e, w, c, l, r, p] = settled;
+    setDash(d.status === 'fulfilled' && d.value?.data ? d.value.data.dashboard : {});
+    setOrders(o.status === 'fulfilled' ? o.value : []);
+    setEnquiries(e.status === 'fulfilled' && e.value?.data ? e.value.data.enquiries || [] : []);
+    setWishlistItems(w.status === 'fulfilled' ? w.value?.wishlist?.items || [] : []);
+    setConversations(c.status === 'fulfilled' && c.value?.data ? c.value.data.conversations : []);
+    setLoyalty(l.status === 'fulfilled' ? l.value?.data : null);
+    setReferralCode(r.status === 'fulfilled' ? r.value?.data?.referralCode || '' : '');
+    setProfile(p.status === 'fulfilled' && p.value?.data ? p.value.data.user : null);
+    setEnquiriesLoading(false);
+    setLoading(false);
+  }, []);
+
+  const retryOrders = useCallback(async () => {
+    setOrdersError(false);
+    setOrdersLoading(true);
+    try {
+      const { data } = await api.get('/orders/my-orders');
+      setOrders(data?.orders || []);
+    } catch {
+      setOrdersError(true);
+    } finally {
+      setOrdersLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (authLoading) return;
     if (!isAuthenticated) { navigate('/login'); return; }
-    let active = true;
-    (async () => {
-      const results = await Promise.allSettled([
-        api.get('/dashboard').catch(() => null),
-        api.get('/orders/my-orders').catch(() => null),
-        api.get('/enquiries/my').catch(() => null),
-        wishlistApi.getWishlist().catch(() => null),
-        api.get('/conversations').catch(() => null),
-        api.get('/loyalty').catch(() => null),
-        api.get('/loyalty/referral').catch(() => null),
-        api.get('/users/profile').catch(() => null),
-      ]);
-      if (!active) return;
-      const [d, o, e, w, c, l, r, p] = results;
-      setDash(d.status === 'fulfilled' && d.value?.data ? d.value.data.dashboard : {});
-      setOrders(o.status === 'fulfilled' && o.value?.data ? o.value.data.orders : []);
-      if (e.status === 'fulfilled' && e.value?.data) {
-        setEnquiries(e.value.data.enquiries || []);
-      } else {
-        setEnquiries([]);
-      }
-      setWishlistItems(w.status === 'fulfilled' && w.value?.wishlist?.items || []);
-      setConversations(c.status === 'fulfilled' && c.value?.data ? c.value.data.conversations : []);
-      setLoyalty(l.status === 'fulfilled' ? l.value?.data : null);
-      setReferralCode(r.status === 'fulfilled' ? r.value?.data?.referralCode || '' : '');
-      setProfile(p.status === 'fulfilled' ? p.value?.data?.user || null : null);
-      setEnquiriesLoading(false);
-      setLoading(false);
-    })();
-    return () => { active = false; };
-  }, [authLoading, isAuthenticated, navigate]);
+    const controller = new AbortController();
+    loadDashboard(controller.signal);
+    return () => controller.abort();
+  }, [authLoading, isAuthenticated, navigate, loadDashboard]);
 
   useEffect(() => {
     if (profile) setEditProfile(profile);
@@ -292,7 +401,13 @@ const Dashboard = () => {
 
   const totalSpent = orders.filter((o) => o.paymentStatus !== 'failed').reduce((a, o) => a + Number(o.totalAmount || 0), 0);
 
-  const switchSection = (id) => navigate(`/dashboard#${id}`, { replace: true });
+  // Sections swap in place, so the scroll offset has to be reset with them —
+  // otherwise moving from the foot of Overview to Orders drops you mid-page,
+  // underneath the sticky navbar.
+  const switchSection = (id) => {
+    navigate(`/dashboard#${id}`, { replace: true });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const reorder = async (order) => {
     try {
@@ -439,12 +554,25 @@ const Dashboard = () => {
 
 if (loading) {
     return (
-      <div className="min-h-screen bg-cream py-10">
+      <div className="bg-cream py-6 sm:py-8">
         <div className="container-custom px-4 lg:px-8">
-          <div className="h-48 animate-pulse rounded-3xl bg-gradient-to-br from-primary-200 to-primary-100" />
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {[1, 2, 3, 4].map((i) => <div key={i} className="h-28 animate-pulse rounded-3xl bg-white/60" />)}
+          <div className="mb-6 flex gap-2 overflow-hidden">
+            {[...DASHBOARD_SECTIONS].map((section) => (
+              <div key={section.id} className="h-11 w-24 shrink-0 animate-pulse rounded-full bg-white/70" />
+            ))}
           </div>
+          <div className="h-44 animate-pulse rounded-3xl bg-gradient-to-br from-primary-200 to-primary-100 sm:h-52" />
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-5">
+            {[0, 1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-24 animate-pulse rounded-3xl bg-white/70" />
+            ))}
+          </div>
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-5">
+            {[0, 1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-16 animate-pulse rounded-2xl bg-white/70" />
+            ))}
+          </div>
+          <div className="mt-6 h-64 animate-pulse rounded-3xl bg-white/70" />
         </div>
       </div>
     );
@@ -452,10 +580,10 @@ if (loading) {
 
   return (
     <Fragment>
-    <div className="min-h-screen bg-cream py-8">
+    <div className="bg-cream py-6 sm:py-8">
       <div className="container-custom px-4 lg:px-8">
-        {/* Tab Bar — horizontally scrollable strip with snap, plus swipe to
-            move between sections on touch devices. */}
+        {/* Tab Bar — a seamless marquee below lg where tabs overflow, and a
+            plain scrollable row on wide screens or under reduced motion. */}
         <div className="mb-6 -mx-4 px-4 sm:mx-0 sm:px-0">
           <div className="flex items-center gap-2">
             <button
@@ -470,37 +598,53 @@ if (loading) {
 
             <div
               ref={tabStripRef}
+              role="tablist"
               onTouchStart={onTouchStart}
               onTouchEnd={onTouchEnd}
-              className="scrollbar-none -mx-1 flex flex-1 snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-2"
+              className={
+                useMarquee
+                  ? `tab-marquee min-w-0 flex-1 ${marqueePaused ? 'tab-marquee--paused' : ''}`
+                  : 'scrollbar-none -mx-1 flex min-w-0 flex-1 gap-2 overflow-x-auto px-1 pb-2'
+              }
             >
-              {DASHBOARD_SECTIONS.map((section, index) => {
-                const Icon = section.icon;
-                const isActiveTab = active === section.id;
-                const showBadge = section.id === 'enquiries' && enquiryUnreadCount > 0 && !isActiveTab;
-                return (
-                  <button
-                    key={section.id}
-                    ref={isActiveTab ? activeTabRef : null}
-                    role="tab"
-                    aria-selected={isActiveTab}
-                    onClick={() => switchSection(section.id)}
-                    className={`relative flex min-h-[44px] shrink-0 snap-start items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold transition sm:px-5 ${
-                      isActiveTab
-                        ? 'bg-primary text-white'
-                        : 'bg-white text-gray-700 hover:bg-primary/5 hover:text-primary'
-                    }`}
+              <div ref={trackRef} className={useMarquee ? 'tab-marquee__track' : 'contents'}>
+                {(useMarquee ? [0, 1] : [0]).map((copy) => (
+                  <div
+                    key={copy}
+                    aria-hidden={copy === 1 ? 'true' : undefined}
+                    className={useMarquee ? 'flex shrink-0 gap-2 pr-2' : 'contents'}
                   >
-                    <Icon className="shrink-0 text-xs" />
-                    <span className="whitespace-nowrap">{section.label}</span>
-                    {showBadge && (
-                      <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-600 px-1.5 text-[10px] font-bold text-white shadow">
-                        {enquiryUnreadCount > 9 ? '9+' : enquiryUnreadCount}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+                    {DASHBOARD_SECTIONS.map((section) => {
+                      const Icon = section.icon;
+                      const isActiveTab = active === section.id;
+                      const showBadge = section.id === 'enquiries' && enquiryUnreadCount > 0 && !isActiveTab;
+                      return (
+                        <button
+                          key={section.id}
+                          data-tab-id={section.id}
+                          role="tab"
+                          tabIndex={copy === 1 ? -1 : 0}
+                          aria-selected={isActiveTab}
+                          onClick={() => switchSection(section.id)}
+                          className={`relative flex min-h-[44px] shrink-0 items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold transition sm:px-5 ${
+                            isActiveTab
+                              ? 'bg-primary text-white'
+                              : 'bg-white text-gray-700 hover:bg-primary/5 hover:text-primary'
+                          }`}
+                        >
+                          <Icon className="shrink-0 text-xs" />
+                          <span className="whitespace-nowrap">{section.label}</span>
+                          {showBadge && (
+                            <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-600 px-1.5 text-[10px] font-bold text-white shadow">
+                              {enquiryUnreadCount > 9 ? '9+' : enquiryUnreadCount}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
             </div>
 
             <button
@@ -550,65 +694,75 @@ if (loading) {
               </div>
             </div>
 
-            {/* Order summary cards */}
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            {/* Order summary cards — 2 up on phones, 3 on tablets, 5 on desktop.
+                The fifth card spans both mobile columns so the row never ends
+                on a lone half-width tile. */}
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-5">
               {[
                 { icon: FaBoxOpen, label: 'Total Orders', value: orderSummary.total, section: 'orders', color: 'bg-primary-50 text-primary-600' },
                 { icon: FaTruck, label: 'Active Orders', value: orderSummary.active, section: 'orders', color: 'bg-blue-50 text-blue-600' },
                 { icon: FaCheckCircle, label: 'Delivered', value: orderSummary.delivered, section: 'orders', color: 'bg-green-50 text-green-600' },
                 { icon: FaTimesCircle, label: 'Cancelled', value: orderSummary.cancelled, section: 'orders', color: 'bg-red-50 text-red-600' },
                 { icon: FaHeart, label: 'Wishlist', value: wishlistItems.length, section: 'wishlist', color: 'bg-pink-50 text-pink-600' },
-              ].map(({ icon: Icon, label, value, section, color }) => (
+              ].map(({ icon: Icon, label, value, section, color }, index) => (
                 <button
                   key={label}
                   onClick={() => switchSection(section)}
-                  className="group relative overflow-hidden rounded-3xl border border-gold/20 bg-white p-5 shadow-card text-left transition hover:shadow-luxury"
+                  className={`group relative flex h-full flex-col overflow-hidden rounded-3xl border border-gold/20 bg-white p-4 text-left shadow-card transition hover:shadow-luxury sm:p-5 ${
+                    index === 4 ? 'col-span-2 md:col-span-1' : ''
+                  }`}
                 >
                   <div className="absolute -right-4 -top-4 h-16 w-16 rounded-full bg-gold-100/40 blur-xl transition group-hover:scale-150" />
-                  <div className="relative flex items-center justify-between">
-                    <div>
+                  <div className="relative flex items-center justify-between gap-2">
+                    <div className="min-w-0">
                       <p className="text-sm text-ink-light">{label}</p>
                       <p className="mt-1 text-2xl font-bold text-ink">{value}</p>
                     </div>
-                    <div className={`rounded-2xl p-3 ${color}`}>{Icon && <Icon className="text-xl" />}</div>
+                    <div className={`shrink-0 rounded-2xl p-3 ${color}`}>{Icon && <Icon className="text-xl" />}</div>
                   </div>
                 </button>
               ))}
             </div>
 
-            {/* Quick Actions */}
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            {/* Quick Actions — 2 equal columns on phones, 3 on tablets, 5 on
+                desktop. The fifth spans both mobile columns so the grid ends
+                on a full-width tile instead of a stranded half. */}
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-5">
               {[
                 { id: 'shop', label: 'Shop Now', to: '/shop', icon: FaShoppingBag },
                 { id: 'orders', label: 'View Orders', section: 'orders', icon: FaClipboardList },
                 { id: 'enquiries', label: 'My Enquiries', section: 'enquiries', icon: FaTag },
                 { id: 'wishlist', label: 'Wishlist', section: 'wishlist', icon: FaHeart },
                 { id: 'rewards', label: 'Rewards', section: 'rewards', icon: FaTrophy },
-              ].map((a) => (
-                <div key={a.id}>
-                  {a.to ? (
-                    <Link
-                      to={a.to}
-                      className="group relative overflow-hidden rounded-2xl border border-gold/20 bg-white p-4 shadow-card text-left transition hover:shadow-luxury"
-                    >
-                      <div className="relative flex items-center gap-3">
-                        <div className="rounded-xl bg-pink-50 p-2.5 text-pink-600">{a.icon && <a.icon className="text-xl" />}</div>
-                        <span className="text-sm font-semibold text-ink">{a.label}</span>
-                      </div>
-                    </Link>
-                  ) : (
-                    <button
-                      onClick={() => switchSection(a.section)}
-                      className="group relative overflow-hidden rounded-2xl border border-gold/20 bg-white p-4 shadow-card text-left transition hover:shadow-luxury"
-                    >
-                      <div className="relative flex items-center gap-3">
-                        <div className="rounded-xl bg-pink-50 p-2.5 text-pink-600">{a.icon && <a.icon className="text-xl" />}</div>
-                        <span className="text-sm font-semibold text-ink">{a.label}</span>
-                      </div>
-                    </button>
-                  )}
-                </div>
-              ))}
+              ].map((a, index) => {
+                const ActionIcon = a.icon;
+                const span = index === 4 ? 'col-span-2 lg:col-span-1' : '';
+                const body = (
+                  <div className="relative flex h-full items-center gap-3">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-pink-50 text-pink-600">
+                      <ActionIcon className="text-xl" />
+                    </div>
+                    <span className="min-w-0 text-sm font-semibold leading-tight text-ink">{a.label}</span>
+                  </div>
+                );
+                return (
+                  <div key={a.id} className={`h-full ${span}`}>
+                    {a.to ? (
+                      <Link to={a.to} className="block rounded-2xl border border-gold/20 bg-white p-4 text-left shadow-card transition hover:shadow-luxury">
+                        {body}
+                      </Link>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => switchSection(a.section)}
+                        className="min-h-[44px] w-full rounded-2xl border border-gold/20 bg-white p-4 text-left shadow-card transition hover:shadow-luxury"
+                      >
+                        {body}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
 
             {/* Recent Orders */}
@@ -622,7 +776,27 @@ if (loading) {
                   View all <FaArrowRight className="text-xs" />
                 </button>
               </div>
-              {orders.length ? (
+              {ordersError ? (
+                <div className="rounded-2xl border border-dashed border-red-300 bg-red-50/50 p-8 text-center">
+                  <FaTimesCircle className="mx-auto h-8 w-8 text-red-300" />
+                  <p className="mt-3 text-sm font-semibold text-ink">We couldn't load your orders.</p>
+                  <p className="mt-1 text-sm text-ink-light">Check your connection and try again.</p>
+                  <button
+                    onClick={retryOrders}
+                    disabled={ordersLoading}
+                    className="mt-4 inline-flex min-h-[44px] items-center gap-2 rounded-full bg-primary px-6 py-2 text-sm font-semibold text-white transition hover:bg-primary-dark disabled:opacity-50"
+                  >
+                    <FaExchangeAlt className={`text-sm ${ordersLoading ? 'animate-spin' : ''}`} />
+                    {ordersLoading ? 'Retrying...' : 'Retry'}
+                  </button>
+                </div>
+              ) : ordersLoading ? (
+                <div className="space-y-3" aria-busy="true" aria-label="Loading recent orders">
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="h-20 animate-pulse rounded-2xl border border-gold/10 bg-cream/60" />
+                  ))}
+                </div>
+              ) : orders.length ? (
                 <div className="space-y-3">
                   {orders.slice(0, 5).map((order) => (
                     <div key={order._id} className="relative overflow-hidden rounded-2xl border border-gold/10 bg-cream/60 p-4">
@@ -686,7 +860,7 @@ if (loading) {
 
         {/* Orders Section */}
         {active === 'orders' && (
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-ink">My Orders</h2>
               <span className="text-sm text-ink-light">{orders.length} orders total</span>
@@ -782,7 +956,7 @@ if (loading) {
 
         {/* Messages Section */}
         {active === 'messages' && (
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-ink">Messages</h2>
               <Link
@@ -839,7 +1013,7 @@ if (loading) {
 
         {/* Enquiries Section */}
         {active === 'enquiries' && (
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-ink">My Enquiries</h2>
               <span className="text-sm text-ink-light">{enquiries.length} enquiries</span>
@@ -1018,7 +1192,7 @@ if (loading) {
 
         {/* Wishlist Section */}
         {active === 'wishlist' && (
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-ink">My Wishlist</h2>
               {wishlistItems.length > 0 && <span className="text-sm text-ink-light">{wishlistItems.length} items</span>}

@@ -79,6 +79,38 @@ canvas {
   display: none;
 }
 
+/* Dashboard tab marquee. The track holds two identical halves and each half
+   carries its own trailing gap, so translating by exactly -50% of the track
+   lands on the pixel-for-pixel start of the loop. */
+.tab-marquee {
+  position: relative;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%);
+}
+
+.tab-marquee__track {
+  position: relative;
+  display: flex;
+  width: max-content;
+  animation: tab-marquee-scroll 26s linear infinite;
+}
+
+.tab-marquee:hover .tab-marquee__track,
+.tab-marquee:focus-within .tab-marquee__track,
+.tab-marquee--paused .tab-marquee__track {
+  animation-play-state: paused;
+}
+
+@keyframes tab-marquee-scroll {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
 /* Elegant serif headings */
 h1, h2, h3, .font-serif {
   font-family: 'Playfair Display', Georgia, serif;
