@@ -152,6 +152,12 @@ const Dashboard = () => {
   const [deleteOrderId, setDeleteOrderId] = useState(null);
   const [enquiryUnreadCount, setEnquiryUnreadCount] = useState(0);
   const fileInputRef = useRef(null);
+  const activeTabRef = useRef(null);
+
+  // On a phone the 7 tabs overflow, so keep the selected one on screen.
+  useEffect(() => {
+    activeTabRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }, [active]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -422,30 +428,36 @@ if (loading) {
     <div className="min-h-screen bg-cream py-8">
       <div className="container-custom px-4 lg:px-8">
         {/* Tab Bar */}
-        <div className="mb-6 flex gap-2 overflow-x-auto border-b border-gold/20">
+        <div className="mb-6 -mx-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">
+          <div role="tablist" className="flex snap-x snap-mandatory gap-2 border-b border-gold/20">
           {DASHBOARD_SECTIONS.map((section) => {
             const Icon = section.icon;
-            const showBadge = section.id === 'enquiries' && enquiryUnreadCount > 0 && active !== 'enquiries';
+            const isActiveTab = active === section.id;
+            const showBadge = section.id === 'enquiries' && enquiryUnreadCount > 0 && !isActiveTab;
             return (
               <button
                 key={section.id}
+                ref={isActiveTab ? activeTabRef : null}
+                role="tab"
+                aria-selected={isActiveTab}
                 onClick={() => switchSection(section.id)}
-                className={`shrink-0 flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition relative ${
-                  active === section.id
+                className={`relative flex min-h-[44px] shrink-0 snap-start items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold transition sm:px-5 ${
+                  isActiveTab
                     ? 'bg-primary text-white'
                     : 'bg-white text-gray-700 hover:bg-primary/5 hover:text-primary'
                 }`}
               >
-                <Icon className="text-xs" />
-                {section.label}
+                <Icon className="shrink-0 text-xs" />
+                <span className="whitespace-nowrap">{section.label}</span>
                 {showBadge && (
-                  <span className="absolute -top-1 -right-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-600 px-1.5 text-[10px] font-bold text-white shadow">
+                  <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-600 px-1.5 text-[10px] font-bold text-white shadow">
                     {enquiryUnreadCount > 9 ? '9+' : enquiryUnreadCount}
                   </span>
                 )}
               </button>
             );
           })}
+          </div>
         </div>
 
         {/* Overview Section */}
@@ -1193,8 +1205,8 @@ if (loading) {
     </div>
     <Fragment>
       {cancelOrderId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/40 p-0 sm:items-center sm:p-4">
+          <div className="w-full max-w-md rounded-t-3xl bg-white p-5 shadow-xl sm:rounded-3xl sm:p-6">
             <h3 className="text-lg font-bold text-ink">Cancel Order</h3>
             <p className="mt-2 text-sm text-gray-600">Are you sure you want to cancel this order? This action cannot be undone.</p>
             <textarea
@@ -1205,17 +1217,17 @@ if (loading) {
               className="mt-4 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-ink focus:border-pink-500 focus:ring-1 focus:ring-pink-200"
               required
             />
-            <div className="mt-4 flex justify-end gap-2">
+            <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <button
                 onClick={() => { setCancelOrderId(null); setCancelReason(''); }}
-                className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-200"
+                className="min-h-[44px] rounded-lg bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-200"
               >
                 Keep Order
               </button>
               <button
                 onClick={() => handleCancelOrder(cancelOrderId)}
                 disabled={actionLoading === cancelOrderId || !cancelReason.trim()}
-                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                className="min-h-[44px] rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
               >
                 {actionLoading === cancelOrderId ? 'Cancelling...' : 'Cancel Order'}
               </button>
@@ -1224,21 +1236,21 @@ if (loading) {
         </div>
       )}
       {deleteOrderId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/40 p-0 sm:items-center sm:p-4">
+          <div className="w-full max-w-md rounded-t-3xl bg-white p-5 shadow-xl sm:rounded-3xl sm:p-6">
             <h3 className="text-lg font-bold text-ink">Delete Order</h3>
             <p className="mt-2 text-sm text-gray-600">Are you sure you want to delete this order from your history? This action cannot be undone.</p>
-            <div className="mt-4 flex justify-end gap-2">
+            <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <button
                 onClick={() => setDeleteOrderId(null)}
-                className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-200"
+                className="min-h-[44px] rounded-lg bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-200"
               >
                 Keep Order
               </button>
               <button
                 onClick={() => handleDeleteOrder(deleteOrderId)}
                 disabled={actionLoading === deleteOrderId}
-                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                className="min-h-[44px] rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
               >
                 {actionLoading === deleteOrderId ? 'Deleting...' : 'Delete Order'}
               </button>

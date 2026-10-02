@@ -104,7 +104,7 @@ const ChatWindow = ({ conversationId, onBack }) => {
   const isOwn = (m) => m.sender?._id === user?._id || m.sender === user?._id;
 
   return (
-    <div className="flex h-[600px] flex-col overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm">
+    <div className="flex h-[70vh] min-h-[320px] flex-col overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm md:h-[600px]">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-4 py-3">
         <div className="flex items-center gap-2">

@@ -87,11 +87,11 @@ const PaymentFailure = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-16">
       <div className="container-custom px-4 lg:px-8">
-        <div className="mx-auto max-w-2xl rounded-3xl border border-gray-200 bg-white p-10 text-center shadow-sm">
-          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-red-100 text-5xl text-red-600">
+        <div className="mx-auto max-w-2xl rounded-3xl border border-gray-200 bg-white p-6 text-center shadow-sm sm:p-10">
+          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-red-100 text-4xl text-red-600 sm:text-5xl">
             <FaTimesCircle />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">Payment Failed</h1>
+          <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Payment Failed</h1>
           <p className="mt-3 text-gray-600">{getErrorMessage()}</p>
 
           {loading ? (

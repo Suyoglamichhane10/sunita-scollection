@@ -78,7 +78,7 @@ const Contact = () => {
         </div>
         <div className="relative mx-auto max-w-4xl text-center">
           <p className="text-sm font-bold uppercase tracking-[0.28em] text-gold-300">Get in Touch</p>
-          <h1 className="mt-4 font-serif text-4xl font-bold leading-tight sm:text-5xl lg:text-6xl">
+          <h1 className="mt-4 font-serif text-3xl font-bold leading-tight sm:text-5xl lg:text-6xl">
             <ContinuousTypewriter words={['Contact Us', 'Let\'s Talk', 'We\'re Here']} speed={100} deleteSpeed={60} pause={1800} />
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-base leading-7 text-white/90 sm:text-lg">

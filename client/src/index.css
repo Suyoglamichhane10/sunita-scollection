@@ -32,6 +32,7 @@ body {
   min-width: 320px;
   min-height: 100vh;
   height: 100%;
+  overflow-x: hidden;
   background-color: #FFF7F7;
   color: #33111F;
   font-synthesis: none;
@@ -45,9 +46,39 @@ body {
   height: 100%;
 }
 
+/* Shared page wrapper. Defined here because it is used as a bare class name
+   across ~25 files, so Tailwind cannot generate it as a utility. Padding is
+   intentionally left to the call sites (`px-4 lg:px-8`) to avoid doubling. */
+.container-custom {
+  width: 100%;
+  max-width: 80rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Long words, URLs and hard-coded pixel widths must never force a
+   horizontal scrollbar on a phone. */
+img,
+video,
+canvas {
+  max-width: 100%;
+}
+
+/* Horizontally scrollable strips need a visible affordance on touch. */
+.overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
 /* Elegant serif headings */
 h1, h2, h3, .font-serif {
   font-family: 'Playfair Display', Georgia, serif;
+}
+
+/* Long unbroken strings (order numbers, emails, tracking codes) are a common
+   source of layout blowouts inside cards and flex rows. */
+h1, h2, h3, h4, p, span, a, td, th, label, li, button {
+  overflow-wrap: break-word;
 }
 
 /* Chat typing indicator dots */

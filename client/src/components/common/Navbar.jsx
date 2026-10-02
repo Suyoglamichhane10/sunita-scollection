@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { FaUser, FaSignOutAlt, FaBars, FaTimes, FaSearch, FaShoppingCart } from 'react-icons/fa';
 import { useAuth } from '../../Context/Authcontext';
@@ -13,18 +14,6 @@ const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [navHeight, setNavHeight] = useState(0);
-  const navRef = useRef(null);
-
-  // The drawer sits below the bar, so it needs the real measured height.
-  useEffect(() => {
-    const el = navRef.current;
-    if (!el) return undefined;
-    const measure = () => setNavHeight(el.getBoundingClientRect().height);
-    measure();
-    window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
-  }, []);
 
   const publicLinks = [
     { label: 'Home', to: '/' },
@@ -61,14 +50,14 @@ const Navbar = () => {
   }, [location.pathname]);
 
   return (
-    <nav ref={navRef} className="sticky top-0 z-40 border-b border-gold/20 bg-cream/95 shadow-sm backdrop-blur">
-      <div className="mx-auto px-4 py-3 lg:px-8">
-        <div className="flex items-center justify-between gap-4">
-          <Link to="/" className="flex items-center">
+    <nav className="sticky top-0 z-40 border-b border-gold/20 bg-cream/95 shadow-sm backdrop-blur">
+      <div className="container-custom px-4 py-3 lg:px-8">
+        <div className="flex items-center justify-between gap-2 sm:gap-4">
+          <Link to="/" className="flex min-w-0 shrink items-center">
             <img
               src={logo}
               alt="Sunita'z Collection"
-              className="h-16 w-auto object-contain"
+              className="h-11 w-auto object-contain sm:h-14 lg:h-16"
             />
           </Link>
 
@@ -88,12 +77,12 @@ const Navbar = () => {
             ))}
           </div>
 
-          <div className="flex items-center gap-2.5">
-            <div className="flex items-center gap-1.5">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2.5">
+            <div className="flex items-center gap-1.5 sm:gap-2.5">
               <button
                 type="button"
                 onClick={() => navigate('/shop')}
-                className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-gold/40 text-ink-light transition hover:border-primary hover:text-primary"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-gold/40 text-ink-light transition hover:border-primary hover:text-primary sm:h-11 sm:w-11"
                 aria-label="Search products"
               >
                 <FaSearch />
@@ -103,7 +92,7 @@ const Navbar = () => {
 
               <Link
                 to="/cart"
-                className="relative inline-flex h-11 w-11 items-center justify-center rounded-full border border-gold/40 text-ink-light transition hover:border-primary hover:text-primary"
+                className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-gold/40 text-ink-light transition hover:border-primary hover:text-primary sm:h-11 sm:w-11"
                 aria-label="Shopping cart"
               >
                 <FaShoppingCart />
@@ -118,7 +107,7 @@ const Navbar = () => {
             <button
               type="button"
               onClick={() => setMobileOpen((v) => !v)}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-gold/40 text-primary lg:hidden"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-gold/40 text-primary sm:h-11 sm:w-11 lg:hidden"
               aria-label="Open menu"
               aria-expanded={mobileOpen}
             >
@@ -156,66 +145,90 @@ const Navbar = () => {
           </div>
         </div>
 
-        {mobileOpen && (
-          <>
-            <div
-              className="fixed inset-0 z-30 bg-black/40 lg:hidden"
-              onClick={() => setMobileOpen(false)}
-              aria-hidden="true"
-            />
-            <div
-              className="fixed inset-x-0 bottom-0 z-40 overflow-y-auto bg-cream px-4 pb-8 pt-3 lg:hidden"
-              style={{ top: navHeight || undefined }}
-            >
-              <div className="space-y-1">
-                {links.map((link) => (
-                  <Link
-                    key={link.label}
-                    to={link.to}
-                    className={`flex min-h-[48px] items-center rounded-xl px-4 py-3 text-[15px] font-medium transition ${
-                      isActive(link.to)
-                        ? 'bg-primary/10 text-primary'
-                        : 'text-ink-light hover:bg-primary/5'
-                    }`}
-                  >
-                    {link.label}
+        {mobileOpen &&
+          createPortal(
+            <div className="fixed inset-0 z-[100] lg:hidden">
+              <div
+                className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                onClick={() => setMobileOpen(false)}
+                aria-hidden="true"
+              />
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-label="Main menu"
+                className="absolute inset-x-0 bottom-0 top-0 flex flex-col overflow-hidden bg-cream sm:inset-y-0 sm:left-auto sm:right-0 sm:top-0 sm:w-[380px] sm:border-l sm:border-gold/20 sm:shadow-luxury"
+              >
+                <div className="flex items-center justify-between border-b border-gold/20 px-4 py-3">
+                  <Link to="/" onClick={() => setMobileOpen(false)} className="flex items-center">
+                    <img src={logo} alt="Sunita'z Collection" className="h-11 w-auto object-contain" />
                   </Link>
-                ))}
-                {isAuthenticated ? (
-                  <>
-                    <div className="mt-3 flex items-center gap-3 rounded-xl bg-primary/5 px-4 py-3">
-                      <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full border-2 border-primary">
-                        <Avatar src={user?.avatar} name={user?.name} size="sm" showBorder={false} />
+                  <button
+                    type="button"
+                    onClick={() => setMobileOpen(false)}
+                    className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-gold/40 text-primary"
+                    aria-label="Close menu"
+                  >
+                    <FaTimes />
+                  </button>
+                </div>
+
+                <nav className="flex-1 overflow-y-auto overscroll-contain px-3 py-4">
+                  <ul className="space-y-1">
+                    {links.map((link) => (
+                      <li key={link.label}>
+                        <Link
+                          to={link.to}
+                          onClick={() => setMobileOpen(false)}
+                          className={`flex min-h-[48px] items-center rounded-xl px-4 py-3 text-[15px] font-medium transition ${
+                            isActive(link.to)
+                              ? 'bg-primary/10 text-primary'
+                              : 'text-ink-light hover:bg-primary/5'
+                          }`}
+                        >
+                          {link.label}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+
+                  {isAuthenticated ? (
+                    <div className="mt-4 border-t border-gold/20 pt-4">
+                      <div className="flex items-center gap-3 rounded-xl bg-primary/5 px-4 py-3">
+                        <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full border-2 border-primary">
+                          <Avatar src={user?.avatar} name={user?.name} size="sm" showBorder={false} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold text-primary">{user?.name || 'User'}</p>
+                          <p className="truncate text-xs text-ink-light">{user?.email || ''}</p>
+                        </div>
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-primary">{user?.name || 'User'}</p>
-                        <p className="truncate text-xs text-ink-light">{user?.email || ''}</p>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          logout();
+                          navigate('/');
+                          setMobileOpen(false);
+                        }}
+                        className="btn-elegant mt-3 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white hover:bg-primary-dark"
+                      >
+                        <FaSignOutAlt /> Logout
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        logout();
-                        navigate('/');
-                        setMobileOpen(false);
-                      }}
-                      className="btn-elegant mt-2 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white hover:bg-primary-dark"
+                  ) : (
+                    <Link
+                      to="/login"
+                      onClick={() => setMobileOpen(false)}
+                      className="btn-elegant mt-4 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white hover:bg-primary-dark"
                     >
-                      <FaSignOutAlt /> Logout
-                    </button>
-                  </>
-                ) : (
-                  <Link
-                    to="/login"
-                    className="btn-elegant mt-2 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white hover:bg-primary-dark"
-                  >
-                    <FaUser /> Login
-                  </Link>
-                )}
+                      <FaUser /> Login
+                    </Link>
+                  )}
+                </nav>
               </div>
-            </div>
-          </>
-        )}
+            </div>,
+            document.body
+          )}
       </div>
     </nav>
   );

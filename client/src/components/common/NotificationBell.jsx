@@ -104,7 +104,7 @@ const NotificationBell = ({ badgeClassName = '' }) => {
       <button
         type="button"
         onClick={handleOpen}
-        className="relative rounded-full border border-gold/40 p-2.5 text-ink-light transition hover:border-primary hover:text-primary"
+        className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-gold/40 text-ink-light transition hover:border-primary hover:text-primary sm:h-11 sm:w-11"
         aria-label="Notifications"
       >
         <FaBell />
@@ -118,7 +118,12 @@ const NotificationBell = ({ badgeClassName = '' }) => {
         <div className="absolute right-0 top-12 z-50 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-gold/20 bg-white shadow-xl">
           <div className="flex items-center justify-between border-b border-gold/20 bg-cream/50 px-4 py-3">
             <p className="font-semibold text-ink">Notifications</p>
-            <button type="button" onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600">
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="-mr-2 inline-flex h-9 w-9 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+              aria-label="Close notifications"
+            >
               <FaTimes />
             </button>
           </div>

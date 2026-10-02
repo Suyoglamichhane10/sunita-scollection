@@ -192,9 +192,9 @@ const Messages = () => {
             {activeId ? (
               <ChatWindow key={activeId} conversationId={activeId} />
             ) : (
-              <div className="flex h-[600px] flex-col items-center justify-center rounded-3xl border border-gray-200 bg-white shadow-sm">
-                <FaComments className="text-5xl text-gray-300" />
-                <p className="mt-4 text-lg font-semibold text-gray-700">Select a conversation</p>
+              <div className="flex h-[70vh] min-h-[320px] flex-col items-center justify-center rounded-3xl border border-gray-200 bg-white shadow-sm md:h-[600px]">
+                <FaComments className="text-4xl text-gray-300 sm:text-5xl" />
+                <p className="mt-4 text-center text-base font-semibold text-gray-700 sm:text-lg">Select a conversation</p>
                 <p className="mt-1 text-sm text-gray-500">or start a new chat to talk to us.</p>
               </div>
             )}

@@ -9,7 +9,7 @@ import FonepayLogo from '../../assets/fonepay.png';
 const Footer = () => {
   return (
     <footer className="footer-gradient mt-auto border-t border-gold/20 text-white">
-      <div className="mx-auto px-4 py-12 lg:px-8">
+      <div className="container-custom px-4 py-12 lg:px-8">
         <div className="grid gap-8 md:grid-cols-3">
           {/* Brand */}
           <div className="flex flex-col items-center text-center">
