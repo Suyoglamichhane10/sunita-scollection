@@ -70,6 +70,15 @@ canvas {
   scrollbar-width: thin;
 }
 
+/* Slider strips keep their own scrollbar hidden so the tab row stays clean. */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
 /* Elegant serif headings */
 h1, h2, h3, .font-serif {
   font-family: 'Playfair Display', Georgia, serif;

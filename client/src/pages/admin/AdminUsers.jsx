@@ -146,11 +146,11 @@ const AdminUsers = () => {
             <table className="min-w-full divide-y divide-gray-200 text-left text-sm">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 font-semibold text-gray-900">Name</th>
-                  <th className="px-6 py-3 font-semibold text-gray-900">Email</th>
-                  <th className="px-6 py-3 font-semibold text-gray-900">Role</th>
-                  <th className="px-6 py-3 font-semibold text-gray-900">Joined</th>
-                  <th className="px-6 py-3 font-semibold text-gray-900">Actions</th>
+                  <th className="px-3 py-3 font-semibold text-gray-900 sm:px-6">Name</th>
+                  <th className="hidden px-3 py-3 font-semibold text-gray-900 sm:table-cell sm:px-6">Email</th>
+                  <th className="px-3 py-3 font-semibold text-gray-900 sm:px-6">Role</th>
+                  <th className="hidden px-3 py-3 font-semibold text-gray-900 md:table-cell sm:px-6">Joined</th>
+                  <th className="sticky right-0 bg-gray-50 px-3 py-3 font-semibold text-gray-900 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] sm:px-6">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white">
@@ -165,17 +165,17 @@ const AdminUsers = () => {
                     const isSelf = currentUser?._id === user._id;
                     return (
                        <tr key={user._id}>
-                         <td className="px-6 py-4">
+                         <td className="px-3 py-4 sm:px-6">
                            <div className="flex items-center gap-3">
                              <Avatar src={user.avatar} name={user.name} size="sm" showBorder={true} borderColor="border-gray-200" />
-                             <div>
+                             <div className="min-w-0">
                                <span className="font-medium text-gray-900">{user.name}</span>
                                {isSelf && <span className="ml-2 rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-semibold text-blue-700">You</span>}
                              </div>
                            </div>
                          </td>
-                         <td className="px-6 py-4 text-gray-600">{user.email}</td>
-                        <td className="px-6 py-4">
+                         <td className="hidden px-3 py-4 text-gray-600 sm:table-cell sm:px-6">{user.email}</td>
+                        <td className="px-3 py-4 sm:px-6">
                           <div className="flex items-center gap-2">
                             <select
                               value={user.role}
@@ -189,23 +189,25 @@ const AdminUsers = () => {
                             {updatingId === user._id && <FaSpinner className="animate-spin text-pink-600" />}
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-gray-600">{new Date(user.createdAt).toLocaleDateString()}</td>
-                        <td className="px-6 py-4">
+                        <td className="hidden px-3 py-4 text-gray-600 md:table-cell sm:px-6">{new Date(user.createdAt).toLocaleDateString()}</td>
+                        <td className="sticky right-0 bg-white px-3 py-4 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] sm:px-6">
                           <div className="flex items-center gap-2">
                             <button
                               type="button"
                               onClick={() => openProfile(user)}
-                              className="flex items-center gap-1 rounded-full border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 hover:border-primary hover:text-primary"
+                              aria-label={`View profile of ${user.name}`}
+                              className="flex min-h-[40px] items-center gap-1 rounded-full border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 hover:border-primary hover:text-primary"
                             >
-                              <FaEye className="text-xs" /> View Profile
+                              <FaEye className="text-xs" /> <span className="hidden sm:inline">View Profile</span>
                             </button>
                             <button
                               type="button"
                               onClick={() => handleDelete(user)}
                               disabled={isSelf || updatingId === user._id}
-                              className="flex items-center gap-1 rounded-full border border-red-500 bg-red-50 px-3 py-1.5 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-40"
+                              aria-label={`Delete ${user.name}`}
+                              className="flex min-h-[40px] items-center gap-1 rounded-full border border-red-500 bg-red-50 px-3 py-1.5 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-40"
                             >
-                              <FaTrash className="text-xs" /> Delete
+                              <FaTrash className="text-xs" /> <span className="hidden sm:inline">Delete</span>
                             </button>
                           </div>
                         </td>

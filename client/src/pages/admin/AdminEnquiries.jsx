@@ -166,13 +166,13 @@ const AdminEnquiries = () => {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gold/20 bg-gray-50 text-left text-ink-light">
-                  <th className="pb-3 pr-4 pl-6">Date</th>
+                  <th className="pb-3 pl-4 pr-4 sm:pl-6">Date</th>
                   <th className="pb-3 pr-4">Customer</th>
                   <th className="pb-3 pr-4">Product</th>
-                  <th className="pb-3 pr-4">Phone</th>
+                  <th className="hidden pb-3 pr-4 md:table-cell">Phone</th>
                   <th className="pb-3 pr-4">Status</th>
                   <th className="pb-3 pr-4">Quote</th>
-                  <th className="pb-3 pr-4">Actions</th>
+                  <th className="sticky right-0 bg-gray-50 pb-3 pr-4 pl-4 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] sm:pr-6">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -188,7 +188,7 @@ const AdminEnquiries = () => {
                     return (
                       <React.Fragment key={enquiry._id}>
                         <tr className="border-b border-gray-100 hover:bg-cream/50">
-                          <td className="py-3 pr-4 pl-6 text-xs text-gray-500">
+                          <td className="py-3 pr-4 pl-4 text-xs text-gray-500 sm:pl-6">
                             {new Date(enquiry.createdAt).toLocaleDateString()} {new Date(enquiry.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </td>
                           <td className="py-3 pr-4">
@@ -208,7 +208,7 @@ const AdminEnquiries = () => {
                               </span>
                             )}
                           </td>
-                          <td className="py-3 pr-4 text-gray-700">{enquiry.phone}</td>
+                          <td className="hidden py-3 pr-4 text-gray-700 md:table-cell">{enquiry.phone}</td>
                           <td className="py-3 pr-4">
                             <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${status.bg} ${status.text}`}>
                               <StatusIcon className="h-3 w-3" /> {status.label}
@@ -226,26 +226,29 @@ const AdminEnquiries = () => {
                               </span>
                             )}
                           </td>
-                          <td className="py-3 pr-6">
+                          <td className="sticky right-0 bg-white py-3 pr-4 pl-4 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] sm:pr-6">
                             <div className="flex items-center gap-1">
                               <button
                                 onClick={() => setExpandedId(isExpanded ? null : enquiry._id)}
-                                className="rounded-lg bg-primary/10 p-1.5 text-primary hover:bg-primary/20"
+                                className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary hover:bg-primary/20"
                                 title="Thread"
+                                aria-label={`Open thread for ${enquiry.name}`}
                               >
                                 <FaReply className="h-4 w-4" />
                               </button>
                               <a
                                 href={`tel:${enquiry.phone}`}
-                                className="rounded-lg bg-gray-100 p-1.5 text-gray-700 hover:bg-gray-200"
+                                className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200"
                                 title="Call"
+                                aria-label={`Call ${enquiry.name}`}
                               >
                                 <FaPhoneAlt className="h-4 w-4" />
                               </a>
                               <button
                                 onClick={() => handleDeleteClick(enquiry._id)}
-                                className="rounded-lg bg-red-100 p-1.5 text-red-700 hover:bg-red-200"
+                                className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-red-100 text-red-700 hover:bg-red-200"
                                 title="Delete"
+                                aria-label={`Delete enquiry from ${enquiry.name}`}
                               >
                                 <FaTrashAlt className="h-4 w-4" />
                               </button>

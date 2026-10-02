@@ -549,10 +549,10 @@ const AdminCatalog = () => {
         </div>
 
         <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-900">{editing ? 'Edit Product' : 'Add New Product'}</h1>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">{editing ? 'Edit Product' : 'Add New Product'}</h1>
             {editing && (
-              <button type="button" onClick={cancelEdit} className="rounded-full border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
+              <button type="button" onClick={cancelEdit} className="min-h-[44px] rounded-full border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
                 Cancel
               </button>
             )}

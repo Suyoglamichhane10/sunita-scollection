@@ -7,7 +7,8 @@ import {
   FaExchangeAlt, FaRedo, FaPhone, FaTrash,
   FaCopy, FaTrophy, FaMedal, FaGift, FaEyeSlash, FaSave,
   FaPlus, FaEnvelope, FaTimes,
-  FaCamera, FaBan, FaUndo, FaDownload, FaPhoneAlt, FaMapMarkerAlt, FaCheck
+  FaCamera, FaBan, FaUndo, FaDownload, FaPhoneAlt, FaMapMarkerAlt, FaCheck,
+  FaChevronLeft, FaChevronRight
 } from 'react-icons/fa';
 import api from '../../Services/api';
 import { useAuth } from '../../Context/Authcontext';
@@ -153,11 +154,37 @@ const Dashboard = () => {
   const [enquiryUnreadCount, setEnquiryUnreadCount] = useState(0);
   const fileInputRef = useRef(null);
   const activeTabRef = useRef(null);
+  const tabStripRef = useRef(null);
+  const touchStartXRef = useRef(null);
+  const activeIndex = Math.max(
+    0,
+    DASHBOARD_SECTIONS.findIndex((s) => s.id === active)
+  );
 
   // On a phone the 7 tabs overflow, so keep the selected one on screen.
   useEffect(() => {
     activeTabRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
   }, [active]);
+
+  const stepSection = (delta) => {
+    const next = DASHBOARD_SECTIONS[activeIndex + delta];
+    if (next) switchSection(next.id);
+  };
+
+  // A deliberate horizontal flick moves one section along, which is what
+  // people expect from a carousel on a phone.
+  const onTouchStart = (e) => {
+    touchStartXRef.current = e.touches[0].clientX;
+  };
+
+  const onTouchEnd = (e) => {
+    const startX = touchStartXRef.current;
+    touchStartXRef.current = null;
+    if (startX == null) return;
+    const deltaX = e.changedTouches[0].clientX - startX;
+    if (Math.abs(deltaX) < 48) return;
+    stepSection(deltaX < 0 ? 1 : -1);
+  };
 
   useEffect(() => {
     if (authLoading) return;
@@ -427,37 +454,66 @@ if (loading) {
     <Fragment>
     <div className="min-h-screen bg-cream py-8">
       <div className="container-custom px-4 lg:px-8">
-        {/* Tab Bar */}
-        <div className="mb-6 -mx-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">
-          <div role="tablist" className="flex snap-x snap-mandatory gap-2 border-b border-gold/20">
-          {DASHBOARD_SECTIONS.map((section) => {
-            const Icon = section.icon;
-            const isActiveTab = active === section.id;
-            const showBadge = section.id === 'enquiries' && enquiryUnreadCount > 0 && !isActiveTab;
-            return (
-              <button
-                key={section.id}
-                ref={isActiveTab ? activeTabRef : null}
-                role="tab"
-                aria-selected={isActiveTab}
-                onClick={() => switchSection(section.id)}
-                className={`relative flex min-h-[44px] shrink-0 snap-start items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold transition sm:px-5 ${
-                  isActiveTab
-                    ? 'bg-primary text-white'
-                    : 'bg-white text-gray-700 hover:bg-primary/5 hover:text-primary'
-                }`}
-              >
-                <Icon className="shrink-0 text-xs" />
-                <span className="whitespace-nowrap">{section.label}</span>
-                {showBadge && (
-                  <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-600 px-1.5 text-[10px] font-bold text-white shadow">
-                    {enquiryUnreadCount > 9 ? '9+' : enquiryUnreadCount}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+        {/* Tab Bar — horizontally scrollable strip with snap, plus swipe to
+            move between sections on touch devices. */}
+        <div className="mb-6 -mx-4 px-4 sm:mx-0 sm:px-0">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => stepSection(-1)}
+              disabled={activeIndex === 0}
+              aria-label="Previous section"
+              className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-full border border-gold/40 text-primary disabled:opacity-30 sm:inline-flex"
+            >
+              <FaChevronLeft />
+            </button>
+
+            <div
+              ref={tabStripRef}
+              onTouchStart={onTouchStart}
+              onTouchEnd={onTouchEnd}
+              className="scrollbar-none -mx-1 flex flex-1 snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-2"
+            >
+              {DASHBOARD_SECTIONS.map((section, index) => {
+                const Icon = section.icon;
+                const isActiveTab = active === section.id;
+                const showBadge = section.id === 'enquiries' && enquiryUnreadCount > 0 && !isActiveTab;
+                return (
+                  <button
+                    key={section.id}
+                    ref={isActiveTab ? activeTabRef : null}
+                    role="tab"
+                    aria-selected={isActiveTab}
+                    onClick={() => switchSection(section.id)}
+                    className={`relative flex min-h-[44px] shrink-0 snap-start items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold transition sm:px-5 ${
+                      isActiveTab
+                        ? 'bg-primary text-white'
+                        : 'bg-white text-gray-700 hover:bg-primary/5 hover:text-primary'
+                    }`}
+                  >
+                    <Icon className="shrink-0 text-xs" />
+                    <span className="whitespace-nowrap">{section.label}</span>
+                    {showBadge && (
+                      <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-600 px-1.5 text-[10px] font-bold text-white shadow">
+                        {enquiryUnreadCount > 9 ? '9+' : enquiryUnreadCount}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => stepSection(1)}
+              disabled={activeIndex === DASHBOARD_SECTIONS.length - 1}
+              aria-label="Next section"
+              className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-full border border-gold/40 text-primary disabled:opacity-30 sm:inline-flex"
+            >
+              <FaChevronRight />
+            </button>
           </div>
+          <div className="mt-1 h-px bg-gold/20 sm:hidden" />
         </div>
 
         {/* Overview Section */}

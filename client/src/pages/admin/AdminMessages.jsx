@@ -113,12 +113,12 @@ const AdminMessages = () => {
                 <thead>
                   <tr className="border-b border-gray-200 text-left text-sm text-gray-500">
                     <th className="pb-3 font-medium">Customer</th>
-                    <th className="pb-3 font-medium">Phone</th>
+                    <th className="hidden pb-3 font-medium md:table-cell">Phone</th>
                     <th className="pb-3 font-medium">Source</th>
                     <th className="pb-3 font-medium">Message</th>
                     <th className="pb-3 font-medium">Status</th>
-                    <th className="pb-3 font-medium">Date</th>
-                    <th className="pb-3 font-medium">Actions</th>
+                    <th className="hidden pb-3 font-medium lg:table-cell">Date</th>
+                    <th className="sticky right-0 bg-white pb-3 pl-3 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -127,7 +127,7 @@ const AdminMessages = () => {
                       <td className="py-4">
                         <p className="font-semibold text-gray-900">{message.senderName}</p>
                       </td>
-                      <td className="py-4 text-sm text-gray-700">
+                      <td className="hidden py-4 text-sm text-gray-700 md:table-cell">
                         {message.senderContact || '-'}
                       </td>
                       <td className="py-4">
@@ -146,24 +146,26 @@ const AdminMessages = () => {
                           {message.status}
                         </span>
                       </td>
-                      <td className="py-4 text-sm text-gray-500">
+                      <td className="hidden py-4 text-sm text-gray-500 lg:table-cell">
                         {new Date(message.createdAt).toLocaleDateString()}
                       </td>
-                      <td className="py-4">
+                      <td className="sticky right-0 bg-white py-4 pl-3 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                         <div className="flex flex-wrap gap-2">
                           <button
                             type="button"
                             onClick={() => document.getElementById(`reply-input-${message._id}`)?.focus()}
-                            className="flex items-center gap-1 rounded-full bg-pink-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-pink-700"
+                            aria-label={`Reply to ${message.senderName}`}
+                            className="flex min-h-[40px] items-center gap-1 rounded-full bg-pink-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-pink-700"
                           >
-                            <FaReply /> Reply
+                            <FaReply /> <span className="hidden sm:inline">Reply</span>
                           </button>
                           <button
                             type="button"
                             onClick={() => handleDelete(message)}
-                            className="flex items-center gap-1 rounded-full bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700"
+                            aria-label={`Delete message from ${message.senderName}`}
+                            className="flex min-h-[40px] items-center gap-1 rounded-full bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700"
                           >
-                            <FaTrash /> Delete
+                            <FaTrash /> <span className="hidden sm:inline">Delete</span>
                           </button>
                         </div>
                         <div className="mt-2 flex gap-2">

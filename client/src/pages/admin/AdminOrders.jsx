@@ -123,11 +123,11 @@ const AdminOrders = () => {
               <thead className="border-b border-gray-200 text-gray-500">
                 <tr>
                   <th className="px-3 py-3">Order #</th>
-                  <th className="px-3 py-3">Customer</th>
+                  <th className="hidden px-3 py-3 sm:table-cell">Customer</th>
                   <th className="px-3 py-3">Total</th>
                   <th className="px-3 py-3">Status</th>
-                  <th className="px-3 py-3">Payment</th>
-                  <th className="px-3 py-3">Actions</th>
+                  <th className="hidden px-3 py-3 md:table-cell">Payment</th>
+                  <th className="sticky right-0 bg-white px-3 py-3 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -137,7 +137,7 @@ const AdminOrders = () => {
                   filtered.map((order) => (
                     <tr key={order._id} className="border-b border-gray-100">
                       <td className="px-3 py-3 font-medium text-gray-900">{order.orderNumber}</td>
-                      <td className="px-3 py-3 text-gray-600">{order.user?.name || 'Guest'}</td>
+                      <td className="hidden px-3 py-3 text-gray-600 sm:table-cell">{order.user?.name || 'Guest'}</td>
                       <td className="px-3 py-3 text-gray-600">Rs. {order.totalAmount}</td>
                       <td className="px-3 py-3">
                         <select
@@ -151,25 +151,27 @@ const AdminOrders = () => {
                           ))}
                         </select>
                       </td>
-                      <td className="px-3 py-3">
+                      <td className="hidden px-3 py-3 md:table-cell">
                         <span className={`rounded-full px-3 py-1 text-xs font-semibold ${paymentColor(order.paymentStatus)}`}>{order.paymentStatus}</span>
                       </td>
-                      <td className="px-3 py-3">
+                      <td className="sticky right-0 bg-white px-3 py-3 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
                             onClick={() => setSelectedOrder(order)}
-                            className="flex items-center gap-1 rounded-full bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700"
+                            aria-label={`View order ${order.orderNumber}`}
+                            className="flex min-h-[40px] items-center gap-1 rounded-full bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700"
                           >
-                            <FaEye /> Details
+                            <FaEye /> <span className="hidden sm:inline">Details</span>
                           </button>
                           <button
                             type="button"
                             onClick={() => handleDelete(order)}
                             disabled={updating}
-                            className="flex items-center gap-1 rounded-full bg-red-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-40"
+                            aria-label={`Delete order ${order.orderNumber}`}
+                            className="flex min-h-[40px] items-center gap-1 rounded-full bg-red-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-40"
                           >
-                            <FaTrash /> Delete
+                            <FaTrash /> <span className="hidden sm:inline">Delete</span>
                           </button>
                         </div>
                       </td>

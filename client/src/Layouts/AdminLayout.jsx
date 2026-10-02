@@ -169,7 +169,7 @@ const AdminLayout = () => {
       {/* Sidebar drawer on mobile, static sidebar on desktop */}
       <aside
         className={[
-          'fixed inset-y-0 left-0 z-40 w-80 transform bg-cream shadow-xl transition-transform duration-300 ease-in-out lg:static lg:z-auto lg:translate-x-0 lg:w-[280px] lg:shadow-none',
+          'fixed inset-y-0 left-0 z-40 w-80 transform overflow-y-auto bg-cream p-4 shadow-xl transition-transform duration-300 ease-in-out lg:static lg:z-auto lg:translate-x-0 lg:w-[280px] lg:overflow-y-hidden lg:shadow-none',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full',
         ].join(' ')}
       >
@@ -177,7 +177,7 @@ const AdminLayout = () => {
         <button
           type="button"
           onClick={() => setSidebarOpen(false)}
-          className="absolute right-3 top-3 rounded-full border border-gold/40 p-2 text-primary lg:hidden"
+          className="absolute right-3 top-3 inline-flex h-10 w-10 items-center justify-center rounded-full border border-gold/40 text-primary lg:hidden"
           aria-label="Close sidebar"
         >
           <FaTimes />
@@ -193,13 +193,13 @@ const AdminLayout = () => {
           <button
             type="button"
             onClick={() => setSidebarOpen(true)}
-            className="rounded-full border border-gold/40 p-2.5 text-primary"
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-gold/40 text-primary"
             aria-label="Open sidebar"
           >
             <FaBars />
           </button>
           <p className="font-serif text-base font-bold text-primary">Store management</p>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
               <NotificationCenter />
               {counts.unread > 0 && (
                 <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-600 px-1.5 text-[11px] font-bold text-white">

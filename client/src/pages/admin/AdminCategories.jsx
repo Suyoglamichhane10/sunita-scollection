@@ -172,10 +172,10 @@ const AdminCategories = () => {
                 <table className="min-w-full divide-y divide-gray-200 text-left text-sm">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 font-semibold text-gray-900">Name</th>
-                      <th className="px-6 py-3 font-semibold text-gray-900">Status</th>
-                      <th className="px-6 py-3 font-semibold text-gray-900">Order</th>
-                      <th className="px-6 py-3 font-semibold text-gray-900">Actions</th>
+                      <th className="px-3 py-3 font-semibold text-gray-900 sm:px-6">Name</th>
+                      <th className="px-3 py-3 font-semibold text-gray-900 sm:px-6">Status</th>
+                      <th className="hidden px-3 py-3 font-semibold text-gray-900 sm:table-cell sm:px-6">Order</th>
+                      <th className="sticky right-0 bg-gray-50 px-3 py-3 font-semibold text-gray-900 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] sm:px-6">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 bg-white">
@@ -186,24 +186,28 @@ const AdminCategories = () => {
                     ) : categories.length ? (
                       categories.map((category) => (
                         <tr key={category._id}>
-                          <td className="px-6 py-4 text-gray-900">{category.name}</td>
-                          <td className="px-6 py-4 text-gray-600">{category.isActive ? 'Active' : 'Inactive'}</td>
-                          <td className="px-6 py-4 text-gray-600">{category.order}</td>
-                          <td className="px-6 py-4 text-gray-600 space-x-2">
-                            <button
-                              type="button"
-                              onClick={() => handleEdit(category)}
-                              className="rounded-full border border-blue-500 bg-blue-50 px-3 py-1 text-blue-700"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDelete(category._id)}
-                              className="rounded-full border border-red-500 bg-red-50 px-3 py-1 text-red-700"
-                            >
-                              Delete
-                            </button>
+                          <td className="px-3 py-4 text-gray-900 sm:px-6">{category.name}</td>
+                          <td className="px-3 py-4 text-gray-600 sm:px-6">{category.isActive ? 'Active' : 'Inactive'}</td>
+                          <td className="hidden px-3 py-4 text-gray-600 sm:table-cell sm:px-6">{category.order}</td>
+                          <td className="sticky right-0 bg-white px-3 py-4 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] sm:px-6">
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleEdit(category)}
+                                aria-label={`Edit ${category.name}`}
+                                className="min-h-[40px] rounded-full border border-blue-500 bg-blue-50 px-3 py-1 text-blue-700"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(category._id)}
+                                aria-label={`Delete ${category.name}`}
+                                className="min-h-[40px] rounded-full border border-red-500 bg-red-50 px-3 py-1 text-red-700"
+                              >
+                                Delete
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))
