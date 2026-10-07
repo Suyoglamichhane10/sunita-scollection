@@ -723,24 +723,29 @@ exports.getCart = async (req, res, next) => {
   exports.addToCart = async (req, res, next) => {
     try {
       const { productId, quantity = 1, variantSku = null, dealPrice = null } = req.body;
+      console.log('[addToCart] Request:', { userId: req.user.id, productId, quantity, variantSku, dealPrice });
       if (!productId) {
         return res.status(400).json({ success: false, message: 'productId is required' });
       }
 
       // Validate dealPrice against approved enquiry
       if (dealPrice !== null && dealPrice !== undefined && dealPrice !== '') {
+        const dealPriceNum = Number(dealPrice);
+        console.log('[addToCart] Validating dealPrice:', dealPriceNum);
         const validEnquiry = await Enquiry.findOne({
           userId: req.user.id,
           productId,
           status: { $in: ['deal_closed', 'customer_agreed', 'converted'] },
-          dealPrice: { $eq: Number(dealPrice) },
+          dealPrice: { $eq: dealPriceNum },
         });
         if (!validEnquiry) {
+          console.warn('[addToCart] Deal price validation failed for:', { userId: req.user.id, productId, dealPrice: dealPriceNum });
           return res.status(403).json({
             success: false,
             message: 'This deal price is not authorized. Please confirm the enquiry deal first.',
           });
         }
+        console.log('[addToCart] Deal price validated for enquiry:', validEnquiry._id);
       }
 
       // Validate quantity: must be a positive integer.

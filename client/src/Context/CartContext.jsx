@@ -59,14 +59,20 @@ const describeCartError = (error, fallback) => {
   const serverMessage = error?.response?.data?.message;
   if (typeof serverMessage === 'string' && serverMessage.trim()) return serverMessage;
   if (status === 401) return 'Your session expired. Please log in again.';
+  if (status === 403) return 'This deal price is not authorized. Please confirm the enquiry deal first.';
   if (status === 429) return 'Too many requests. Please wait a moment and try again.';
   if (status >= 500) return 'The server is temporarily unavailable. Please try again.';
   if (error?.code === 'ECONNABORTED') return 'The server took too long to respond. Please try again.';
-  if (!error?.response) return 'Cannot reach the server. Check your connection and try again.';
+  if (!error?.response) {
+    console.error('Cart network error:', error);
+    return 'Cannot reach the server. Please check your internet connection and try again.';
+  }
   return fallback;
 };
 
 const GUEST_CART_KEY = 'guest_cart';
+const MAX_RETRIES = 2;
+const RETRY_DELAY = 1000;
 
 export const CartProvider = ({ children }) => {
   const { isAuthenticated, user, loading: authLoading } = useAuth();
@@ -201,7 +207,7 @@ const { data } = await api.get('/users/profile/cart');
     setTotalPrice(price);
   }, [cartItems]);
 
- const addToCart = useCallback(
+const addToCart = useCallback(
     (product, quantity = 1, variant = null, dealPrice = null) => {
       if (!isAuthenticated) {
         toast.error('Please login to add items to your cart');
@@ -238,20 +244,27 @@ const { data } = await api.get('/users/profile/cart');
         return consolidateCartItems([...prev, newItem]);
       });
 
-      api
-        .post('/users/profile/cart', { productId: product._id, quantity: sanitizedQty, variantSku, dealPrice: dealPrice || undefined })
-        .then(({ data }) => {
+      const attemptAddToCart = async (retryCount = 0) => {
+        try {
+          const { data } = await api.post('/users/profile/cart', { productId: product._id, quantity: sanitizedQty, variantSku, dealPrice: dealPrice || undefined });
           setCartItems(
             consolidateCartItems(
               (data.cart || []).map(normalizeServerItem).filter(Boolean)
             )
           );
           toast.success('Added to cart!');
-        })
-        .catch((error) => {
+        } catch (error) {
+          const isNetworkError = !error?.response || error?.code === 'ECONNABORTED' || error?.code === 'ENOTFOUND' || error?.code === 'ECONNREFUSED';
+          if (isNetworkError && retryCount < MAX_RETRIES) {
+            await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY * (retryCount + 1)));
+            return attemptAddToCart(retryCount + 1);
+          }
           toast.error(describeCartError(error, 'Unable to add to cart'));
           fetchServerCart();
-        });
+        }
+      };
+
+      attemptAddToCart();
       return true;
     },
     [isAuthenticated, fetchServerCart]
@@ -261,9 +274,19 @@ const { data } = await api.get('/users/profile/cart');
     (key) => {
       setCartItems((prev) => prev.filter((item) => item.key !== key));
       if (isAuthenticated) {
-        api
-          .delete(`/users/profile/cart/${key}`)
-          .catch((error) => toast.error(describeCartError(error, 'Unable to remove item')));
+        const attemptRemove = async (retryCount = 0) => {
+          try {
+            await api.delete(`/users/profile/cart/${key}`);
+          } catch (error) {
+            const isNetworkError = !error?.response || error?.code === 'ECONNABORTED' || error?.code === 'ENOTFOUND' || error?.code === 'ECONNREFUSED';
+            if (isNetworkError && retryCount < MAX_RETRIES) {
+              await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY * (retryCount + 1)));
+              return attemptRemove(retryCount + 1);
+            }
+            toast.error(describeCartError(error, 'Unable to remove item'));
+          }
+        };
+        attemptRemove();
       }
       toast.success('Removed from cart');
     },
@@ -282,9 +305,19 @@ const { data } = await api.get('/users/profile/cart');
         )
       );
       if (isAuthenticated) {
-        api
-          .put(`/users/profile/cart/${key}`, { quantity })
-          .catch((error) => toast.error(describeCartError(error, 'Unable to update quantity')));
+        const attemptUpdate = async (retryCount = 0) => {
+          try {
+            await api.put(`/users/profile/cart/${key}`, { quantity });
+          } catch (error) {
+            const isNetworkError = !error?.response || error?.code === 'ECONNABORTED' || error?.code === 'ENOTFOUND' || error?.code === 'ECONNREFUSED';
+            if (isNetworkError && retryCount < MAX_RETRIES) {
+              await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY * (retryCount + 1)));
+              return attemptUpdate(retryCount + 1);
+            }
+            toast.error(describeCartError(error, 'Unable to update quantity'));
+          }
+        };
+        attemptUpdate();
       }
     },
     [isAuthenticated, removeFromCart]
