@@ -26,6 +26,10 @@ exports.uploadImages = async (req, res, next) => {
 // If Cloudinary is not configured, return the local file path so the
     // product can still be saved and the image can be served from /uploads.
     if (!isCloudinaryConfigured()) {
+      if (process.env.NODE_ENV === 'production') {
+        console.warn('⚠️ Cloudinary not configured - falling back to LOCAL storage (EPHEMERAL on Render/Heroku!)');
+        console.warn('⚠️ Images will DISAPPEAR on server restart. Configure Cloudinary for persistence.');
+      }
       const images = req.files.map((file) => ({
         url: getAbsoluteUrl(req, `/uploads/${path.basename(file.path)}`),
         publicId: null,
@@ -115,6 +119,9 @@ exports.uploadAvatar = async (req, res, next) => {
     let publicId;
 
     if (!isCloudinaryConfigured()) {
+      if (process.env.NODE_ENV === 'production') {
+        console.warn('⚠️ Cloudinary not configured - avatar stored locally (EPHEMERAL on Render/Heroku!)');
+      }
       avatarUrl = getAbsoluteUrl(req, `/uploads/${path.basename(req.file.path)}`);
       publicId = null;
     } else {

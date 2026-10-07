@@ -107,6 +107,23 @@ function startOnPort(port) {
     console.log(`📡 Environment: ${process.env.NODE_ENV}`);
     console.log(`✅ Frontend served from Vercel: https://sunitacollection-frontend.vercel.app`);
 
+    // Check Cloudinary configuration
+    const isCloudinaryConfigured = () =>
+      Boolean(
+        process.env.CLOUDINARY_CLOUD_NAME &&
+        process.env.CLOUDINARY_API_KEY &&
+        process.env.CLOUDINARY_API_SECRET &&
+        !process.env.CLOUDINARY_API_KEY.includes('your_')
+      );
+
+    if (!isCloudinaryConfigured()) {
+      console.warn('⚠️  Cloudinary NOT configured - images will be stored locally');
+      console.warn('⚠️  WARNING: On Render/Heroku, local storage is EPHEMERAL - images will disappear on restart!');
+      console.warn('⚠️  Fix: Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET in Render dashboard');
+    } else {
+      console.log('✅ Cloudinary configured - images will be stored permanently');
+    }
+
     // Connect to DB after server is listening
     connectDB().catch((err) => {
       console.error('❌ Database connection failed:', err.message);
