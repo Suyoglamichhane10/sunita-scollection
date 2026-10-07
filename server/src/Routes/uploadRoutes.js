@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const { uploadImages, uploadAvatar, deleteImage } = require('../controllers/uploadController');
+const { uploadImages, uploadAvatar, deleteImage, checkCloudinaryHealth } = require('../controllers/uploadController');
 const { protect, authorize } = require('../Middleware/auth');
 
 // Configure multer storage (temp local storage before Cloudinary upload)
@@ -30,6 +30,9 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
   fileFilter,
 });
+
+// Health check - public endpoint for monitoring
+router.get('/health/cloudinary', checkCloudinaryHealth);
 
 // Admin routes
 router.post('/image', protect, authorize('admin'), upload.array('images', 10), uploadImages);

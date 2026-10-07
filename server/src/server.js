@@ -117,9 +117,12 @@ function startOnPort(port) {
       );
 
     if (!isCloudinaryConfigured()) {
-      console.warn('⚠️  Cloudinary NOT configured - images will be stored locally');
-      console.warn('⚠️  WARNING: On Render/Heroku, local storage is EPHEMERAL - images will disappear on restart!');
-      console.warn('⚠️  Fix: Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET in Render dashboard');
+      console.error('🚨 CRITICAL: Cloudinary credentials not set. Image uploads will fail in production.');
+      if (process.env.NODE_ENV === 'production') {
+        console.error('🚨 PRODUCTION MODE: Uploads will be REJECTED. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET in Render dashboard.');
+      } else {
+        console.warn('⚠️  Development mode: falling back to local storage (images will not persist on restart)');
+      }
     } else {
       console.log('✅ Cloudinary configured - images will be stored permanently');
     }

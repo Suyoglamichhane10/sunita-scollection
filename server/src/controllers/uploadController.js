@@ -12,7 +12,9 @@ const isCloudinaryConfigured = () =>
     !process.env.CLOUDINARY_API_KEY.includes('your_')
   );
 
-// @desc    Upload images to Cloudinary (with local fallback)
+const isProduction = () => process.env.NODE_ENV === 'production';
+
+// @desc    Upload images to Cloudinary (with local fallback in dev only)
 // @route   POST /api/upload/image
 // @access  Private/Admin
 // Expects multipart/form-data with field 'images' (can be multiple)
@@ -23,13 +25,16 @@ exports.uploadImages = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'No images uploaded' });
     }
 
-// If Cloudinary is not configured, return the local file path so the
-    // product can still be saved and the image can be served from /uploads.
+    // In production, Cloudinary is REQUIRED. Reject if not configured.
     if (!isCloudinaryConfigured()) {
-      if (process.env.NODE_ENV === 'production') {
-        console.warn('⚠️ Cloudinary not configured - falling back to LOCAL storage (EPHEMERAL on Render/Heroku!)');
-        console.warn('⚠️ Images will DISAPPEAR on server restart. Configure Cloudinary for persistence.');
+      if (isProduction()) {
+        return res.status(500).json({
+          success: false,
+          message: 'Image storage is not configured. Please contact the administrator.',
+        });
       }
+      // Development: warn and fall back to local storage
+      console.warn('⚠️ Cloudinary not configured, using local storage (image will not persist on restart)');
       const images = req.files.map((file) => ({
         url: getAbsoluteUrl(req, `/uploads/${path.basename(file.path)}`),
         publicId: null,
@@ -37,10 +42,7 @@ exports.uploadImages = async (req, res, next) => {
       return res.status(200).json({ success: true, images, local: true });
     }
 
-    // Try uploading to Cloudinary. If it fails for any reason (bad/expired
-    // credentials, network issues, quota, etc.), gracefully fall back to
-    // serving the file from the local /uploads directory so the product can
-    // always be created without a server error.
+    // Try uploading to Cloudinary.
     try {
       const uploadPromises = req.files.map((file) => {
         return cloudinary.uploader.upload(file.path, {
@@ -57,15 +59,31 @@ exports.uploadImages = async (req, res, next) => {
         publicId: result.public_id,
       }));
 
+      // Log success in non-production
+      if (!isProduction()) {
+        results.forEach((result) => {
+          console.log(`✅ Uploaded to Cloudinary: ${result.secure_url}`);
+        });
+      } else {
+        console.log(`✅ ${results.length} image(s) uploaded to Cloudinary`);
+      }
+
       return res.status(200).json({ success: true, images });
     } catch (cloudinaryError) {
+      // Cloudinary configured but upload failed - in production, this is an error
+      console.error('❌ Cloudinary upload failed:', cloudinaryError.message);
+      if (isProduction()) {
+        return res.status(500).json({
+          success: false,
+          message: 'Image upload failed. Please try again.',
+        });
+      }
+      // Development: fall back to local storage
       console.warn('⚠️ Cloudinary upload failed, falling back to local storage:', cloudinaryError.message);
-
       const images = req.files.map((file) => ({
         url: getAbsoluteUrl(req, `/uploads/${path.basename(file.path)}`),
         publicId: null,
       }));
-
       return res.status(200).json({ success: true, images, local: true });
     }
   } catch (error) {
@@ -118,10 +136,16 @@ exports.uploadAvatar = async (req, res, next) => {
     let avatarUrl;
     let publicId;
 
+    // In production, Cloudinary is REQUIRED. Reject if not configured.
     if (!isCloudinaryConfigured()) {
-      if (process.env.NODE_ENV === 'production') {
-        console.warn('⚠️ Cloudinary not configured - avatar stored locally (EPHEMERAL on Render/Heroku!)');
+      if (isProduction()) {
+        return res.status(500).json({
+          success: false,
+          message: 'Image storage is not configured. Please contact the administrator.',
+        });
       }
+      // Development: warn and fall back to local storage
+      console.warn('⚠️ Cloudinary not configured, using local storage (image will not persist on restart)');
       avatarUrl = getAbsoluteUrl(req, `/uploads/${path.basename(req.file.path)}`);
       publicId = null;
     } else {
@@ -134,7 +158,20 @@ exports.uploadAvatar = async (req, res, next) => {
         });
         avatarUrl = result.secure_url;
         publicId = result.public_id;
+        if (!isProduction()) {
+          console.log(`✅ Uploaded avatar to Cloudinary: ${avatarUrl}`);
+        } else {
+          console.log('✅ Avatar uploaded to Cloudinary');
+        }
       } catch (cloudinaryError) {
+        console.error('❌ Avatar Cloudinary upload failed:', cloudinaryError.message);
+        if (isProduction()) {
+          return res.status(500).json({
+            success: false,
+            message: 'Image upload failed. Please try again.',
+          });
+        }
+        // Development: fall back to local storage
         console.warn('⚠️ Avatar Cloudinary upload failed, falling back to local storage:', cloudinaryError.message);
         avatarUrl = getAbsoluteUrl(req, `/uploads/${path.basename(req.file.path)}`);
         publicId = null;
@@ -148,6 +185,44 @@ exports.uploadAvatar = async (req, res, next) => {
     user.password = undefined;
 
     res.status(200).json({ success: true, avatar: avatarUrl, user });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Check Cloudinary configuration and connectivity
+// @route   GET /api/health/cloudinary
+// @access  Public (or Private - accessible for monitoring)
+exports.checkCloudinaryHealth = async (req, res, next) => {
+  try {
+    const configured = isCloudinaryConfigured();
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME || null;
+
+    if (!configured) {
+      return res.status(200).json({
+        configured: false,
+        reachable: false,
+        cloudName: null,
+        error: 'Cloudinary credentials not set',
+      });
+    }
+
+    // Ping Cloudinary API to verify credentials work
+    let reachable = false;
+    let error = null;
+    try {
+      await cloudinary.api.ping();
+      reachable = true;
+    } catch (pingError) {
+      error = pingError.message || 'Invalid credentials';
+    }
+
+    res.status(200).json({
+      configured: true,
+      reachable,
+      cloudName,
+      error,
+    });
   } catch (error) {
     next(error);
   }

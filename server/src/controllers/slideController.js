@@ -11,6 +11,8 @@ const isCloudinaryConfigured = () =>
     !process.env.CLOUDINARY_API_KEY.includes('your_')
   );
 
+const isProduction = () => process.env.NODE_ENV === 'production';
+
 // @desc    Get all slides (admin - all, public - active only)
 // @route   GET /api/slides
 // @access  Public (returns active only)
@@ -58,7 +60,17 @@ exports.createSlide = async (req, res, next) => {
     let imagePublicId = null;
 
     if (req.file) {
-      if (isCloudinaryConfigured()) {
+      if (!isCloudinaryConfigured()) {
+        if (isProduction()) {
+          return res.status(500).json({
+            success: false,
+            message: 'Image storage is not configured. Please contact the administrator.',
+          });
+        }
+        console.warn('⚠️ Cloudinary not configured, using local storage (image will not persist on restart)');
+        imageUrl = getAbsoluteUrl(req, `/uploads/${path.basename(req.file.path)}`);
+        imagePublicId = null;
+      } else {
         try {
           const result = await cloudinary.uploader.upload(req.file.path, {
             folder: 'sunitas-collection/slides',
@@ -67,14 +79,23 @@ exports.createSlide = async (req, res, next) => {
           });
           imageUrl = result.secure_url;
           imagePublicId = result.public_id;
+          if (!isProduction()) {
+            console.log(`✅ Uploaded slide to Cloudinary: ${imageUrl}`);
+          } else {
+            console.log('✅ Slide uploaded to Cloudinary');
+          }
         } catch (cloudinaryError) {
-          console.warn('Cloudinary upload failed, falling back to local:', cloudinaryError.message);
+          console.error('❌ Cloudinary upload failed:', cloudinaryError.message);
+          if (isProduction()) {
+            return res.status(500).json({
+              success: false,
+              message: 'Image upload failed. Please try again.',
+            });
+          }
+          console.warn('⚠️ Cloudinary upload failed, falling back to local storage:', cloudinaryError.message);
           imageUrl = getAbsoluteUrl(req, `/uploads/${path.basename(req.file.path)}`);
           imagePublicId = null;
         }
-      } else {
-        imageUrl = getAbsoluteUrl(req, `/uploads/${path.basename(req.file.path)}`);
-        imagePublicId = null;
       }
     }
 
@@ -127,7 +148,17 @@ exports.updateSlide = async (req, res, next) => {
         }
       }
 
-      if (isCloudinaryConfigured()) {
+      if (!isCloudinaryConfigured()) {
+        if (isProduction()) {
+          return res.status(500).json({
+            success: false,
+            message: 'Image storage is not configured. Please contact the administrator.',
+          });
+        }
+        console.warn('⚠️ Cloudinary not configured, using local storage (image will not persist on restart)');
+        slide.imageUrl = getAbsoluteUrl(req, `/uploads/${path.basename(req.file.path)}`);
+        slide.imagePublicId = null;
+      } else {
         try {
           const result = await cloudinary.uploader.upload(req.file.path, {
             folder: 'sunitas-collection/slides',
@@ -136,14 +167,23 @@ exports.updateSlide = async (req, res, next) => {
           });
           slide.imageUrl = result.secure_url;
           slide.imagePublicId = result.public_id;
+          if (!isProduction()) {
+            console.log(`✅ Uploaded slide to Cloudinary: ${slide.imageUrl}`);
+          } else {
+            console.log('✅ Slide uploaded to Cloudinary');
+          }
         } catch (cloudinaryError) {
-          console.warn('Cloudinary upload failed, falling back to local:', cloudinaryError.message);
-          slide.imageUrl = `/uploads/${path.basename(req.file.path)}`;
+          console.error('❌ Cloudinary upload failed:', cloudinaryError.message);
+          if (isProduction()) {
+            return res.status(500).json({
+              success: false,
+              message: 'Image upload failed. Please try again.',
+            });
+          }
+          console.warn('⚠️ Cloudinary upload failed, falling back to local storage:', cloudinaryError.message);
+          slide.imageUrl = getAbsoluteUrl(req, `/uploads/${path.basename(req.file.path)}`);
           slide.imagePublicId = null;
         }
-      } else {
-        slide.imageUrl = `/uploads/${path.basename(req.file.path)}`;
-        slide.imagePublicId = null;
       }
     }
 
