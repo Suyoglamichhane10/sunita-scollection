@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaBell, FaTimes, FaEnvelope, FaShoppingCart, FaHeart, FaGift, FaExclamationCircle, FaTag, FaTrashAlt } from 'react-icons/fa';
+import { FaBell, FaTimes, FaEnvelope, FaShoppingCart, FaHeart, FaGift, FaExclamationCircle, FaTag, FaTrashAlt, FaCreditCard } from 'react-icons/fa';
 import useNotifications from '../../hooks/useNotifications';
 import { useAuth } from '../../Context/Authcontext';
+import { buildNotificationLink } from '../../utils/notificationLinks';
 import toast from 'react-hot-toast';
 
 const TYPE_ICONS = {
@@ -14,6 +15,7 @@ const TYPE_ICONS = {
   wishlist: FaHeart,
   rewards: FaGift,
   price: FaTag,
+  payment: FaCreditCard,
 };
 
 const TYPE_COLORS = {
@@ -25,6 +27,7 @@ const TYPE_COLORS = {
   wishlist: 'text-pink-600',
   rewards: 'text-orange-600',
   price: 'text-primary',
+  payment: 'text-emerald-600',
 };
 
 const getTypeLabel = (type) => {
@@ -37,6 +40,7 @@ const getTypeLabel = (type) => {
     case 'wishlist': return 'Wishlist';
     case 'rewards': return 'Rewards';
     case 'price': return 'Price';
+    case 'payment': return 'Payment';
     default: return 'Notification';
   }
 };
@@ -64,7 +68,6 @@ const NotificationBell = ({ badgeClassName = '' }) => {
     markAllRead,
     markOneRead,
     clearAll,
-    latestArrival,
   } = useNotifications(isAuthenticated);
   const [open, setOpen] = useState(false);
   const panelRef = useRef(null);
@@ -86,9 +89,7 @@ const NotificationBell = ({ badgeClassName = '' }) => {
   const handleNotificationClick = (notif) => {
     markOneRead(notif);
     setOpen(false);
-    if (notif.navigateTo) {
-      navigate(notif.navigateTo);
-    }
+    navigate(buildNotificationLink(notif, 'customer'));
   };
 
   const handleClearAll = async () => {

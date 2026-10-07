@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { phoneField, registerPhoneValidation } = require('../Utils/phoneValidator');
 
 const deliverySchema = new mongoose.Schema(
   {
@@ -45,7 +46,7 @@ const deliverySchema = new mongoose.Schema(
       },
     ],
     deliveryPersonName: { type: String, default: '' },
-    deliveryPersonPhone: { type: String, default: '' },
+    deliveryPersonPhone: phoneField({ default: '' }),
     deliveryPersonVehicle: { type: String, default: '' },
     deliveryPersonPhoto: { type: String, default: '' },
     notes: { type: String, default: '' },
@@ -55,5 +56,7 @@ const deliverySchema = new mongoose.Schema(
 
 deliverySchema.index({ deliveryPersonId: 1 });
 deliverySchema.index({ status: 1 });
+
+registerPhoneValidation(deliverySchema, ['deliveryPersonPhone']);
 
 module.exports = mongoose.model('Delivery', deliverySchema);

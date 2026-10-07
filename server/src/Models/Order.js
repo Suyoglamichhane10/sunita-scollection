@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { phoneField, registerPhoneValidation } = require('../Utils/phoneValidator');
 
 const orderSchema = new mongoose.Schema(
   {
@@ -56,10 +57,7 @@ const orderSchema = new mongoose.Schema(
         type: String,
         required: true,
       },
-      phone: {
-        type: String,
-        required: true,
-      },
+      phone: phoneField({ required: true }),
       street: {
         type: String,
         required: true,
@@ -114,6 +112,16 @@ const orderSchema = new mongoose.Schema(
     trackingNumber: String,
     deliveryDate: Date,
     notes: String,
+    cancelledAt: Date,
+    cancellationReason: String,
+    // Stock is only decremented at order creation for COD/Stripe and after
+    // gateway verification otherwise, so cancellation must restore only when a
+    // decrement actually happened - and only once.
+    stockDeducted: {
+      type: Boolean,
+      default: false,
+    },
+    stockRestoredAt: Date,
     isPaid: {
       type: Boolean,
       default: false,
@@ -176,7 +184,10 @@ orderSchema.pre('validate', function (next) {
   next();
 });
 
+registerPhoneValidation(orderSchema, ['shippingAddress.phone']);
+
 orderSchema.index({ paymentStatus: 1, orderStatus: 1 });
 orderSchema.index({ createdAt: -1 });
+orderSchema.index({ user: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Order', orderSchema);

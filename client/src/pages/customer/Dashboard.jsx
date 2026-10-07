@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef, Fragment } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import {
   FaBoxOpen, FaTruck, FaCheckCircle, FaTimesCircle,
   FaShoppingBag, FaClipboardList, FaUser, FaArrowRight,
@@ -8,7 +8,7 @@ import {
   FaCopy, FaTrophy, FaMedal, FaGift, FaEyeSlash, FaSave,
   FaPlus, FaEnvelope, FaTimes,
   FaCamera, FaBan, FaUndo, FaDownload, FaPhoneAlt, FaMapMarkerAlt, FaCheck,
-  FaChevronLeft, FaChevronRight
+  FaChevronLeft, FaChevronRight, FaHome
 } from 'react-icons/fa';
 import api from '../../Services/api';
 import { useAuth } from '../../Context/Authcontext';
@@ -18,6 +18,13 @@ import Avatar from '../../components/common/Avatar';
 import wishlistApi from '../../Services/wishlistApi';
 import toast from 'react-hot-toast';
 import { getCloudinaryOptimizedUrl, getAbsoluteImageUrl, handleImageError, getMainImage } from '../../utils/imageOptimizer';
+import {
+  PHONE_ERROR_CLASS,
+  PHONE_ERROR_MESSAGE,
+  PHONE_INPUT_PROPS,
+  isValidNepaliPhone,
+  sanitizePhone,
+} from '../../utils/validatePhone';
 import ProfileAvatarUpload from '../../components/customer/ProfileAvatarUpload';
 import OrderActions from '../../components/customer/OrderActions';
 import AddressManager from '../../components/customer/AddressManager';
@@ -37,6 +44,14 @@ const STATUS_BADGE = {
 };
 
 const ORDER_FLOW = ['pending', 'confirmed', 'processing', 'packed', 'shipped', 'delivered'];
+
+// Must match CANCELLABLE_ORDER_STATUSES / isDeletableOrder on the server, or the
+// button appears for an action the API will reject.
+const CANCELLABLE_ORDER_STATUSES = ['pending', 'confirmed', 'processing', 'packed'];
+const isDeletableOrder = (order) =>
+  order.orderStatus === 'cancelled' ||
+  order.orderStatus === 'delivered' ||
+  order.paymentStatus === 'failed';
 
 const ENQUIRY_STATUS = {
   pending: { bg: 'bg-amber-100', text: 'text-amber-700', label: 'Pending' },
@@ -128,8 +143,21 @@ const Dashboard = () => {
   const { socketRef } = useChat();
   const navigate = useNavigate();
   const location = useLocation();
-  const hash = location.hash?.replace('#', '') || 'overview';
-  const active = DASHBOARD_SECTIONS.some((s) => s.id === hash) ? hash : 'overview';
+  const [searchParams] = useSearchParams();
+  // Sections are addressable two ways: ?tab=orders from a notification deep
+  // link, and #orders from the tab strip. The query wins when both are present.
+  const hashSection = location.hash?.replace('#', '') || '';
+  const tabSection = searchParams.get('tab') || '';
+  const requested = tabSection || hashSection;
+  const active = DASHBOARD_SECTIONS.some((s) => s.id === requested) ? requested : 'overview';
+
+  // The id of the exact row a notification was about, if it carried one.
+  const focusOrderId = searchParams.get('order');
+  const focusEnquiryId = searchParams.get('enquiry');
+  const focusChatId = searchParams.get('chat');
+  const focusId = focusOrderId || focusEnquiryId || focusChatId;
+  const [highlightId, setHighlightId] = useState(null);
+  const cardRefs = useRef({});
 
   const [dash, setDash] = useState(null);
   const [orders, setOrders] = useState([]);
@@ -140,6 +168,8 @@ const Dashboard = () => {
   const [referralCode, setReferralCode] = useState('');
   const [profile, setProfile] = useState(null);
   const [editProfile, setEditProfile] = useState(null);
+  const [profilePhoneError, setProfilePhoneError] = useState(false);
+  const [profilePhoneTouched, setProfilePhoneTouched] = useState(false);
   const [loading, setLoading] = useState(true);
   const [enquiriesLoading, setEnquiriesLoading] = useState(false);
   const [ordersLoading, setOrdersLoading] = useState(false);
@@ -251,7 +281,28 @@ const Dashboard = () => {
     strip.scrollTo({ left: Math.max(0, Math.min(target, max)), behavior: 'smooth' });
   }, [active, loading, useMarquee]);
 
-  const stepSection = (delta) => {
+// When a notification deep link carries an id, scroll that card into view and
+// flash it so it is obvious which record the alert was about.
+useEffect(() => {
+    if (!focusId || loading) return;
+    setHighlightId(focusId);
+  }, [focusId, loading]);
+
+// Scrolling is keyed off the highlight alone so a background refetch of the
+// lists cannot cancel the scroll before it runs.
+useEffect(() => {
+    if (!highlightId) return undefined;
+    const scrollTimer = setTimeout(() => {
+      cardRefs.current[highlightId]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 150);
+    const clearTimer = setTimeout(() => setHighlightId(null), 5000);
+    return () => {
+      clearTimeout(scrollTimer);
+      clearTimeout(clearTimer);
+    };
+  }, [highlightId]);
+
+const stepSection = (delta) => {
     const next = DASHBOARD_SECTIONS[activeIndex + delta];
     if (next) switchSection(next.id);
   };
@@ -331,7 +382,11 @@ const loadDashboard = useCallback(async (signal) => {
   }, [authLoading, isAuthenticated, navigate, loadDashboard]);
 
   useEffect(() => {
-    if (profile) setEditProfile(profile);
+    if (profile) {
+      setEditProfile(profile);
+      setProfilePhoneTouched(false);
+      setProfilePhoneError(false);
+    }
   }, [profile]);
 
   // Enquiry unread count - fetch + poll + socket
@@ -405,7 +460,13 @@ const loadDashboard = useCallback(async (signal) => {
   // otherwise moving from the foot of Overview to Orders drops you mid-page,
   // underneath the sticky navbar.
   const switchSection = (id) => {
-    navigate(`/dashboard#${id}`, { replace: true });
+    // Switching sections by hand drops any stale deep-link focus, and replaces
+    // rather than pushes so the browser Back button still leaves the dashboard.
+    const next = new URLSearchParams(searchParams);
+    next.set('tab', id);
+    ['order', 'enquiry', 'chat'].forEach((key) => next.delete(key));
+    const query = next.toString();
+    navigate(`/dashboard${query ? `?${query}` : ''}`, { replace: true });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -506,8 +567,28 @@ const loadDashboard = useCallback(async (signal) => {
     } catch { toast.error('Failed to load invoice'); }
   };
 
+  const handleProfilePhoneChange = (e) => {
+    const digits = sanitizePhone(e.target.value);
+    setEditProfile((prev) => ({ ...prev, phone: digits }));
+    if (profilePhoneTouched) setProfilePhoneError(!isValidNepaliPhone(digits));
+  };
+
+  const handleProfilePhoneBlur = () => {
+    setProfilePhoneTouched(true);
+    setProfilePhoneError(!isValidNepaliPhone(editProfile?.phone));
+  };
+
   const handleProfileSave = async () => {
     if (!editProfile) return;
+
+    if (editProfile.phone) {
+      setProfilePhoneTouched(true);
+      if (!isValidNepaliPhone(editProfile.phone)) {
+        setProfilePhoneError(true);
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       const { data } = await api.put('/users/profile', { name: editProfile.name, phone: editProfile.phone, address: editProfile.address });
@@ -586,6 +667,16 @@ if (loading) {
             plain scrollable row on wide screens or under reduced motion. */}
         <div className="mb-6 -mx-4 px-4 sm:mx-0 sm:px-0">
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              aria-label="Back to home"
+              className="inline-flex min-h-[44px] shrink-0 items-center gap-2 rounded-full border border-gold/50 bg-white/80 px-3 py-2 text-sm font-semibold text-primary transition hover:border-primary hover:bg-primary hover:text-white sm:px-4"
+            >
+              <FaHome className="shrink-0 text-xs" />
+              <span className="hidden whitespace-nowrap sm:inline">Back to Home</span>
+            </button>
+
             <button
               type="button"
               onClick={() => stepSection(-1)}
@@ -867,7 +958,15 @@ if (loading) {
             </div>
             {orders.length ? (
               orders.slice(0, 10).map((order) => (
-                <div key={order._id} className="rounded-3xl border border-gold/20 bg-white p-5 shadow-card">
+                <div
+                  key={order._id}
+                  ref={(el) => { cardRefs.current[order._id] = el; }}
+                  className={`rounded-3xl border bg-white p-5 shadow-card transition ${
+                    highlightId === order._id
+                      ? 'border-pink-400 ring-2 ring-pink-300'
+                      : 'border-gold/20'
+                  }`}
+                >
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <p className="text-sm font-semibold text-ink">{order.orderNumber}</p>
@@ -902,20 +1001,22 @@ if (loading) {
                         <FaTruck className="text-xs" /> Track
                       </button>
                     )}
-                    {['pending', 'confirmed', 'processing'].includes(order.orderStatus) && (
+                    {CANCELLABLE_ORDER_STATUSES.includes(order.orderStatus) && (
                       <button
                         onClick={() => { setCancelOrderId(order._id); setCancelReason(''); }}
                         disabled={actionLoading === order._id}
-                        className="flex items-center gap-1 rounded-lg bg-red-100 px-3 py-1.5 text-sm font-semibold text-red-700 hover:bg-red-200 disabled:opacity-50"
+                        aria-label={`Cancel order ${order.orderNumber}`}
+                        className="flex min-h-[44px] items-center gap-1 rounded-lg bg-red-100 px-3 py-1.5 text-sm font-semibold text-red-700 hover:bg-red-200 disabled:opacity-50"
                       >
                         <FaTimesCircle className="text-xs" /> Cancel
                       </button>
                     )}
-                    {['cancelled', 'delivered'].includes(order.orderStatus) && (
+                    {isDeletableOrder(order) && (
                       <button
                         onClick={() => setDeleteOrderId(order._id)}
                         disabled={actionLoading === order._id}
-                        className="flex items-center gap-1 rounded-lg bg-gray-100 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-200 disabled:opacity-50"
+                        aria-label={`Delete order ${order.orderNumber}`}
+                        className="flex min-h-[44px] items-center gap-1 rounded-lg bg-gray-100 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-200 disabled:opacity-50"
                       >
                         <FaTrash className="text-xs" /> Delete
                       </button>
@@ -970,8 +1071,13 @@ if (loading) {
               conversations.map((conv) => (
                 <Link
                   key={conv._id}
-                  to="/messages"
-                  className="group block rounded-2xl border border-gold/10 bg-white p-4 transition hover:border-gold/30 hover:bg-cream/30"
+                  to={`/messages?chat=${conv._id}`}
+                  ref={(el) => { cardRefs.current[conv._id] = el; }}
+                  className={`group block rounded-2xl border bg-white p-4 transition hover:border-gold/30 hover:bg-cream/30 ${
+                    highlightId === conv._id
+                      ? 'border-pink-400 ring-2 ring-pink-300'
+                      : 'border-gold/10'
+                  }`}
                 >
                   <div className="flex items-start gap-3">
                     <Avatar
@@ -1037,7 +1143,15 @@ if (loading) {
                 const dealPrice = enquiry.dealPrice || enquiry.quotedPrice;
                 const adminMsg = latestAdminMsg(enquiry);
                 return (
-                  <div key={enquiry._id} className="rounded-3xl border border-gold/20 bg-white p-5 shadow-card">
+                  <div
+                    key={enquiry._id}
+                    ref={(el) => { cardRefs.current[enquiry._id] = el; }}
+                    className={`rounded-3xl border bg-white p-5 shadow-card transition ${
+                      highlightId === enquiry._id
+                        ? 'border-pink-400 ring-2 ring-pink-300'
+                        : 'border-gold/20'
+                    }`}
+                  >
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
                         <div className="flex items-center gap-2">
@@ -1311,11 +1425,16 @@ if (loading) {
                   <div>
                     <label className="text-xs font-semibold text-ink-light">Phone Number</label>
                     <input
-                      type="tel"
+                      {...PHONE_INPUT_PROPS}
                       value={editProfile?.phone || ''}
-                      onChange={(e) => setEditProfile({ ...editProfile, phone: e.target.value })}
+                      onChange={handleProfilePhoneChange}
+                      onBlur={handleProfilePhoneBlur}
+                      aria-invalid={profilePhoneError}
                       className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-ink focus:border-pink-500 focus:ring-1 focus:ring-pink-200"
                     />
+                    {profilePhoneError && (
+                      <p className={PHONE_ERROR_CLASS}>{PHONE_ERROR_MESSAGE}</p>
+                    )}
                   </div>
                   <div>
                     <label className="text-xs font-semibold text-ink-light">Address</label>

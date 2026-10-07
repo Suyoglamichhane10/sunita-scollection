@@ -1,6 +1,7 @@
 const Delivery = require('../Models/Delivery');
 const Order = require('../Models/Order');
 const User = require('../Models/User');
+const { isValidPhone } = require('../Utils/phoneValidator');
 
 exports.createDelivery = async (req, res, next) => {
   try {
@@ -77,7 +78,7 @@ exports.assignDeliveryPerson = async (req, res, next) => {
     if (deliveryPerson) {
       delivery.deliveryPersonId = deliveryPerson._id;
       delivery.deliveryPersonName = deliveryPerson.name;
-      delivery.deliveryPersonPhone = deliveryPerson.phone || '';
+      delivery.deliveryPersonPhone = isValidPhone(deliveryPerson.phone) ? deliveryPerson.phone.trim() : '';
       delivery.deliveryPersonVehicle = deliveryPerson.vehicle || '';
       delivery.deliveryPersonPhoto = deliveryPerson.avatar || '';
       delivery.status = 'confirmed';

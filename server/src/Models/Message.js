@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { phoneField, registerPhoneValidation } = require('../Utils/phoneValidator');
 
 const attachmentSchema = new mongoose.Schema(
   {
@@ -25,7 +26,7 @@ const messageSchema = new mongoose.Schema(
       default: 'chat',
     },
 senderName: { type: String, trim: true },
-    senderContact: { type: String, trim: true },
+    senderContact: phoneField(),
     // Platform sender id (Facebook PSID, WhatsApp phone, TikTok open id, etc.)
     platformSenderId: { type: String, index: true },
     message: {
@@ -96,6 +97,8 @@ reply: { type: String, trim: true },
 );
 
 messageSchema.index({ conversation: 1, createdAt: 1 });
+
+registerPhoneValidation(messageSchema, ['senderContact']);
 messageSchema.index({ sender: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Message', messageSchema);

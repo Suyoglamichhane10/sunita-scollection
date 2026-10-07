@@ -72,12 +72,16 @@ const Login = () => {
             </div>
             <h2 className="font-serif text-3xl font-bold text-gold-200 text-center">Welcome Back</h2>
             <p className="mt-3 leading-7 text-white/80 text-center">
-              Sign in to access your account, track your orders, and continue shopping with our trendy collection.
+              Sign in to access your account and continue shopping with our trendy collection.
             </p>
             <div className="mt-8 space-y-3 text-sm text-white/80">
-              <p className="flex items-center gap-2"><span className="text-gold-300">✦</span> Track your orders in real time</p>
+            
               <p className="flex items-center gap-2"><span className="text-gold-300">✦</span> Manage your wishlist & rewards</p>
               <p className="flex items-center gap-2"><span className="text-gold-300">✦</span> Secure & delightful experience</p>
+              <p className="flex items-center gap-2"><span className="text-gold-300">✦</span>  Exclusive offers & updates</p>
+              
+              
+              
             </div>
           </div>
         </div>

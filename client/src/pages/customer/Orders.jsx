@@ -1,12 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../Services/api';
+import toast from 'react-hot-toast';
 import { useCart } from '../../Context/CartContext';
 import { useAuth } from '../../Context/Authcontext';
-import { FaCheck, FaTruck, FaTimes, FaMapMarkerAlt, FaFileInvoice, FaRedo } from 'react-icons/fa';
+import { FaCheck, FaTruck, FaTimes, FaMapMarkerAlt, FaFileInvoice, FaRedo, FaTrash } from 'react-icons/fa';
 import { handleImageError } from '../../utils/imageOptimizer';
+import DeleteModal from '../../components/admin/DeleteModal';
 
 const ORDER_FLOW = ['pending', 'confirmed', 'processing', 'packed', 'shipped', 'delivered'];
+
+// Must match CANCELLABLE_ORDER_STATUSES / isDeletableOrder on the server.
+const CANCELLABLE_ORDER_STATUSES = ['pending', 'confirmed', 'processing', 'packed'];
+const isDeletableOrder = (order) =>
+  order.orderStatus === 'cancelled' ||
+  order.orderStatus === 'delivered' ||
+  order.paymentStatus === 'failed';
 const ORDER_COLORS = {
   pending: 'bg-amber-100 text-amber-700',
   confirmed: 'bg-blue-100 text-blue-700',
@@ -62,6 +71,8 @@ const Orders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [cancellingOrderId, setCancellingOrderId] = useState(null);
+  const [deleteOrder, setDeleteOrder] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const { isAuthenticated, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
@@ -72,18 +83,30 @@ const Orders = () => {
 
     setCancellingOrderId(orderId);
     try {
-      const { data } = await api.put(`/orders/${orderId}/cancel`);
+      const { data } = await api.put(`/orders/${orderId}/cancel`, { reason: 'Cancelled by customer' });
       if (data.success) {
-        setOrders(orders.map(order => 
-          order._id === orderId ? data.order : order
-        ));
-        alert('Order cancelled successfully. Stock has been restored.');
+        setOrders((prev) => prev.map((order) => (order._id === orderId ? data.order : order)));
+        toast.success('Order cancelled successfully. Stock has been restored.');
       }
     } catch (error) {
-      console.error('Error cancelling order:', error);
-      alert(error.response?.data?.message || 'Failed to cancel order. Please try again.');
+      toast.error(error.response?.data?.message || 'Failed to cancel order. Please try again.');
     } finally {
       setCancellingOrderId(null);
+    }
+  };
+
+  const handleDeleteOrder = async () => {
+    if (!deleteOrder) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/orders/${deleteOrder._id}`);
+      setOrders((prev) => prev.filter((order) => order._id !== deleteOrder._id));
+      setDeleteOrder(null);
+      toast.success('Order deleted');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to delete order. Please try again.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -94,10 +117,10 @@ const Orders = () => {
       const url = URL.createObjectURL(blob);
       const win = window.open(url, '_blank');
       if (!win) {
-        alert('Please allow popups to download the invoice');
+        toast.error('Please allow popups to download the invoice');
       }
     } catch (error) {
-      alert(error.response?.data?.message || 'Failed to load invoice');
+      toast.error(error.response?.data?.message || 'Failed to load invoice');
     }
   };
 
@@ -229,15 +252,27 @@ const Orders = () => {
                 </div>
 
                 <div className="mt-4 flex flex-wrap gap-2">
-                  {(order.orderStatus === 'pending' || order.orderStatus === 'confirmed') && (
+                  {CANCELLABLE_ORDER_STATUSES.includes(order.orderStatus) && (
                     <div>
                       <button
                         onClick={() => handleCancelOrder(order._id)}
                         disabled={cancellingOrderId === order._id}
-                        className="flex h-10 items-center gap-2 rounded-full border border-red-300 bg-white px-4 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        aria-label={`Cancel order ${order.orderNumber}`}
+                        className="flex min-h-[44px] items-center gap-2 rounded-full border border-red-300 bg-white px-4 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <FaTimes />
                         {cancellingOrderId === order._id ? 'Cancelling...' : 'Cancel Order'}
+                      </button>
+                    </div>
+                  )}
+                  {isDeletableOrder(order) && (
+                    <div>
+                      <button
+                        onClick={() => setDeleteOrder(order)}
+                        aria-label={`Delete order ${order.orderNumber}`}
+                        className="flex min-h-[44px] items-center gap-2 rounded-full border border-gray-300 bg-white px-4 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+                      >
+                        <FaTrash /> Delete Order
                       </button>
                     </div>
                   )}
@@ -265,6 +300,19 @@ const Orders = () => {
           )}
         </div>
       </div>
+
+      <DeleteModal
+        isOpen={!!deleteOrder}
+        onClose={() => !deleting && setDeleteOrder(null)}
+        onConfirm={handleDeleteOrder}
+        loading={deleting}
+        title="Delete Order"
+        message={
+          deleteOrder
+            ? `Delete order ${deleteOrder.orderNumber} from your history? This cannot be undone.`
+            : ''
+        }
+      />
     </div>
   );
 };

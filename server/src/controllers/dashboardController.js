@@ -69,6 +69,19 @@ exports.markNotificationsRead = async (req, res, next) => {
   }
 };
 
+// Clear all notifications (delete them from user.notifications array)
+exports.clearNotifications = async (req, res, next) => {
+  try {
+    await User.updateOne(
+      { _id: req.user.id },
+      { $set: { notifications: [] } }
+    );
+    res.status(200).json({ success: true });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Update style profile (kept for backward compatibility with Profile page edits)
 exports.updateStyleProfile = async (req, res, next) => {
   try {

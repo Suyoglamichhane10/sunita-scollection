@@ -7,7 +7,6 @@ const {
   getOrder,
   updateOrderStatus,
   deleteOrder,
-  deleteOwnOrder,
   cancelOrder,
   getOrderMetrics,
   getOrderInvoice,
@@ -21,12 +20,14 @@ router.get('/my-orders', protect, getMyOrders);
 router.get('/metrics', protect, authorize('admin'), getOrderMetrics);
 router.get('/:id/invoice', protect, getOrderInvoice);
 router.get('/:id', protect, getOrder);
+// One DELETE handler serves both roles: it checks ownership for customers and
+// allows admins through. Registering a second admin-only DELETE /:id here would
+// be dead code, because the first match always wins.
+router.delete('/:id', protect, deleteOrder);
 router.put('/:id/cancel', protect, cancelOrder);
-router.delete('/:id', protect, deleteOwnOrder);
 
 // Admin routes
 router.get('/', protect, authorize('admin'), getOrders);
 router.put('/:id/status', protect, authorize('admin'), updateOrderStatus);
-router.delete('/:id', protect, authorize('admin'), deleteOrder);
 
 module.exports = router;

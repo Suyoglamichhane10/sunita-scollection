@@ -4,6 +4,13 @@ import { useAuth } from '../../Context/Authcontext';
 import { useEnquiry } from '../../Context/EnquiryContext';
 import toast from 'react-hot-toast';
 import { FaTimes } from 'react-icons/fa';
+import {
+  PHONE_ERROR_CLASS,
+  PHONE_ERROR_MESSAGE,
+  PHONE_INPUT_PROPS,
+  isValidNepaliPhone,
+  sanitizePhone,
+} from '../../utils/validatePhone';
 
 const EnquiryModal = ({ product: propProduct, isOpen: propIsOpen, onClose: propOnClose }) => {
   const { user, isAuthenticated } = useAuth();
@@ -17,6 +24,8 @@ const EnquiryModal = ({ product: propProduct, isOpen: propIsOpen, onClose: propO
   const [form, setForm] = useState({ name: '', phone: '', email: '', message: '' });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [phoneTouched, setPhoneTouched] = useState(false);
+  const [phoneError, setPhoneError] = useState(false);
 
   useEffect(() => {
     if (isOpen && product && isAuthenticated) {
@@ -27,18 +36,37 @@ const EnquiryModal = ({ product: propProduct, isOpen: propIsOpen, onClose: propO
         message: `I'm interested in "${product.name}". Could you please share the price and availability?`,
       });
       setSuccess(false);
+      setPhoneTouched(false);
+      setPhoneError(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, product, isAuthenticated, user]);
 
   const handleChange = (e) => {
+    if (e.target.name === 'phone') {
+      const digits = sanitizePhone(e.target.value);
+      setForm((prev) => ({ ...prev, phone: digits }));
+      if (phoneTouched) setPhoneError(!isValidNepaliPhone(digits));
+      return;
+    }
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handlePhoneBlur = () => {
+    setPhoneTouched(true);
+    setPhoneError(!isValidNepaliPhone(form.phone));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name || !form.phone || !form.message) {
       toast.error('Please fill in all required fields');
+      return;
+    }
+
+    setPhoneTouched(true);
+    if (!isValidNepaliPhone(form.phone)) {
+      setPhoneError(true);
       return;
     }
 
@@ -53,6 +81,8 @@ const EnquiryModal = ({ product: propProduct, isOpen: propIsOpen, onClose: propO
       });
       setSuccess(true);
       setForm({ name: '', phone: '', email: '', message: '' });
+      setPhoneTouched(false);
+      setPhoneError(false);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to submit enquiry');
     } finally {
@@ -139,14 +169,19 @@ const EnquiryModal = ({ product: propProduct, isOpen: propIsOpen, onClose: propO
                 Phone Number *
               </label>
               <input
-                type="tel"
+                {...PHONE_INPUT_PROPS}
                 name="phone"
                 value={form.phone}
                 onChange={handleChange}
+                onBlur={handlePhoneBlur}
                 required
+                aria-invalid={phoneError}
                 className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-100"
-                placeholder="Your phone number"
+                placeholder="98XXXXXXXXX"
               />
+              {phoneError && (
+                <p className={PHONE_ERROR_CLASS}>{PHONE_ERROR_MESSAGE}</p>
+              )}
             </div>
 
             <div>

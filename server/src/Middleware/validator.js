@@ -1,4 +1,11 @@
 const { body, validationResult } = require('express-validator');
+const { PHONE_ERROR_MESSAGE, PHONE_PATTERN } = require('../Utils/phoneValidator');
+
+const optionalPhone = (field) =>
+  body(field)
+    .optional()
+    .custom((value) => value === '' || PHONE_PATTERN.test(String(value).trim()))
+    .withMessage(PHONE_ERROR_MESSAGE);
 
 // Registration validation
 exports.validateRegister = [
@@ -16,6 +23,7 @@ exports.validateRegister = [
   body('password')
     .isLength({ min: 6 })
     .withMessage('Password must be at least 6 characters'),
+  optionalPhone('phone'),
 ];
 
 // Login validation

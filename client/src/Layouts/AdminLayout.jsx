@@ -5,22 +5,24 @@ import { useAuth } from '../Context/Authcontext';
 import NotificationCenter from '../components/chat/NotificationCenter';
 import Avatar from '../components/common/Avatar';
 import useAdminEnquiryBadge from '../hooks/useAdminEnquiryBadge';
+import useAdminOrderBadge from '../hooks/useAdminOrderBadge';
 
 const AdminLayout = () => {
   const { isAuthenticated, isAdmin, loading, logout, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { counts } = useAdminEnquiryBadge();
+  const { counts: enquiryCounts } = useAdminEnquiryBadge();
+  const { counts: orderCounts } = useAdminOrderBadge();
 
   useEffect(() => {
     document.title =
       location.pathname === '/admin/enquiries'
-        ? `Enquiries (${counts.unread}) | Sunita'z Collection Admin`
+        ? `Enquiries (${enquiryCounts.unread}) | Sunita'z Collection Admin`
         : location.pathname === '/admin'
           ? 'Overview | Sunita\'z Collection Admin'
           : 'Admin Panel | Sunita\'z Collection';
-  }, [location.pathname, counts.unread]);
+  }, [location.pathname, enquiryCounts.unread]);
 
   useEffect(() => {
     if (!loading) {
@@ -81,8 +83,8 @@ const AdminLayout = () => {
     { to: '/admin/products', label: 'Products', icon: FaBoxOpen },
     { to: '/admin/inventory', label: 'Inventory', icon: FaWarehouse },
     { to: '/admin/categories', label: 'Categories', icon: FaLayerGroup },
-    { to: '/admin/orders', label: 'Orders', icon: FaTruck },
-    { to: '/admin/enquiries', label: 'Enquiries', icon: FaEnvelope, badge: counts.unread || undefined },
+    { to: '/admin/orders', label: 'Orders', icon: FaTruck, badge: orderCounts.new || undefined },
+    { to: '/admin/enquiries', label: 'Enquiries', icon: FaEnvelope, badge: enquiryCounts.unread || undefined },
     { to: '/admin/slideshow', label: 'Slideshow', icon: FaImages },
     { to: '/admin/messages', label: 'Messages', icon: FaComments },
     { to: '/admin/users', label: 'Customers', icon: FaUsers },
@@ -199,14 +201,14 @@ const AdminLayout = () => {
             <FaBars />
           </button>
           <p className="font-serif text-base font-bold text-primary">Store management</p>
-          <div className="flex shrink-0 items-center gap-2">
+<div className="flex shrink-0 items-center gap-2">
               <NotificationCenter />
-              {counts.unread > 0 && (
+              {enquiryCounts.unread > 0 && (
                 <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-600 px-1.5 text-[11px] font-bold text-white">
-                  {counts.unread > 99 ? '99+' : counts.unread}
+                  {enquiryCounts.unread > 99 ? '99+' : enquiryCounts.unread}
                 </span>
               )}
-          </div>
+            </div>
         </header>
 
         <main className="flex-1 p-4">

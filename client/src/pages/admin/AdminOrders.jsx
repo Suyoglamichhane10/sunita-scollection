@@ -1,10 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import api from '../../Services/api';
-import { FaEye, FaTimes, FaTrash } from 'react-icons/fa';
+import { useSearchParams } from 'react-router-dom';
+import { FaEye, FaTimes, FaTrash, FaBan } from 'react-icons/fa';
 import { getFallbackImage } from '../../utils/imageOptimizer';
+import DeleteModal from '../../components/admin/DeleteModal';
 
 const ORDER_STATUSES = ['pending', 'confirmed', 'processing', 'packed', 'shipped', 'delivered', 'cancelled'];
+
+// Must match CANCELLABLE_ORDER_STATUSES / isDeletableOrder on the server.
+const CANCELLABLE_ORDER_STATUSES = ['pending', 'confirmed', 'processing', 'packed'];
+const isDeletableOrder = (order) =>
+  order.orderStatus === 'cancelled' ||
+  order.orderStatus === 'delivered' ||
+  order.paymentStatus === 'failed';
 
 const AdminOrders = () => {
   const [orders, setOrders] = useState([]);
@@ -13,8 +22,16 @@ const AdminOrders = () => {
   const [search, setSearch] = useState('');
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [updating, setUpdating] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [highlightId, setHighlightId] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const rowRefs = useRef({});
+  // Deep-link focus should happen once per id. Without this guard, a background
+  // refetch would re-apply the row snapshot over edits made in the open modal.
+  const focusedRef = useRef(null);
 
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     try {
       const { data } = await api.get('/orders');
       setOrders(data.orders);
@@ -23,9 +40,45 @@ const AdminOrders = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  useEffect(() => { fetchOrders(); }, []);
+  useEffect(() => { fetchOrders(); }, [fetchOrders]);
+
+  // A notification deep link lands on /admin/orders?order=<id>. Open that
+  // order and flash its row so it is obvious what it was about.
+  const focusOrderParam = searchParams.get('order');
+  useEffect(() => {
+    if (!focusOrderParam || loading) return;
+    if (focusedRef.current === focusOrderParam) return;
+    const match = orders.find((o) => o._id === focusOrderParam);
+    if (!match) return;
+
+    focusedRef.current = focusOrderParam;
+    setSelectedOrder(match);
+    setHighlightId(focusOrderParam);
+    document.title = `Order ${match.orderNumber} | Sunita'z Collection Admin`;
+  }, [focusOrderParam, orders, loading]);
+
+  // Scrolling is keyed off the highlight alone so a background refetch of
+  // `orders` cannot cancel the scroll before it runs.
+  useEffect(() => {
+    if (!highlightId) return undefined;
+    const scrollTimer = setTimeout(() => {
+      rowRefs.current[highlightId]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 120);
+    const clearTimer = setTimeout(() => setHighlightId(null), 4000);
+    return () => {
+      clearTimeout(scrollTimer);
+      clearTimeout(clearTimer);
+    };
+  }, [highlightId]);
+
+  const clearFocusParam = useCallback(() => {
+    if (!searchParams.get('order')) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete('order');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const updateOrder = async (orderId, updates) => {
     setUpdating(true);
@@ -41,18 +94,42 @@ const AdminOrders = () => {
     }
   };
 
-  const handleDelete = async (order) => {
-    if (!window.confirm(`Delete order ${order.orderNumber}? This cannot be undone.`)) return;
+  const handleCancel = async (order) => {
+    const reason = window.prompt(
+      `Cancel order ${order.orderNumber}? Add a reason (optional):`,
+      'Cancelled by admin'
+    );
+    if (reason === null) return;
+
     setUpdating(true);
     try {
-      await api.delete(`/orders/${order._id}`);
-      setOrders((prev) => prev.filter((o) => o._id !== order._id));
-      if (selectedOrder?._id === order._id) setSelectedOrder(null);
+      const { data } = await api.put(`/orders/${order._id}/cancel`, { reason });
+      setOrders((prev) => prev.map((o) => (o._id === order._id ? { ...data.order, user: o.user } : o)));
+      if (selectedOrder?._id === order._id) setSelectedOrder((prev) => ({ ...prev, ...data.order }));
+      toast.success('Order cancelled');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Unable to cancel order');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/orders/${deleteTarget._id}`);
+      setOrders((prev) => prev.filter((o) => o._id !== deleteTarget._id));
+      if (selectedOrder?._id === deleteTarget._id) {
+        setSelectedOrder(null);
+        clearFocusParam();
+      }
+      setDeleteTarget(null);
       toast.success('Order deleted');
     } catch (error) {
       toast.error(error.response?.data?.message || 'Unable to delete order');
     } finally {
-      setUpdating(false);
+      setDeleting(false);
     }
   };
 
@@ -135,7 +212,15 @@ const AdminOrders = () => {
                   <tr><td colSpan="6" className="p-8 text-center text-gray-500">Loading orders...</td></tr>
                 ) : filtered.length ? (
                   filtered.map((order) => (
-                    <tr key={order._id} className="border-b border-gray-100">
+                    <tr
+                      key={order._id}
+                      ref={(el) => { rowRefs.current[order._id] = el; }}
+                      className={`border-b border-gray-100 transition ${
+                        highlightId === order._id
+                          ? 'bg-pink-50 ring-2 ring-inset ring-pink-400'
+                          : ''
+                      }`}
+                    >
                       <td className="px-3 py-3 font-medium text-gray-900">{order.orderNumber}</td>
                       <td className="hidden px-3 py-3 text-gray-600 sm:table-cell">{order.user?.name || 'Guest'}</td>
                       <td className="px-3 py-3 text-gray-600">Rs. {order.totalAmount}</td>
@@ -144,6 +229,7 @@ const AdminOrders = () => {
                           value={order.orderStatus}
                           onChange={(e) => updateOrder(order._id, { orderStatus: e.target.value })}
                           disabled={updating}
+                          aria-label={`Status for order ${order.orderNumber}`}
                           className={`rounded-full border border-gray-200 px-3 py-1 text-sm ${statusColor(order.orderStatus)}`}
                         >
                           {ORDER_STATUSES.map((s) => (
@@ -164,15 +250,38 @@ const AdminOrders = () => {
                           >
                             <FaEye /> <span className="hidden sm:inline">Details</span>
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(order)}
-                            disabled={updating}
-                            aria-label={`Delete order ${order.orderNumber}`}
-                            className="flex min-h-[40px] items-center gap-1 rounded-full bg-red-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-40"
-                          >
-                            <FaTrash /> <span className="hidden sm:inline">Delete</span>
-                          </button>
+                          {CANCELLABLE_ORDER_STATUSES.includes(order.orderStatus) && (
+                            <button
+                              type="button"
+                              onClick={() => handleCancel(order)}
+                              disabled={updating}
+                              aria-label={`Cancel order ${order.orderNumber}`}
+                              title={`Cancel order ${order.orderNumber}`}
+                              className="flex min-h-[40px] items-center gap-1 rounded-full bg-amber-500 px-3 py-1.5 text-sm font-semibold text-white hover:bg-amber-600 disabled:opacity-40"
+                            >
+                              <FaBan /> <span className="hidden sm:inline">Cancel</span>
+                            </button>
+                          )}
+                          {isDeletableOrder(order) ? (
+                            <button
+                              type="button"
+                              onClick={() => setDeleteTarget(order)}
+                              disabled={updating}
+                              aria-label={`Delete order ${order.orderNumber}`}
+                              title={`Delete order ${order.orderNumber}`}
+                              className="flex min-h-[40px] items-center gap-1 rounded-full bg-red-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-40"
+                            >
+                              <FaTrash /> <span className="hidden sm:inline">Delete</span>
+                            </button>
+                          ) : (
+                            <span
+                              aria-hidden="true"
+                              title="Cancel the order first to delete it"
+                              className="flex min-h-[40px] cursor-not-allowed items-center gap-1 rounded-full bg-gray-100 px-3 py-1.5 text-sm font-semibold text-gray-400"
+                            >
+                              <FaTrash /> <span className="hidden sm:inline">Delete</span>
+                            </span>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -188,11 +297,11 @@ const AdminOrders = () => {
 
       {/* Order Detail Modal */}
       {selectedOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setSelectedOrder(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => { setSelectedOrder(null); clearFocusParam(); }}>
           <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold text-gray-900">Order {selectedOrder.orderNumber}</h2>
-              <button type="button" onClick={() => setSelectedOrder(null)} className="rounded-full p-2 text-gray-500 hover:bg-gray-100">
+              <button type="button" onClick={() => { setSelectedOrder(null); clearFocusParam(); }} aria-label="Close order details" className="rounded-full p-2 text-gray-500 hover:bg-gray-100">
                 <FaTimes />
               </button>
             </div>
@@ -267,7 +376,32 @@ const AdminOrders = () => {
               </div>
             </div>
 
-            <div className="mt-4 flex justify-end gap-6 border-t border-gray-200 pt-4 text-sm">
+            <div className="mt-4 flex flex-wrap items-center justify-end gap-3 border-t border-gray-200 pt-4">
+              {CANCELLABLE_ORDER_STATUSES.includes(selectedOrder.orderStatus) && (
+                <button
+                  type="button"
+                  onClick={() => handleCancel(selectedOrder)}
+                  disabled={updating}
+                  aria-label={`Cancel order ${selectedOrder.orderNumber}`}
+                  className="flex min-h-[44px] items-center gap-2 rounded-full bg-amber-500 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-600 disabled:opacity-40"
+                >
+                  <FaBan /> Cancel Order
+                </button>
+              )}
+              {isDeletableOrder(selectedOrder) && (
+                <button
+                  type="button"
+                  onClick={() => setDeleteTarget(selectedOrder)}
+                  disabled={updating}
+                  aria-label={`Delete order ${selectedOrder.orderNumber}`}
+                  className="flex min-h-[44px] items-center gap-2 rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-40"
+                >
+                  <FaTrash /> Delete Order
+                </button>
+              )}
+            </div>
+
+            <div className="mt-4 flex flex-wrap justify-end gap-6 border-t border-gray-200 pt-4 text-sm">
               <span className="text-gray-600">Subtotal: <strong>Rs. {selectedOrder.subtotal}</strong></span>
               <span className="text-gray-600">Tax: <strong>Rs. {selectedOrder.tax}</strong></span>
               <span className="text-gray-600">Shipping: <strong>{selectedOrder.shippingCost ? `Rs. ${selectedOrder.shippingCost}` : 'Free'}</strong></span>
@@ -276,6 +410,19 @@ const AdminOrders = () => {
           </div>
         </div>
       )}
+
+      <DeleteModal
+        isOpen={!!deleteTarget}
+        onClose={() => !deleting && setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        loading={deleting}
+        title="Delete Order"
+        message={
+          deleteTarget
+            ? `Delete order ${deleteTarget.orderNumber}? This permanently removes the order, its payment record and its delivery tracking.`
+            : ''
+        }
+      />
     </div>
   );
 };

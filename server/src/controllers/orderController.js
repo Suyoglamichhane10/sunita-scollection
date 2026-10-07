@@ -5,14 +5,29 @@ const Review = require('../Models/Review');
 const Conversation = require('../Models/Conversation');
 const Message = require('../Models/Message');
 const Enquiry = require('../Models/Enquiry');
+const Payment = require('../Models/Payment');
+const Delivery = require('../Models/Delivery');
 const Stripe = require('stripe');
 const { sendOrderConfirmation } = require('../services/emailService');
-const { decrementStock } = require('../services/stockService');
+const { decrementStock, restoreStock } = require('../services/stockService');
 const loyaltyService = require('../services/loyaltyService');
 const automationService = require('../services/automationService');
 const crypto = require('crypto');
+const { rejectInvalidPhone } = require('../Utils/phoneValidator');
 
 const stripe = process.env.STRIPE_SECRET_KEY ? Stripe(process.env.STRIPE_SECRET_KEY) : null;
+
+// An order can still be cancelled while it is only being prepared. Once it has
+// left the warehouse the stock is physically gone, so cancelling is refused and
+// the customer has to wait for delivery.
+const CANCELLABLE_ORDER_STATUSES = ['pending', 'confirmed', 'processing', 'packed'];
+
+// Terminal orders are safe to remove. A failed payment counts too: the order can
+// never complete, so it is dead weight in the customer's history.
+const isDeletableOrder = (order) =>
+  order.orderStatus === 'cancelled' ||
+  order.orderStatus === 'delivered' ||
+  order.paymentStatus === 'failed';
 
 const calculateTotals = (items, shippingAddress) => {
   const subtotal = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
@@ -34,6 +49,8 @@ exports.createOrder = async (req, res, next) => {
     if (!shippingAddress || !shippingAddress.fullName || !shippingAddress.phone || !shippingAddress.street || !shippingAddress.city) {
       return res.status(400).json({ success: false, message: 'Shipping address is incomplete' });
     }
+
+    if (rejectInvalidPhone(res, shippingAddress.phone)) return;
 
     const consolidatedMap = new Map();
     for (const item of items) {
@@ -185,12 +202,16 @@ exports.createOrder = async (req, res, next) => {
     const io = req.app.get('io');
 
     const notifyAdmins = async () => {
+      const message = `New order #${order.orderNumber} from ${customerName} — Rs. ${totals.totalAmount}`;
       try {
         const admins = await User.find({ role: 'admin' }).select('_id');
         const adminNotifications = admins.map((admin) => ({
           user: admin._id,
-          message: `New order #${order.orderNumber} from ${customerName} — Rs. ${totals.totalAmount}`,
+          message,
           type: 'order',
+          action: 'order_placed',
+          orderId: order._id.toString(),
+          link: `/admin/orders?order=${order._id}`,
           read: false,
           createdAt: Date.now(),
         }));
@@ -211,8 +232,12 @@ exports.createOrder = async (req, res, next) => {
 
     if (io) {
       io.to('admins').emit('notification:new', {
-        message: `New order #${order.orderNumber} from ${customerName} — Rs. ${totals.totalAmount}`,
+        id: `order-placed-${order._id}`,
+        message,
         type: 'order',
+        action: 'order_placed',
+        orderId: order._id.toString(),
+        link: `/admin/orders?order=${order._id}`,
         createdAt: Date.now(),
       });
     }
@@ -260,6 +285,8 @@ exports.createOrder = async (req, res, next) => {
         variantSku: li.variantSku,
       }));
       await decrementStock(stockItems);
+      order.stockDeducted = true;
+      await order.save({ validateBeforeSave: false });
     }
 
     // Send order confirmation email + award loyalty points (non-blocking).
@@ -409,10 +436,51 @@ await order.save();
 
     const ioAdmin = req.app.get('io');
     if (ioAdmin && orderStatus) {
+      const statusMessage = `Order #${order.orderNumber} status updated to ${orderStatus}`;
       ioAdmin.to('admins').emit('notification:new', {
-        message: `Order #${order.orderNumber} status updated to ${orderStatus}`,
+        id: `order-status-${order._id}-${orderStatus}`,
+        message: statusMessage,
         type: 'order',
+        action: 'order_status_changed',
+        orderId: order._id.toString(),
+        link: `/admin/orders?order=${order._id}`,
         createdAt: Date.now(),
+      });
+
+      // The customer is the one who needs to know their parcel moved.
+      const customerMessage = `Your order #${order.orderNumber} is now ${orderStatus}`;
+      const at = new Date();
+      setImmediate(async () => {
+        try {
+          await User.updateOne(
+            { _id: order.user },
+            {
+              $push: {
+                notifications: {
+                  message: customerMessage,
+                  type: 'order',
+                  action: 'order_status_changed',
+                  orderId: order._id.toString(),
+                  link: `/dashboard?tab=orders&order=${order._id}`,
+                  read: false,
+                  createdAt: at,
+                },
+              },
+            }
+          );
+        } catch (err) {
+          console.error('Customer order-status notification persist failed:', err.message);
+        }
+      });
+
+      ioAdmin.to(`user_${order.user}`).emit('notification:new', {
+        id: `order-status-${order._id}-${orderStatus}`,
+        message: customerMessage,
+        type: 'order',
+        action: 'order_status_changed',
+        orderId: order._id.toString(),
+        link: `/dashboard?tab=orders&order=${order._id}`,
+        createdAt: at.getTime(),
       });
     }
 
@@ -456,9 +524,44 @@ exports.getOrders = async (req, res, next) => {
   }
 };
 
-// @desc    Delete an order (admin) - cleans up related references and reviews
+// Removing an order takes its dependants with it: reviews would otherwise keep
+// recalculating product ratings from a dead order, and messages, delivery
+// records and payments would be left pointing at nothing.
+const detachOrderDependants = async (order) => {
+  const orderId = order._id;
+  const userId = order.user;
+
+  const reviews = await Review.find({ order: orderId }).select('product');
+  await Review.deleteMany({ order: orderId });
+  for (const r of reviews) {
+    if (!r.product) continue;
+    const stats = await Review.aggregate([
+      { $match: { product: r.product, isApproved: true } },
+      { $group: { _id: '$product', avgRating: { $avg: '$rating' }, count: { $sum: 1 } } },
+    ]);
+    await Product.findByIdAndUpdate(r.product, {
+      'rating.average': stats.length ? stats[0].avgRating : 0,
+      'rating.count': stats.length ? stats[0].count : 0,
+    });
+  }
+
+  await Message.deleteMany({ order: orderId });
+  await Conversation.deleteMany({ order: orderId });
+  await Payment.deleteMany({ orderId });
+  await Delivery.deleteMany({ orderId });
+
+  if (userId) {
+    await User.updateOne(
+      { _id: userId },
+      { $pull: { orderHistory: orderId } }
+    );
+  }
+};
+
+// @desc    Delete an order - customer may delete their own terminal order,
+//          admin may delete any terminal order
 // @route   DELETE /api/orders/:id
-// @access  Private/Admin
+// @access  Private
 exports.deleteOrder = async (req, res, next) => {
   try {
     const order = await Order.findById(req.params.id);
@@ -466,94 +569,19 @@ exports.deleteOrder = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Order not found' });
     }
 
-    const orderId = order._id;
-    const userId = order.user;
-
-    // Remove reviews linked to this order (recompute product ratings)
-    const reviews = await Review.find({ order: orderId }).select('product');
-    await Review.deleteMany({ order: orderId });
-    for (const r of reviews) {
-      if (r.product) {
-        const stats = await Review.aggregate([
-          { $match: { product: r.product, isApproved: true } },
-          { $group: { _id: '$product', avgRating: { $avg: '$rating' }, count: { $sum: 1 } } },
-        ]);
-        await Product.findByIdAndUpdate(r.product, {
-          'rating.average': stats.length ? stats[0].avgRating : 0,
-          'rating.count': stats.length ? stats[0].count : 0,
-        });
-      }
-    }
-
-    // Delete order-linked messages and conversations
-    await Message.deleteMany({ order: orderId });
-    await Conversation.deleteMany({ order: orderId });
-
-    // Remove the order from the user's orderHistory
-    if (userId) {
-      await User.updateOne({ _id: userId }, { $pull: { orderHistory: orderId } });
-    }
-
-    await order.deleteOne();
-
-    res.status(200).json({ success: true, message: 'Order deleted successfully' });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Delete own order (customer) - only for cancelled or delivered orders
-// @route   DELETE /api/orders/:id
-// @access  Private
-exports.deleteOwnOrder = async (req, res, next) => {
-  try {
-    const order = await Order.findById(req.params.id);
-    if (!order) {
-      return res.status(404).json({ success: false, message: 'Order not found' });
-    }
-
-    // Check if the order belongs to the authenticated user
-    if (order.user.toString() !== req.user.id) {
+    const isAdmin = req.user.role === 'admin';
+    if (!isAdmin && order.user.toString() !== req.user.id) {
       return res.status(403).json({ success: false, message: 'Unauthorized to delete this order' });
     }
 
-    // Only allow deletion of cancelled or delivered orders
-    const deletableStatuses = ['cancelled', 'delivered'];
-    if (!deletableStatuses.includes(order.orderStatus)) {
-      return res.status(400).json({ 
-        success: false, 
-        message: `Cannot delete order with status: ${order.orderStatus}. Only cancelled or delivered orders can be deleted.` 
+    if (!isDeletableOrder(order)) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot delete an order that is still ${order.orderStatus}. Cancel it first, then delete it.`,
       });
     }
 
-    const orderId = order._id;
-    const userId = order.user;
-
-    // Remove reviews linked to this order (recompute product ratings)
-    const reviews = await Review.find({ order: orderId }).select('product');
-    await Review.deleteMany({ order: orderId });
-    for (const r of reviews) {
-      if (r.product) {
-        const stats = await Review.aggregate([
-          { $match: { product: r.product, isApproved: true } },
-          { $group: { _id: '$product', avgRating: { $avg: '$rating' }, count: { $sum: 1 } } },
-        ]);
-        await Product.findByIdAndUpdate(r.product, {
-          'rating.average': stats.length ? stats[0].avgRating : 0,
-          'rating.count': stats.length ? stats[0].count : 0,
-        });
-      }
-    }
-
-    // Delete order-linked messages and conversations
-    await Message.deleteMany({ order: orderId });
-    await Conversation.deleteMany({ order: orderId });
-
-    // Remove the order from the user's orderHistory
-    if (userId) {
-      await User.updateOne({ _id: userId }, { $pull: { orderHistory: orderId } });
-    }
-
+    await detachOrderDependants(order);
     await order.deleteOne();
 
     res.status(200).json({ success: true, message: 'Order deleted successfully' });
@@ -562,61 +590,76 @@ exports.deleteOwnOrder = async (req, res, next) => {
   }
 };
 
-// @desc    Cancel order (customer)
+// @desc    Cancel an order - customer may cancel their own order while it is
+//          still being prepared, admin may cancel any such order
 // @route   PUT /api/orders/:id/cancel
-// @access  Private/Customer
+// @access  Private
 exports.cancelOrder = async (req, res, next) => {
   try {
     const order = await Order.findById(req.params.id);
-    
+
     if (!order) {
       return res.status(404).json({ success: false, message: 'Order not found' });
     }
 
-    // Check if the order belongs to the authenticated user
-    if (order.user.toString() !== req.user.id) {
+    const isAdmin = req.user.role === 'admin';
+    if (!isAdmin && order.user.toString() !== req.user.id) {
       return res.status(403).json({ success: false, message: 'Unauthorized to cancel this order' });
     }
 
-    // Check if order can be cancelled (only pending or confirmed orders)
-    const cancellableStatuses = ['pending', 'confirmed'];
-    if (!cancellableStatuses.includes(order.orderStatus)) {
-      return res.status(400).json({ 
-        success: false, 
-        message: `Cannot cancel order with status: ${order.orderStatus}. Only pending or confirmed orders can be cancelled.` 
+    if (!CANCELLABLE_ORDER_STATUSES.includes(order.orderStatus)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          order.orderStatus === 'cancelled'
+            ? 'This order is already cancelled.'
+            : `Cannot cancel an order that is already ${order.orderStatus}.`,
       });
     }
 
-    // Update order status to cancelled
+    const reason = (req.body?.reason || '').trim() || 'No reason given';
+
     order.orderStatus = 'cancelled';
+    order.cancelledAt = new Date();
+    order.cancellationReason = reason;
     order.statusHistory.push({
       status: 'cancelled',
-      note: 'Order cancelled by customer',
+      note: `Order cancelled by ${isAdmin ? 'admin' : 'customer'}: ${reason}`,
       updatedBy: req.user.id,
     });
 
+    // Only give the stock back if it was actually taken, and only once - a
+    // gateway order that never verified never had its stock decremented.
+    const shouldRestoreStock = order.stockDeducted && !order.stockRestoredAt;
+    if (shouldRestoreStock) {
+      order.stockRestoredAt = new Date();
+    }
+
     await order.save();
 
+    if (shouldRestoreStock) {
+      try {
+        await restoreStock(
+          order.items.map((item) => ({
+            product: item.product,
+            quantity: item.quantity,
+            variantSku: item.variantSku,
+          }))
+        );
+      } catch (stockErr) {
+        console.error('Stock restore on cancellation failed:', stockErr.message);
+      }
+    }
+
     try {
-      const Delivery = require('../Models/Delivery');
       await Delivery.findOneAndUpdate(
         { orderId: order._id },
-        { status: 'cancelled', notes: 'Order cancelled by customer' }
+        { status: 'cancelled', notes: `Order cancelled: ${reason}` }
       );
     } catch (deliveryErr) {
       console.error('Delivery cancellation failed:', deliveryErr.message);
     }
 
-    // Restore stock for the cancelled order items
-    const { restoreStock } = require('../services/stockService');
-    const stockItems = order.items.map((item) => ({
-      product: item.product,
-      quantity: item.quantity,
-      variantSku: item.variantSku,
-    }));
-    await restoreStock(stockItems);
-
-    // Emit socket event for real-time update
     try {
       const app = require('../app');
       const io = app.get('io');
@@ -627,9 +670,59 @@ exports.cancelOrder = async (req, res, next) => {
           statusHistory: order.statusHistory,
           updatedAt: new Date().toISOString(),
         });
+        io.to('admins').emit('order:updated', {
+          orderId: order._id,
+          orderStatus: order.orderStatus,
+        });
       }
     } catch (socketErr) {
       console.error('Order socket emit failed:', socketErr.message);
+    }
+
+    // A customer-initiated cancellation is the one the store owner has to act
+    // on, so it lands in the admin bell both live and on reload.
+    if (!isAdmin) {
+      const customerName = req.user.name || 'A customer';
+      const message = `Order #${order.orderNumber} was cancelled by ${customerName} — ${reason}`;
+      const at = new Date();
+
+      try {
+        const io = req.app.get('io');
+        if (io) {
+          io.to('admins').emit('notification:new', {
+            id: `order-cancelled-${order._id}`,
+            message,
+            type: 'order',
+            action: 'order_cancelled',
+            orderId: order._id.toString(),
+            link: `/admin/orders?order=${order._id}`,
+            createdAt: at.getTime(),
+          });
+        }
+      } catch (socketErr) {
+        console.error('Admin cancellation notification emit failed:', socketErr.message);
+      }
+
+      try {
+        await User.updateMany(
+          { role: 'admin' },
+          {
+            $push: {
+              notifications: {
+                message,
+                type: 'order',
+                action: 'order_cancelled',
+                orderId: order._id.toString(),
+                link: `/admin/orders?order=${order._id}`,
+                read: false,
+                createdAt: at,
+              },
+            },
+          }
+        );
+      } catch (persistErr) {
+        console.error('Admin cancellation notification persist failed:', persistErr.message);
+      }
     }
 
     res.status(200).json({ success: true, order, message: 'Order cancelled successfully' });

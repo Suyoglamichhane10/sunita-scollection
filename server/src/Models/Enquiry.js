@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { phoneField, registerPhoneValidation } = require('../Utils/phoneValidator');
 
 const messageSchema = new mongoose.Schema(
   {
@@ -50,11 +51,7 @@ const enquirySchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
-    phone: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+    phone: phoneField({ required: true }),
     email: {
       type: String,
       trim: true,
@@ -120,6 +117,8 @@ const enquirySchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+registerPhoneValidation(enquirySchema, ['phone']);
 
 enquirySchema.index({ productId: 1 });
 enquirySchema.index({ userId: 1 });

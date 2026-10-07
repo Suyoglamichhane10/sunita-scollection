@@ -5,6 +5,13 @@ import toast from 'react-hot-toast';
 import { FaCamera, FaCheckCircle, FaEnvelope, FaEye, FaEyeSlash, FaPhone, FaShieldAlt, FaTrash, FaUserShield } from 'react-icons/fa';
 import Avatar from '../../components/common/Avatar';
 import LOGO from '../../assets/LOGO!.png';
+import {
+  PHONE_ERROR_CLASS,
+  PHONE_ERROR_MESSAGE,
+  PHONE_INPUT_PROPS,
+  isValidNepaliPhone,
+  sanitizePhone,
+} from '../../utils/validatePhone';
 
 const AdminProfile = () => {
   const { user, setUser } = useAuth();
@@ -16,6 +23,8 @@ const AdminProfile = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [phoneError, setPhoneError] = useState(false);
+  const [phoneTouched, setPhoneTouched] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -38,11 +47,31 @@ const AdminProfile = () => {
 
   const handleProfileChange = (e) => {
     const { name, value } = e.target;
+    if (name === 'phone') {
+      const digits = sanitizePhone(value);
+      setProfile((prev) => ({ ...prev, phone: digits }));
+      if (phoneTouched) setPhoneError(!isValidNepaliPhone(digits));
+      return;
+    }
     setProfile((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handlePhoneBlur = () => {
+    setPhoneTouched(true);
+    setPhoneError(!isValidNepaliPhone(profile.phone));
   };
 
   const handleProfileSubmit = async (e) => {
     e.preventDefault();
+
+    if (profile.phone) {
+      setPhoneTouched(true);
+      if (!isValidNepaliPhone(profile.phone)) {
+        setPhoneError(true);
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       const { data } = await api.put('/users/profile', {
@@ -248,11 +277,17 @@ const AdminProfile = () => {
                 <div>
                   <label className="mb-2 block text-sm font-medium text-gray-700">Phone</label>
                   <input
+                    {...PHONE_INPUT_PROPS}
                     name="phone"
                     value={profile.phone}
                     onChange={handleProfileChange}
+                    onBlur={handlePhoneBlur}
+                    aria-invalid={phoneError}
                     className="w-full rounded-3xl border border-gray-200 bg-gray-50 px-4 py-3 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
                   />
+                  {phoneError && (
+                    <p className={PHONE_ERROR_CLASS}>{PHONE_ERROR_MESSAGE}</p>
+                  )}
                 </div>
                 <div>
                   <label className="mb-2 block text-sm font-medium text-gray-700">Role</label>

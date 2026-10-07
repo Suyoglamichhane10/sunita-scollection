@@ -1,5 +1,14 @@
 const nodemailer = require('nodemailer');
 
+// The shipped .env keeps placeholders ("your_email@gmail.com") so a fresh
+// checkout runs without secrets. Detect that up front instead of letting SMTP
+// fail with an opaque EAUTH error that the user never sees.
+const isPlaceholder = (value) =>
+  !value || /^(your_|your-|<|change_?me|xxx)/i.test(value.trim());
+
+const emailConfigured = () =>
+  !isPlaceholder(process.env.EMAIL_USER) && !isPlaceholder(process.env.EMAIL_PASS);
+
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST || 'smtp.gmail.com',
   port: parseInt(process.env.EMAIL_PORT) || 587,
@@ -11,9 +20,13 @@ const transporter = nodemailer.createTransport({
 });
 
 const sendEmail = async (options) => {
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    console.warn('⚠️ Email credentials not configured. Skipping email send.');
-    return { success: false, message: 'Email not configured' };
+  if (!emailConfigured()) {
+    const reason =
+      !process.env.EMAIL_USER || isPlaceholder(process.env.EMAIL_USER)
+        ? 'EMAIL_USER is missing or still a placeholder'
+        : 'EMAIL_PASS is missing or still a placeholder';
+    console.warn(`⚠️ Email not sent to ${options.to}: ${reason}. Set real SMTP credentials in server/.env.`);
+    return { success: false, message: reason };
   }
 
   const mailOptions = {
@@ -29,7 +42,7 @@ const sendEmail = async (options) => {
     console.log(`📧 Email sent: ${info.messageId}`);
     return { success: true, info };
   } catch (error) {
-    console.error('❌ Email sending failed:', error.message);
+    console.error(`❌ Email sending failed for ${options.to}:`, error.message);
     return { success: false, message: error.message };
   }
 };
@@ -226,6 +239,7 @@ const sendFollowUp = async (customer, enquiry, offerCode) => {
 
 module.exports = {
   sendEmail,
+  emailConfigured,
   sendOrderConfirmation,
   sendPasswordReset,
   sendEnquiryNotification,

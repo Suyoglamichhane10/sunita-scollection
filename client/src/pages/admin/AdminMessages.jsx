@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import api from '../../Services/api';
 import toast from 'react-hot-toast';
+import { useSearchParams } from 'react-router-dom';
 import { FaTrash, FaReply } from 'react-icons/fa';
 import { createSocket, releaseSocket } from '../../Services/socket';
 
@@ -9,6 +10,13 @@ const AdminMessages = () => {
   const [loading, setLoading] = useState(true);
   const [replies, setReplies] = useState({});
   const [filter, setFilter] = useState('all');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const focusChatId = searchParams.get('chat');
+  const [highlightId, setHighlightId] = useState(null);
+  const rowRefs = useRef({});
+  // Deep-link focus happens once per message, so a later socket update cannot
+  // re-flash a row the admin has already dealt with.
+  const focusedRef = useRef(null);
 
   useEffect(() => {
     const fetchMessages = async () => {
@@ -36,6 +44,42 @@ const AdminMessages = () => {
       socket.off('message:replied');
     };
   }, []);
+
+  // A notification deep link lands on /admin/messages?chat=<conversationId>.
+  // Widen the channel filter if the message is hidden by it, then flash the row
+  // and put the cursor in its reply box.
+  useEffect(() => {
+    if (!focusChatId || loading) return;
+
+    const match = messages.find((m) => String(m.conversation || '') === focusChatId);
+    if (!match) return;
+    if (filter !== 'all') setFilter('all');
+    if (focusedRef.current === match._id) return;
+    focusedRef.current = match._id;
+    setHighlightId(match._id);
+  }, [focusChatId, messages, loading, filter]);
+
+  // Scrolling is keyed off the highlight alone so a socket update cannot cancel
+  // the scroll before it runs.
+  useEffect(() => {
+    if (!highlightId) return undefined;
+    const scrollTimer = setTimeout(() => {
+      rowRefs.current[highlightId]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      document.getElementById(`reply-input-${highlightId}`)?.focus();
+    }, 150);
+    const clearTimer = setTimeout(() => setHighlightId(null), 5000);
+    return () => {
+      clearTimeout(scrollTimer);
+      clearTimeout(clearTimer);
+    };
+  }, [highlightId]);
+
+  const clearFocusParam = () => {
+    if (!searchParams.get('chat')) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete('chat');
+    setSearchParams(next, { replace: true });
+  };
 
   const reply = async (messageId) => {
     const replyText = replies[messageId]?.trim();
@@ -94,7 +138,10 @@ const AdminMessages = () => {
               {['all', 'website', 'whatsapp', 'tiktok', 'facebook', 'chat'].map((source) => (
                 <button
                   key={source}
-                  onClick={() => setFilter(source)}
+                  onClick={() => {
+                    setFilter(source);
+                    clearFocusParam();
+                  }}
                   className={`rounded-full px-3 py-2 text-xs font-semibold capitalize transition sm:text-sm ${
                     filter === source ? 'bg-pink-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
@@ -123,7 +170,15 @@ const AdminMessages = () => {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {filteredMessages.map((message) => (
-                    <tr key={message._id} className="hover:bg-gray-50">
+                    <tr
+                      key={message._id}
+                      ref={(el) => { rowRefs.current[message._id] = el; }}
+                      className={`transition ${
+                        highlightId === message._id
+                          ? 'bg-pink-50 ring-2 ring-inset ring-pink-400'
+                          : 'hover:bg-gray-50'
+                      }`}
+                    >
                       <td className="py-4">
                         <p className="font-semibold text-gray-900">{message.senderName}</p>
                       </td>

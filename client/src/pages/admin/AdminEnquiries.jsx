@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useRef, useState, useEffect } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { FaSearch, FaRedo, FaClock, FaExchangeAlt, FaReply, FaTag, FaPhoneAlt, FaTrashAlt, FaCheckCircle, FaEnvelope } from 'react-icons/fa';
 import api from '../../Services/api';
 import { useAuth } from '../../Context/Authcontext';
@@ -19,6 +19,13 @@ const STATUS_CONFIG = {
 
 const AdminEnquiries = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const focusEnquiryId = searchParams.get('enquiry');
+  const [highlightId, setHighlightId] = useState(null);
+  const rowRefs = useRef({});
+  // Deep-link focus happens once per id, so a later refetch cannot reopen or
+  // re-expand a row the admin has since closed.
+  const focusedRef = useRef(null);
   const { isAuthenticated, isAdmin } = useAuth();
   const { counts } = useAdminEnquiryBadge();
   const [enquiries, setEnquiries] = useState([]);
@@ -41,6 +48,47 @@ const AdminEnquiries = () => {
   useEffect(() => {
     document.title = `Enquiries (${counts.unread}) | Sunita'z Collection Admin`;
   }, [counts.unread]);
+
+  // A notification deep link lands on /admin/enquiries?enquiry=<id>. Widen the
+  // filters if the target is hidden by them, then open and flash that enquiry.
+  useEffect(() => {
+    if (!focusEnquiryId || loading) return;
+
+    const match = enquiries.find((e) => e._id === focusEnquiryId);
+    if (!match) {
+      if (filterStatus !== 'all' || searchTerm) {
+        setFilterStatus('all');
+        setSearchTerm('');
+      }
+      return;
+    }
+
+    if (focusedRef.current === focusEnquiryId) return;
+    focusedRef.current = focusEnquiryId;
+    setExpandedId(focusEnquiryId);
+    setHighlightId(focusEnquiryId);
+  }, [focusEnquiryId, enquiries, loading, filterStatus, searchTerm]);
+
+  // Scrolling is keyed off the highlight alone so a refetch of `enquiries`
+  // cannot cancel the scroll before it runs.
+  useEffect(() => {
+    if (!highlightId) return undefined;
+    const scrollTimer = setTimeout(() => {
+      rowRefs.current[highlightId]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 150);
+    const clearTimer = setTimeout(() => setHighlightId(null), 5000);
+    return () => {
+      clearTimeout(scrollTimer);
+      clearTimeout(clearTimer);
+    };
+  }, [highlightId]);
+
+  const clearFocusParam = () => {
+    if (!searchParams.get('enquiry')) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete('enquiry');
+    setSearchParams(next, { replace: true });
+  };
 
   const fetchEnquiries = async () => {
     try {
@@ -187,7 +235,14 @@ const AdminEnquiries = () => {
                     const isExpanded = expandedId === enquiry._id;
                     return (
                       <React.Fragment key={enquiry._id}>
-                        <tr className="border-b border-gray-100 hover:bg-cream/50">
+                        <tr
+                          ref={(el) => { rowRefs.current[enquiry._id] = el; }}
+                          className={`border-b border-gray-100 transition ${
+                            highlightId === enquiry._id
+                              ? 'bg-pink-50 ring-2 ring-inset ring-pink-400'
+                              : 'hover:bg-cream/50'
+                          }`}
+                        >
                           <td className="py-3 pr-4 pl-4 text-xs text-gray-500 sm:pl-6">
                             {new Date(enquiry.createdAt).toLocaleDateString()} {new Date(enquiry.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </td>
@@ -229,7 +284,10 @@ const AdminEnquiries = () => {
                           <td className="sticky right-0 bg-white py-3 pr-4 pl-4 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] sm:pr-6">
                             <div className="flex items-center gap-1">
                               <button
-                                onClick={() => setExpandedId(isExpanded ? null : enquiry._id)}
+                                onClick={() => {
+                                  setExpandedId(isExpanded ? null : enquiry._id);
+                                  clearFocusParam();
+                                }}
                                 className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary hover:bg-primary/20"
                                 title="Thread"
                                 aria-label={`Open thread for ${enquiry.name}`}

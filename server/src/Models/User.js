@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const { phoneField, registerPhoneValidation } = require('../Utils/phoneValidator');
 
 const userSchema = new mongoose.Schema(
   {
@@ -32,10 +33,7 @@ const userSchema = new mongoose.Schema(
       enum: ['customer', 'admin', 'supplier'],
       default: 'customer',
     },
-    phone: {
-      type: String,
-      trim: true,
-    },
+    phone: phoneField(),
     address: {
       street: String,
       city: String,
@@ -49,7 +47,7 @@ const userSchema = new mongoose.Schema(
     addresses: [
       {
         fullName: String,
-        phone: String,
+        phone: phoneField(),
         street: String,
         city: String,
         state: String,
@@ -186,8 +184,31 @@ const userSchema = new mongoose.Schema(
         message: String,
         type: {
           type: String,
-          enum: ['order', 'promotion', 'system', 'enquiry'],
+          enum: [
+            'order',
+            'promotion',
+            'system',
+            'enquiry',
+            'payment',
+            'message',
+            'review',
+            'deal',
+            'price',
+            'rewards',
+            'wishlist',
+          ],
         },
+        // Which event produced this, so a click can route to the exact record.
+        action: { type: String, default: null },
+        orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', default: null },
+        enquiryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Enquiry', default: null },
+        conversationId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Conversation',
+          default: null,
+        },
+        // Fully-formed destination, preferred over type + refId when present.
+        link: { type: String, default: null },
         read: {
           type: Boolean,
           default: false,
@@ -218,6 +239,8 @@ const userSchema = new mongoose.Schema(
 );
 
 // Encrypt password before saving
+registerPhoneValidation(userSchema, ['phone', 'addresses.$*.phone']);
+
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) {
     return next();

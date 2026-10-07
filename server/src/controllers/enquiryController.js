@@ -1,6 +1,7 @@
 const Enquiry = require('../Models/Enquiry');
 const User = require('../Models/User');
 const Product = require('../Models/Product');
+const { rejectInvalidPhone } = require('../Utils/phoneValidator');
 const {
   sendEnquiryNotification,
   sendEnquiryReply,
@@ -56,19 +57,21 @@ const notifyAdminsOfCustomerAction = async (req, enquiry, actionLabel) => {
   // One timestamp for both the live push and the persisted copy so the admin
   // bell can recognise them as the same notification and not show it twice.
   const at = new Date();
+  const link = `/admin/enquiries?enquiry=${enquiry._id}`;
+  const payload = {
+    id: `enquiry-${actionLabel.toLowerCase().replace(/\s+/g, '-')}-${enquiry._id}`,
+    message,
+    type: 'enquiry',
+    action: actionLabel.toLowerCase().replace(/\s+/g, '_'),
+    enquiryId: enquiry._id.toString(),
+    link,
+    createdAt: at.getTime(),
+  };
 
   try {
     const io = req.app && req.app.get('io');
     if (io) {
-      io.to('admins').emit('notification:new', {
-        id: `enquiry-${actionLabel.toLowerCase().replace(/\s+/g, '-')}-${enquiry._id}`,
-        message,
-        type: 'enquiry',
-        action: actionLabel,
-        enquiryId: enquiry._id,
-        navigateTo: '/admin/enquiries',
-        createdAt: at.getTime(),
-      });
+      io.to('admins').emit('notification:new', payload);
     }
   } catch (error) {
     console.error('Admin enquiry notification failed:', error.message);
@@ -79,7 +82,15 @@ const notifyAdminsOfCustomerAction = async (req, enquiry, actionLabel) => {
       { role: 'admin' },
       {
         $push: {
-          notifications: { message, type: 'enquiry', read: false, createdAt: at },
+          notifications: {
+            message,
+            type: 'enquiry',
+            action: payload.action,
+            enquiryId: enquiry._id,
+            link,
+            read: false,
+            createdAt: at,
+          },
         },
       }
     );
@@ -96,6 +107,8 @@ exports.createEnquiry = async (req, res, next) => {
     if (!name || !phone || !message) {
       return res.status(400).json({ success: false, message: 'Please fill in all required fields' });
     }
+
+    if (rejectInvalidPhone(res, phone)) return;
 
     // A product is optional so the same endpoint serves the general enquiry
     // form in the footer, which has no product context.
@@ -539,6 +552,8 @@ exports.updateEnquiry = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Cannot edit enquiry after admin has replied' });
     }
     
+    if (rejectInvalidPhone(res, phone)) return;
+
     if (message && String(message).trim()) {
       // Update the first message (original enquiry message)
       if (enquiry.messages && enquiry.messages.length > 0) {

@@ -7,6 +7,13 @@ import toast from 'react-hot-toast';
 import EsewaLogo from '../../assets/Esewa_logo.webp';
 import FonepayLogo from '../../assets/fonepay.png';
 import { FaAward } from 'react-icons/fa';
+import {
+  PHONE_ERROR_CLASS,
+  PHONE_ERROR_MESSAGE,
+  PHONE_INPUT_PROPS,
+  isValidNepaliPhone,
+  sanitizePhone,
+} from '../../utils/validatePhone';
 
 const Checkout = () => {
   const { cartItems, totalPrice, clearCart } = useCart();
@@ -21,6 +28,8 @@ const Checkout = () => {
   });
   const [paymentMethod, setPaymentMethod] = useState('cod');
   const [loading, setLoading] = useState(false);
+  const [phoneTouched, setPhoneTouched] = useState(false);
+  const [phoneError, setPhoneError] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const referralCode = searchParams.get('ref') || '';
@@ -34,6 +43,17 @@ const Checkout = () => {
     }
   }, [authLoading, isAuthenticated, navigate]);
 
+  const handlePhoneChange = (e) => {
+    const digits = sanitizePhone(e.target.value);
+    setShipping((prev) => ({ ...prev, phone: digits }));
+    if (phoneTouched) setPhoneError(!isValidNepaliPhone(digits));
+  };
+
+  const handlePhoneBlur = () => {
+    setPhoneTouched(true);
+    setPhoneError(!isValidNepaliPhone(shipping.phone));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!cartItems.length) {
@@ -41,6 +61,13 @@ const Checkout = () => {
       navigate('/cart');
       return;
     }
+
+    setPhoneTouched(true);
+    if (!isValidNepaliPhone(shipping.phone)) {
+      setPhoneError(true);
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -140,14 +167,21 @@ const Checkout = () => {
                 required
                 className="w-full rounded-3xl border border-gray-200 bg-gray-50 px-4 py-3 outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-100"
               />
-              <input
-                type="tel"
-                placeholder="Phone Number"
-                value={shipping.phone}
-                onChange={(e) => setShipping({ ...shipping, phone: e.target.value })}
-                required
-                className="w-full rounded-3xl border border-gray-200 bg-gray-50 px-4 py-3 outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-100"
-              />
+              <div>
+                <input
+                  {...PHONE_INPUT_PROPS}
+                  placeholder="Phone Number"
+                  value={shipping.phone}
+                  onChange={handlePhoneChange}
+                  onBlur={handlePhoneBlur}
+                  required
+                  aria-invalid={phoneError}
+                  className="w-full rounded-3xl border border-gray-200 bg-gray-50 px-4 py-3 outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-100"
+                />
+                {phoneError && (
+                  <p className={PHONE_ERROR_CLASS}>{PHONE_ERROR_MESSAGE}</p>
+                )}
+              </div>
               <input
                 type="text"
                 placeholder="Street Address"

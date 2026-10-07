@@ -13,6 +13,9 @@ const ResetPassword = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
+  // The token comes from the URL and cannot change without a remount, so this
+  // does not need to be state.
+  const tokenMissing = !resetToken;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,12 +27,16 @@ const ResetPassword = () => {
       toast.error('Password must be at least 6 characters');
       return;
     }
+    if (!resetToken) {
+      toast.error('This reset link is incomplete. Please request a new one.');
+      return;
+    }
     setLoading(true);
     try {
-      await api.put(`/auth/reset-password/${resetToken}`, { password });
-      toast.success('Password reset successfully! Please login.');
-      navigate('/login');
-    } catch {
+      const { data } = await api.put(`/auth/reset-password/${resetToken}`, { password });
+      toast.success(data.message || 'Password reset successfully! Please login with your new password.');
+      navigate('/login', { replace: true });
+    } catch (error) {
       toast.error(error.response?.data?.message || 'Unable to reset password');
     } finally {
       setLoading(false);
@@ -44,6 +51,20 @@ return (
           <p className="text-sm text-white/85">Set a new password</p>
         </div>
         <div className="p-6 sm:p-8">
+          {tokenMissing ? (
+            <div className="text-center">
+              <h2 className="font-serif text-xl font-semibold text-primary-800">This reset link is invalid</h2>
+              <p className="mt-3 text-sm text-ink-light">
+                The link is missing its reset token. Request a fresh one and use the newest email.
+              </p>
+              <Link
+                to="/forgot-password"
+                className="btn-elegant mt-6 inline-block rounded-full px-6 py-3 text-sm font-semibold"
+              >
+                Request a new link
+              </Link>
+            </div>
+          ) : (
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div className="relative">
               <label className="mb-2 block text-sm font-medium text-primary-800">New password</label>
@@ -96,6 +117,7 @@ return (
               <Link to="/login" className="font-semibold text-primary-600 hover:text-primary-800">Back to login</Link>
             </div>
           </form>
+          )}
         </div>
       </div>
     </div>

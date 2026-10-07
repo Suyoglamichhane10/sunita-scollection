@@ -55,8 +55,8 @@ exports.getNotifications = async (req, res, next) => {
         .sort('-lastMessageAt')
         .limit(15),
       User.findById(userId).select('notifications').lean(),
-      Payment.find({ userId, status: { $in: ['pending', 'completed', 'failed'] } })
-        .populate('order', 'orderNumber')
+      Payment.find({ userId, paymentStatus: { $in: ['pending', 'paid', 'failed'] } })
+        .populate('orderId', 'orderNumber')
         .sort('-createdAt')
         .limit(10),
     ]);
@@ -64,13 +64,11 @@ exports.getNotifications = async (req, res, next) => {
     const items = [];
 
     enquiries.forEach((e) => {
-      let navigateTo = '/dashboard?tab=enquiries';
-      if (e.status === 'customer_agreed' || e.status === 'deal_closed') {
-        navigateTo = `/dashboard?tab=enquiries&enquiry=${e._id}`;
-      }
+      const navigateTo = `/dashboard?tab=enquiries&enquiry=${e._id}`;
       items.push({
         _id: String(e._id),
         type: 'enquiry',
+        action: 'admin_replied',
         message: `Admin replied to your enquiry about ${e.productId?.name || e.productName || 'Product'} ${e.quotedPrice ? money(e.quotedPrice) : ''}`,
         shortMessage: e.adminReply || `Enquiry update on ${e.productName || 'Product'}`,
         enquiryId: e._id,
@@ -78,49 +76,64 @@ exports.getNotifications = async (req, res, next) => {
         read: !!e.readByCustomer,
         createdAt: e.repliedAt || e.updatedAt || e.createdAt,
         navigateTo,
+        link: navigateTo,
         status: e.status,
       });
     });
 
     orders.forEach((o) => {
+      const navigateTo = `/dashboard?tab=orders&order=${o._id}`;
       items.push({
         _id: `order-${o._id}`,
         type: 'order',
+        action: 'order_status_changed',
         message: `Your order #${o.orderNumber} is now ${o.orderStatus}`,
         shortMessage: `Order #${o.orderNumber} — ${o.orderStatus}`,
         orderId: o._id,
         orderNumber: o.orderNumber,
         read: false,
         createdAt: o.createdAt,
-        navigateTo: `/orders/${o._id}`,
+        navigateTo,
+        link: navigateTo,
       });
     });
 
     conversations.forEach((c) => {
+      const navigateTo = `/dashboard?tab=messages&chat=${c._id}`;
       items.push({
         _id: `conv-${c._id}`,
         type: 'message',
+        action: 'message_received',
         message: `New message from Sunita's Collection`,
         shortMessage: c.lastMessagePreview || 'New message',
         conversationId: c._id,
         read: false,
         createdAt: c.lastMessageAt,
-        navigateTo: '/dashboard?tab=messages',
+        navigateTo,
+        link: navigateTo,
       });
     });
 
+    // The Payment model stores `paymentStatus` and `orderId`; the previous
+    // `status` / `order` names matched nothing, so payment notifications never
+    // reached the bell at all.
     payments.forEach((p) => {
+      const navigateTo = p.orderId
+        ? `/dashboard?tab=orders&order=${p.orderId._id || p.orderId}`
+        : '/dashboard?tab=orders';
       items.push({
         _id: `payment-${p._id}`,
         type: 'payment',
-        message: `Payment ${p.paymentStatus} for order #${p.order?.orderNumber || 'N/A'} — ${money(p.amount)}`,
+        action: `payment_${p.paymentStatus}`,
+        message: `Payment ${p.paymentStatus} for order #${p.orderId?.orderNumber || 'N/A'} — ${money(p.amount)}`,
         shortMessage: `Payment ${p.paymentStatus} — ${money(p.amount)}`,
         paymentId: p._id,
-        orderId: p.order?._id,
-        orderNumber: p.order?.orderNumber,
+        orderId: p.orderId?._id || p.orderId || null,
+        orderNumber: p.orderId?.orderNumber,
         read: false,
         createdAt: p.createdAt,
-        navigateTo: p.order?._id ? `/orders/${p.order._id}` : '/dashboard?tab=orders',
+        navigateTo,
+        link: navigateTo,
       });
     });
 
@@ -132,25 +145,30 @@ exports.getNotifications = async (req, res, next) => {
             ? 'rewards'
             : n.type === 'order'
               ? 'order'
-              : 'system';
+              : n.type;
         items.push({
           _id: n._id || `dn-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
           type: mappedType,
+          action: n.action,
           message: n.message || n.title || 'You have a new notification',
           shortMessage: (n.message || n.title || '').slice(0, 60),
+          enquiryId: n.enquiryId || undefined,
+          orderId: n.orderId || undefined,
+          conversationId: n.conversationId || undefined,
           read: false,
           createdAt: n.createdAt,
           navigateTo:
-            n.type === 'promotion'
+            n.link ||
+            (mappedType === 'rewards'
               ? '/dashboard?tab=rewards'
-              : n.type === 'order'
-                ? '/dashboard?tab=orders'
-                : '/dashboard',
+              : mappedType === 'order'
+                ? (n.orderId ? `/dashboard?tab=orders&order=${n.orderId}` : '/dashboard?tab=orders')
+                : '/dashboard'),
+          link: n.link || undefined,
         });
       });
 
     items.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-    items.slice(0, 30);
 
     res.status(200).json({ success: true, notifications: items.slice(0, 30) });
   } catch (error) {

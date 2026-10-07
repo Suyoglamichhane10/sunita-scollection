@@ -63,7 +63,7 @@ const Register = () => {
             <div className="mt-8 space-y-3 text-sm text-white/80">
               <p className="flex items-center gap-2"><span className="text-gold-300">✦</span> Simple, secure & fast signup</p>
               <p className="flex items-center gap-2"><span className="text-gold-300">✦</span> Earn rewards on every order</p>
-              <p className="flex items-center gap-2"><span className="text-gold-300">✦</span> Real-time order tracking</p>
+              <p className="flex items-center gap-2"><span className="text-gold-300">✦</span> Exclusive offers & updates</p>
             </div>
           </div>
         </div>

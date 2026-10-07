@@ -3,6 +3,13 @@ import { FaPhoneAlt, FaMapMarkerAlt, FaFacebookF, FaInstagram, FaTiktok, FaPaper
 import toast from 'react-hot-toast';
 import api from '../../Services/api';
 import QRCode from '../../assets/QR.png';
+import {
+  PHONE_ERROR_CLASS,
+  PHONE_ERROR_MESSAGE,
+  PHONE_INPUT_PROPS,
+  isValidNepaliPhone,
+  sanitizePhone,
+} from '../../utils/validatePhone';
 
 const ContinuousTypewriter = ({ words = [], speed = 100, deleteSpeed = 60, pause = 1500, className = '' }) => {
   const [wordIndex, setWordIndex] = useState(0);
@@ -48,19 +55,41 @@ const ContinuousTypewriter = ({ words = [], speed = 100, deleteSpeed = 60, pause
 const Contact = () => {
   const [form, setForm] = useState({ name: '', email: '', phone: '', subject: '', message: '' });
   const [sending, setSending] = useState(false);
+  const [phoneTouched, setPhoneTouched] = useState(false);
+  const [phoneError, setPhoneError] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    if (name === 'phone') {
+      const digits = sanitizePhone(value);
+      setForm((prev) => ({ ...prev, phone: digits }));
+      if (phoneTouched) setPhoneError(!isValidNepaliPhone(digits));
+      return;
+    }
     setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handlePhoneBlur = () => {
+    setPhoneTouched(true);
+    setPhoneError(!isValidNepaliPhone(form.phone));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (form.phone) {
+      setPhoneTouched(true);
+      if (!isValidNepaliPhone(form.phone)) {
+        setPhoneError(true);
+        return;
+      }
+    }
     setSending(true);
     try {
       await api.post('/messages', { ...form, source: 'website' });
       toast.success('Message sent successfully! We will get back to you soon.');
       setForm({ name: '', email: '', phone: '', subject: '', message: '' });
+      setPhoneTouched(false);
+      setPhoneError(false);
     } catch (error) {
       toast.error(error.response?.data?.message || 'Unable to send message');
     } finally {
@@ -214,7 +243,8 @@ const Contact = () => {
                   </div>
                   <div>
                     <label className="mb-2 block text-sm font-medium text-gray-700">Phone</label>
-                    <input name="phone" value={form.phone} onChange={handleChange} className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10" placeholder="+977-98XXXXXXXX" />
+                    <input {...PHONE_INPUT_PROPS} name="phone" value={form.phone} onChange={handleChange} onBlur={handlePhoneBlur} aria-invalid={phoneError} className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10" placeholder="98XXXXXXXXX" />
+                    {phoneError && <p className={PHONE_ERROR_CLASS}>{PHONE_ERROR_MESSAGE}</p>}
                   </div>
                   <div>
                     <label className="mb-2 block text-sm font-medium text-gray-700">Subject</label>

@@ -36,6 +36,7 @@ const finalizePaidOrder = async (order, paymentDetails, userId) => {
     gateway: paymentDetails.gateway,
   };
   order.orderStatus = 'confirmed';
+  order.stockDeducted = true;
   order.statusHistory = order.statusHistory || [];
   order.statusHistory.push({
     status: 'confirmed',

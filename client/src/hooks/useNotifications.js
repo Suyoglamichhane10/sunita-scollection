@@ -218,6 +218,7 @@ const useNotifications = (active = false) => {
     socket.on('order:updated', handleRealtime);
     socket.on('order:status', handleRealtime);
     socket.on('message:new', handleRealtime);
+    socket.on('notification:new', handleRealtime);
 
     return () => {
       socket.off('enquiry:new', handleRealtime);
@@ -227,6 +228,7 @@ const useNotifications = (active = false) => {
       socket.off('order:updated', handleRealtime);
       socket.off('order:status', handleRealtime);
       socket.off('message:new', handleRealtime);
+      socket.off('notification:new', handleRealtime);
     };
   }, [socketRef, isAuthenticated, fetchCounts, fetchNotifications]);
 

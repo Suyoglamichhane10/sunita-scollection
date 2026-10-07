@@ -3,6 +3,13 @@ import { useAuth } from '../../Context/Authcontext';
 import api from '../../Services/api';
 import toast from 'react-hot-toast';
 import { FaMapMarkerAlt, FaPlus, FaCheck, FaTimes, FaTrash, FaEdit, FaCheckCircle } from 'react-icons/fa';
+import {
+  PHONE_ERROR_CLASS,
+  PHONE_ERROR_MESSAGE,
+  PHONE_INPUT_PROPS,
+  isValidNepaliPhone,
+  sanitizePhone,
+} from '../../utils/validatePhone';
 
 const AddressManager = ({ user, onUserUpdate }) => {
   const { updateUser } = useAuth();
@@ -13,6 +20,19 @@ const AddressManager = ({ user, onUserUpdate }) => {
     fullName: '', phone: '', street: '', city: '', state: '', pincode: '', isDefault: false,
   });
   const [saving, setSaving] = useState(false);
+  const [phoneTouched, setPhoneTouched] = useState(false);
+  const [phoneError, setPhoneError] = useState(false);
+
+  const handlePhoneChange = (e) => {
+    const digits = sanitizePhone(e.target.value);
+    setForm((prev) => ({ ...prev, phone: digits }));
+    if (phoneTouched) setPhoneError(!isValidNepaliPhone(digits));
+  };
+
+  const handlePhoneBlur = () => {
+    setPhoneTouched(true);
+    setPhoneError(!isValidNepaliPhone(form.phone));
+  };
 
   const handleFetchAddresses = async () => {
     try {
@@ -25,12 +45,16 @@ const AddressManager = ({ user, onUserUpdate }) => {
 
   const handleOpenAdd = () => {
     setEditingId(null);
+    setPhoneTouched(false);
+    setPhoneError(false);
     setForm({ fullName: '', phone: '', street: '', city: '', state: '', pincode: '', isDefault: addresses.length === 0 });
     setShowForm(true);
   };
 
   const handleEdit = (addr) => {
     setEditingId(addr._id);
+    setPhoneTouched(false);
+    setPhoneError(false);
     setForm({
       fullName: addr.fullName, phone: addr.phone, street: addr.street,
       city: addr.city, state: addr.state, pincode: addr.pincode, isDefault: addr.isDefault,
@@ -40,6 +64,11 @@ const AddressManager = ({ user, onUserUpdate }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setPhoneTouched(true);
+    if (!isValidNepaliPhone(form.phone)) {
+      setPhoneError(true);
+      return;
+    }
     setSaving(true);
     try {
       let res;
@@ -52,6 +81,8 @@ const AddressManager = ({ user, onUserUpdate }) => {
       handleFetchAddresses();
       setShowForm(false);
       setEditingId(null);
+      setPhoneTouched(false);
+      setPhoneError(false);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to save');
     } finally {
@@ -147,7 +178,8 @@ const AddressManager = ({ user, onUserUpdate }) => {
               </div>
               <div>
                 <label className="text-xs font-semibold text-ink-light">Phone</label>
-                <input type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} required className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-ink focus:border-pink-500 focus:ring-1 focus:ring-pink-200" />
+                <input {...PHONE_INPUT_PROPS} value={form.phone} onChange={handlePhoneChange} onBlur={handlePhoneBlur} required aria-invalid={phoneError} className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-ink focus:border-pink-500 focus:ring-1 focus:ring-pink-200" />
+                {phoneError && <p className={PHONE_ERROR_CLASS}>{PHONE_ERROR_MESSAGE}</p>}
               </div>
               <div>
                 <label className="text-xs font-semibold text-ink-light">Street Address</label>

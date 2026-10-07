@@ -1,5 +1,6 @@
 const Message = require('../Models/Message');
 const { sendWhatsAppReply } = require('../services/socialMediaService');
+const { rejectInvalidPhones } = require('../Utils/phoneValidator');
 
 const formatPhoneForWhatsApp = (phone) => {
   if (!phone) return null;
@@ -16,6 +17,8 @@ exports.createMessage = async (req, res, next) => {
     if (!senderName || !message) {
       return res.status(400).json({ success: false, message: 'Name and message are required' });
     }
+
+    if (rejectInvalidPhones(res, [senderContact, req.body.phone])) return;
 
     const createdMessage = await Message.create({
       user: req.user.id,
@@ -47,6 +50,8 @@ exports.createPublicMessage = async (req, res, next) => {
     if (!senderName || !message) {
       return res.status(400).json({ success: false, message: 'Name and message are required' });
     }
+
+    if (rejectInvalidPhones(res, [senderContact, req.body.phone])) return;
 
     const createdMessage = await Message.create({
       source: source || 'website',
@@ -94,6 +99,8 @@ exports.createPublicTikTokMessage = async (req, res, next) => {
     if (!senderName || !message) {
       return res.status(400).json({ success: false, message: 'Name and message are required' });
     }
+
+    if (rejectInvalidPhones(res, [senderContact, req.body.phone])) return;
 
     const createdMessage = await Message.create({
       source: 'tiktok',

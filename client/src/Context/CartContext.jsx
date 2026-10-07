@@ -54,6 +54,18 @@ const consolidateCartItems = (items) => {
   return Array.from(map.values());
 };
 
+const describeCartError = (error, fallback) => {
+  const status = error?.response?.status;
+  const serverMessage = error?.response?.data?.message;
+  if (typeof serverMessage === 'string' && serverMessage.trim()) return serverMessage;
+  if (status === 401) return 'Your session expired. Please log in again.';
+  if (status === 429) return 'Too many requests. Please wait a moment and try again.';
+  if (status >= 500) return 'The server is temporarily unavailable. Please try again.';
+  if (error?.code === 'ECONNABORTED') return 'The server took too long to respond. Please try again.';
+  if (!error?.response) return 'Cannot reach the server. Check your connection and try again.';
+  return fallback;
+};
+
 const GUEST_CART_KEY = 'guest_cart';
 
 export const CartProvider = ({ children }) => {
@@ -237,7 +249,7 @@ const { data } = await api.get('/users/profile/cart');
           toast.success('Added to cart!');
         })
         .catch((error) => {
-          toast.error(error.response?.data?.message || 'Unable to add to cart');
+          toast.error(describeCartError(error, 'Unable to add to cart'));
           fetchServerCart();
         });
       return true;
@@ -251,7 +263,7 @@ const { data } = await api.get('/users/profile/cart');
       if (isAuthenticated) {
         api
           .delete(`/users/profile/cart/${key}`)
-          .catch(() => toast.error('Unable to remove item'));
+          .catch((error) => toast.error(describeCartError(error, 'Unable to remove item')));
       }
       toast.success('Removed from cart');
     },
@@ -272,7 +284,7 @@ const { data } = await api.get('/users/profile/cart');
       if (isAuthenticated) {
         api
           .put(`/users/profile/cart/${key}`, { quantity })
-          .catch(() => toast.error('Unable to update quantity'));
+          .catch((error) => toast.error(describeCartError(error, 'Unable to update quantity')));
       }
     },
     [isAuthenticated, removeFromCart]

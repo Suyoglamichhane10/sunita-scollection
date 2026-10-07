@@ -3,7 +3,8 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const axios = require('axios');
 const { sendPasswordReset } = require('../services/emailService');
-const { getFrontendUrl } = require('../Utils/frontendUrl');
+const { getFrontendUrl, resolveFrontendUrl } = require('../Utils/frontendUrl');
+const { rejectInvalidPhone } = require('../Utils/phoneValidator');
 
 const FACEBOOK_GRAPH_URL = 'https://graph.facebook.com/v18.0';
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
@@ -114,6 +115,8 @@ const fetchSocialUser = async (accessToken, provider) => {
 exports.register = async (req, res, next) => {
   try {
     const { name, email, password, phone } = req.body;
+
+    if (rejectInvalidPhone(res, phone)) return;
 
     const userExists = await User.findOne({ email });
     if (userExists) {
@@ -379,13 +382,23 @@ exports.getMe = async (req, res, next) => {
 // @access  Public
 exports.forgotPassword = async (req, res, next) => {
   try {
-    const user = await User.findOne({ email: req.body.email });
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'No user found with that email',
+    const email = (req.body.email || '').trim().toLowerCase();
+    const genericResponse = () =>
+      res.status(200).json({
+        success: true,
+        message: 'If an account exists for that email, a password reset link is on its way.',
       });
+
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Please provide your email' });
+    }
+
+    const user = await User.findOne({ email });
+
+    // Answer identically whether or not the account exists. A 404 here would
+    // tell anyone who guesses an address that it is registered.
+    if (!user) {
+      return genericResponse();
     }
 
     const resetToken = crypto.randomBytes(20).toString('hex');
@@ -399,21 +412,22 @@ exports.forgotPassword = async (req, res, next) => {
 
     await user.save({ validateBeforeSave: false });
 
-    const resetUrl = `${getFrontendUrl()}/reset-password/${resetToken}`;
+    const resetUrl = `${resolveFrontendUrl(req)}/reset-password/${resetToken}`;
 
-    // Send password reset email (non-blocking)
-    try {
-      await sendPasswordReset(user, resetUrl);
-    } catch (emailErr) {
-      console.error('Password reset email failed:', emailErr.message);
+    const mailResult = await sendPasswordReset(user, resetUrl);
+    if (!mailResult?.success) {
+      // Silently claiming success while the mail never left the server is what
+      // made this flow look broken. Say so, and log the reason.
+      console.error('Password reset email was not delivered:', mailResult?.message || mailResult);
+      return res.status(503).json({
+        success: false,
+        message: 'We could not send the reset email. Please try again later or contact support.',
+      });
     }
 
-    res.status(200).json({
-      success: true,
-      message: 'Password reset email sent',
-      resetToken,
-      resetUrl,
-    });
+    // Never echo the token or the reset URL back to the caller: that would let
+    // anyone reset a password for an address they merely know.
+    return genericResponse();
   } catch (error) {
     next(error);
   }
@@ -424,6 +438,15 @@ exports.forgotPassword = async (req, res, next) => {
 // @access  Public
 exports.resetPassword = async (req, res, next) => {
   try {
+    const { password } = req.body;
+
+    if (!password || password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 6 characters',
+      });
+    }
+
     const resetPasswordToken = crypto
       .createHash('sha256')
       .update(req.params.resetToken)
@@ -441,12 +464,20 @@ exports.resetPassword = async (req, res, next) => {
       });
     }
 
-    user.password = req.body.password;
+    user.password = password;
+    // Burn the token so the same link cannot be replayed to set the password
+    // again later.
     user.resetPasswordToken = undefined;
     user.resetPasswordExpire = undefined;
     await user.save();
 
-    sendTokenResponse(user, 200, res);
+    // Deliberately no session here. The frontend sends the customer to the
+    // login page, and handing out a token at the same time would sign them in
+    // without them asking.
+    res.status(200).json({
+      success: true,
+      message: 'Password reset successfully. Please log in with your new password.',
+    });
   } catch (error) {
     next(error);
   }

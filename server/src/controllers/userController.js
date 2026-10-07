@@ -10,6 +10,7 @@ const bcrypt = require('bcrypt');
 const path = require('path');
 const cloudinary = require('../config/cloudinary');
 const { getAbsoluteUrl } = require('../Utils/getAbsoluteUrl');
+const { rejectInvalidPhone } = require('../Utils/phoneValidator');
 
 // Helper: delete Cloudinary image by publicId (ignore local/null ids)
 const deleteCloudinaryImage = async (publicId) => {
@@ -89,6 +90,8 @@ exports.getProfile = async (req, res, next) => {
 exports.updateProfile = async (req, res, next) => {
   try {
     const { name, phone, address, avatar, avatarPublicId } = req.body;
+    if (rejectInvalidPhone(res, phone)) return;
+
     const user = await User.findById(req.user.id);
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
@@ -305,6 +308,8 @@ exports.addAddress = async (req, res, next) => {
       });
     }
 
+    if (rejectInvalidPhone(res, phone)) return;
+
     const address = {
       fullName,
       phone,
@@ -341,6 +346,7 @@ exports.updateAddress = async (req, res, next) => {
     }
 
     const { fullName, phone, street, city, state, zipCode, country, isDefault } = req.body;
+    if (rejectInvalidPhone(res, phone)) return;
     if (fullName) address.fullName = fullName;
     if (phone) address.phone = phone;
     if (street) address.street = street;

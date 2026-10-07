@@ -6,6 +6,13 @@ import { uploadAvatar, deleteAvatar } from '../../Services/api';
 import toast from 'react-hot-toast';
 import { FaEye, FaEyeSlash, FaPlus, FaTshirt, FaCamera, FaTrash, FaCheckCircle, FaEnvelope, FaPhone, FaSave, FaUndo } from 'react-icons/fa';
 import Avatar from '../../components/common/Avatar';
+import {
+  PHONE_ERROR_CLASS,
+  PHONE_ERROR_MESSAGE,
+  PHONE_INPUT_PROPS,
+  isValidNepaliPhone,
+  sanitizePhone,
+} from '../../utils/validatePhone';
 
 const Profile = () => {
   const { user, setUser, refreshUser, isAuthenticated, loading: authLoading } = useAuth();
@@ -23,6 +30,10 @@ const Profile = () => {
   const [avatarDirty, setAvatarDirty] = useState(false);
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [newAddress, setNewAddress] = useState({ fullName: '', phone: '', street: '', city: '', state: '', zipCode: '', country: 'Nepal', isDefault: false });
+  const [profilePhoneError, setProfilePhoneError] = useState(false);
+  const [profilePhoneTouched, setProfilePhoneTouched] = useState(false);
+  const [addressPhoneError, setAddressPhoneError] = useState(false);
+  const [addressPhoneTouched, setAddressPhoneTouched] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -52,17 +63,48 @@ const Profile = () => {
     fetchProfile();
   }, [authLoading, isAuthenticated, navigate]);
 
-  const handleProfileChange = (e) => {
+const handleProfileChange = (e) => {
     const { name, value } = e.target;
     if (['street', 'city', 'state', 'country'].includes(name)) {
       setProfile((prev) => ({ ...prev, address: { ...prev.address, [name]: value } }));
-    } else {
-      setProfile((prev) => ({ ...prev, [name]: value }));
+      return;
     }
+    if (name === 'phone') {
+      const digits = sanitizePhone(value);
+      setProfile((prev) => ({ ...prev, phone: digits }));
+      if (profilePhoneTouched) setProfilePhoneError(!isValidNepaliPhone(digits));
+      return;
+    }
+    setProfile((prev) => ({ ...prev, [name]: value }));
   };
 
-const handleProfileSubmit = async (e) => {
+  const handleProfilePhoneBlur = () => {
+    setProfilePhoneTouched(true);
+    setProfilePhoneError(!isValidNepaliPhone(profile.phone));
+  };
+
+  const handleAddressPhoneChange = (e) => {
+    const digits = sanitizePhone(e.target.value);
+    setNewAddress((prev) => ({ ...prev, phone: digits }));
+    if (addressPhoneTouched) setAddressPhoneError(!isValidNepaliPhone(digits));
+  };
+
+  const handleAddressPhoneBlur = () => {
+    setAddressPhoneTouched(true);
+    setAddressPhoneError(!isValidNepaliPhone(newAddress.phone));
+  };
+
+  const handleProfileSubmit = async (e) => {
     e.preventDefault();
+
+    if (profile.phone) {
+      setProfilePhoneTouched(true);
+      if (!isValidNepaliPhone(profile.phone)) {
+        setProfilePhoneError(true);
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       const { data } = await api.put('/users/profile', profile);
@@ -158,10 +200,19 @@ const handleProfileSubmit = async (e) => {
 
   const handleAddAddress = async (e) => {
     e.preventDefault();
+
+    setAddressPhoneTouched(true);
+    if (!isValidNepaliPhone(newAddress.phone)) {
+      setAddressPhoneError(true);
+      return;
+    }
+
     try {
       const { data } = await api.post('/users/profile/addresses', newAddress);
       setAddresses(data.addresses);
       setNewAddress({ fullName: '', phone: '', street: '', city: '', state: '', zipCode: '', country: 'Nepal', isDefault: false });
+      setAddressPhoneTouched(false);
+      setAddressPhoneError(false);
       setShowAddressForm(false);
       toast.success('Address added successfully');
     } catch (error) {
@@ -375,11 +426,17 @@ const [styleProfile, setStyleProfile] = useState({ shoeSize: '', dressSize: '', 
                   <div>
                     <label className="mb-2 block text-sm font-medium text-gray-700">Phone</label>
                     <input
+                      {...PHONE_INPUT_PROPS}
                       name="phone"
                       value={profile.phone}
                       onChange={handleProfileChange}
+                      onBlur={handleProfilePhoneBlur}
+                      aria-invalid={profilePhoneError}
                       className="w-full rounded-3xl border border-gray-200 bg-gray-50 px-4 py-3 outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-100"
                     />
+                    {profilePhoneError && (
+                      <p className={PHONE_ERROR_CLASS}>{PHONE_ERROR_MESSAGE}</p>
+                    )}
                   </div>
                   <div>
                     <label className="mb-2 block text-sm font-medium text-gray-700">Country</label>
@@ -541,13 +598,21 @@ const [styleProfile, setStyleProfile] = useState({ shoeSize: '', dressSize: '', 
                         placeholder="Full name"
                         className="w-full rounded-3xl border border-gray-200 bg-white px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                       />
-                      <input
-                        required
-                        value={newAddress.phone}
-                        onChange={(e) => setNewAddress({ ...newAddress, phone: e.target.value })}
-                        placeholder="Phone number"
-                        className="w-full rounded-3xl border border-gray-200 bg-white px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                      />
+                      <div>
+                        <input
+                          {...PHONE_INPUT_PROPS}
+                          required
+                          value={newAddress.phone}
+                          onChange={handleAddressPhoneChange}
+                          onBlur={handleAddressPhoneBlur}
+                          aria-invalid={addressPhoneError}
+                          placeholder="Phone number"
+                          className="w-full rounded-3xl border border-gray-200 bg-white px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                        />
+                        {addressPhoneError && (
+                          <p className={PHONE_ERROR_CLASS}>{PHONE_ERROR_MESSAGE}</p>
+                        )}
+                      </div>
                       <input
                         required
                         value={newAddress.street}

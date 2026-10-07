@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../../Services/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../Context/Authcontext';
@@ -11,6 +11,8 @@ const Messages = () => {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { socketRef } = useChat();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const focusChatId = searchParams.get('chat');
   const [conversations, setConversations] = useState([]);
   const [activeId, setActiveId] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -49,6 +51,13 @@ const Messages = () => {
     fetchConversations();
     fetchOrders();
   }, [authLoading, isAuthenticated, navigate]);
+
+  // A notification deep link arrives as /messages?chat=<id>; open that chat once
+// the conversation list has loaded.
+useEffect(() => {
+    if (!focusChatId || loading) return;
+    setActiveId((current) => current || focusChatId);
+  }, [focusChatId, loading, conversations.length]);
 
   useEffect(() => {
     if (!socketRef.current) return undefined;

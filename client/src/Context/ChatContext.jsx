@@ -151,6 +151,7 @@ export const ChatProvider = ({ children }) => {
   }, [user?._id]);
 
   const clearNotifications = useCallback(() => {
+    setNotifications([]);
     setUnreadCount(0);
   }, []);
 

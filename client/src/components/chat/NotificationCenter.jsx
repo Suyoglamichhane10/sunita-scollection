@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { FaBell, FaTimes } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { useChat } from '../../Context/ChatContext';
+import { buildNotificationLink } from '../../utils/notificationLinks';
 import api from '../../Services/api';
 
 const PANEL_WIDTH = 360;
@@ -59,6 +60,19 @@ const NotificationCenter = () => {
     }
     prevUnreadCount.current = unreadCount;
   }, [unreadCount]);
+
+  // Also chime when new admin notifications arrive via history fetch
+  const prevHistoryLength = useRef(0);
+  useEffect(() => {
+    if (!hasMounted.current) {
+      prevHistoryLength.current = history.length;
+      return;
+    }
+    if (history.length > prevHistoryLength.current) {
+      playBellSound();
+    }
+    prevHistoryLength.current = history.length;
+  }, [history.length]);
 
   useEffect(() => {
     if (!open) return;
@@ -158,12 +172,22 @@ const NotificationCenter = () => {
     }
   };
 
-  const openNotification = (n) => {
-    if (n.enquiryId) {
-      navigate(`/admin/enquiries?enquiry=${n.enquiryId}`);
-    } else {
-      navigate(n.navigateTo || '/admin');
+  const clearAll = async () => {
+    try {
+      // The server endpoint for admin is different - it clears the user.notifications array
+      await api.delete('/dashboard/notifications');
+      clearNotifications();
+      setHistory([]);
+      setNotifications([]);
+    } catch {
+      // ignore
     }
+  };
+
+  const openNotification = (n) => {
+    // The map decides where this notification came from, so an enquiry lands on
+    // that enquiry, an order on that order, and a message on that chat.
+    navigate(buildNotificationLink(n, 'admin'));
     setOpen(false);
   };
 
@@ -216,6 +240,23 @@ const NotificationCenter = () => {
                   aria-label="Close notifications"
                 >
                   <FaTimes />
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between border-b border-gray-100 px-4 py-2">
+                <button
+                  type="button"
+                  onClick={markAllRead}
+                  className="text-xs font-semibold text-pink-600 transition hover:text-pink-700"
+                >
+                  Mark all read
+                </button>
+                <button
+                  type="button"
+                  onClick={clearAll}
+                  className="flex items-center gap-1 text-xs font-semibold text-red-600 transition hover:text-red-700"
+                >
+                  <FaTimes className="text-[10px]" /> Clear all
                 </button>
               </div>
 
