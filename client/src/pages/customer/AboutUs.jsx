@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import GlamourAboutHero from '../../components/home/GlamourAboutHero';
 import TrendingBanner from '../../components/home/TrendingBanner';
 import QRCode from '../../assets/QR.png';
+import OwnerImage from '../../assets/0.jpg';
 
 const ContinuousTypewriter = ({ words = [], speed = 100, deleteSpeed = 60, pause = 1500, className = '' }) => {
   const [wordIndex, setWordIndex] = useState(0);
@@ -140,11 +141,9 @@ const AboutUs = () => {
               <div className="moving-rect-border">
                 <div className="moving-rect-border-inner h-72 w-full overflow-hidden rounded-2xl bg-gray-100 sm:h-80 lg:h-[28rem]">
                   <img
-                    src="/img/owner-900.webp"
+                    src={OwnerImage}
                     alt="Sunita Lamichhane, founder of Sunita'z Collection"
                     loading="lazy"
-                    width="900"
-                    height="1125"
                     className="h-full w-full object-cover"
                   />
                 </div>
