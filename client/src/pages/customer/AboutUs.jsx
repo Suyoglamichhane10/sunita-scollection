@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import GlamourAboutHero from '../../components/home/GlamourAboutHero';
 import TrendingBanner from '../../components/home/TrendingBanner';
 import QRCode from '../../assets/QR.png';
-import OwnerImage from '../../assets/0.jpg';
+import OwnerImage from '../../assets/O.jpeg';
 
 const ContinuousTypewriter = ({ words = [], speed = 100, deleteSpeed = 60, pause = 1500, className = '' }) => {
   const [wordIndex, setWordIndex] = useState(0);
