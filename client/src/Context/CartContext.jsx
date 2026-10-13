@@ -22,6 +22,8 @@ const normalizeServerItem = (cartItem) => {
   const image = variant?.images?.[0]?.url || product.images?.[0]?.url || getFallbackImage();
   const stock = variant?.stock ?? product.stock;
 
+  const hasValidPrice = (price != null && Number(price) > 0) || (cartItem.dealPrice != null && Number(cartItem.dealPrice) > 0);
+
   return {
     key: variantSku ? `${product._id}:${variantSku}` : `${product._id}`,
     productId: product._id,
@@ -32,6 +34,7 @@ const normalizeServerItem = (cartItem) => {
     quantity: Math.min(cartItem.quantity, stock || cartItem.quantity),
     stock,
     variant: variant ? { sku: variant.sku || variant._id, attributes: variant.attributes } : null,
+    hasValidPrice,
   };
 };
 
@@ -217,8 +220,10 @@ const addToCart = useCallback(
       const variantSku = variant?.sku || variant?._id || null;
       const key = variantSku ? `${product._id}:${variantSku}` : `${product._id}`;
       const price = dealPrice ?? (variant?.price ?? product.price);
-  const image = variant?.images?.[0]?.url || product.images?.[0]?.url || getFallbackImage();
+      const image = variant?.images?.[0]?.url || product.images?.[0]?.url || getFallbackImage();
       const stock = variant?.stock ?? product.stock;
+
+      const hasValidPrice = (price != null && Number(price) > 0) || (dealPrice != null && Number(dealPrice) > 0);
 
       const sanitizedQty = Math.max(1, Math.floor(Number(quantity) || 1));
       const newItem = {
@@ -231,6 +236,7 @@ const addToCart = useCallback(
         quantity: Math.min(sanitizedQty, stock || sanitizedQty),
         stock,
         variant: variant ? { sku: variant.sku || variant._id, attributes: variant.attributes } : null,
+        hasValidPrice,
       };
 
       setCartItems((prev) => {

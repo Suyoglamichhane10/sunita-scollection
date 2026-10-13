@@ -38,11 +38,7 @@ const Checkout = () => {
   const totalAmount = totalPrice + tax + shippingCost;
 
   // Check if any cart item lacks a valid price
-  const invalidItems = cartItems.filter((item) => {
-    const hasDealPrice = item.dealPrice != null && Number(item.dealPrice) > 0;
-    const hasPrice = item.price != null && Number(item.price) > 0;
-    return !hasDealPrice && !hasPrice;
-  });
+  const invalidItems = cartItems.filter((item) => !item.hasValidPrice);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
