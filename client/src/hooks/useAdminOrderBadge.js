@@ -15,7 +15,7 @@ const useAdminOrderBadge = () => {
     try {
       const res = await api.get('/orders/metrics');
       const metrics = res.data?.metrics || {};
-      const next = { total: metrics.totalOrders || 0, new: metrics.pendingOrders || 0 };
+      const next = { total: metrics.orders || 0, new: metrics.pendingOrders || 0 };
       setCounts(next);
     } catch {
       setCounts({ total: 0, new: 0 });

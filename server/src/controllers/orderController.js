@@ -13,7 +13,18 @@ const { decrementStock, restoreStock } = require('../services/stockService');
 const loyaltyService = require('../services/loyaltyService');
 const automationService = require('../services/automationService');
 const crypto = require('crypto');
+const mongoose = require('mongoose');
 const { rejectInvalidPhone } = require('../Utils/phoneValidator');
+
+// Build an error that the global errorHandler maps to a specific HTTP
+// status instead of the default 500. Business-rule failures (missing
+// product, out of stock, unauthorized deal) are client problems, not
+// server faults, so they must never surface as "Internal Server Error".
+const httpError = (message, statusCode) => {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  return error;
+};
 
 const stripe = process.env.STRIPE_SECRET_KEY ? Stripe(process.env.STRIPE_SECRET_KEY) : null;
 
@@ -69,6 +80,19 @@ exports.createOrder = async (req, res, next) => {
     }
     const consolidatedItems = Array.from(consolidatedMap.values());
 
+    // Validate every product reference up front. A missing or malformed id
+    // would otherwise crash on `.toString()` or throw a CastError from the
+    // Enquiry/Product `$in` queries and surface as a 500.
+    const hasBadProductId = consolidatedItems.some(
+      (item) => !item.productId || !mongoose.isValidObjectId(item.productId)
+    );
+    if (hasBadProductId) {
+      return res.status(400).json({
+        success: false,
+        message: 'One or more cart items reference an invalid product',
+      });
+    }
+
     const approvedEnquiries = await Enquiry.find({
       userId: req.user.id,
       status: { $in: ['deal_closed', 'customer_agreed', 'converted'] },
@@ -108,7 +132,7 @@ exports.createOrder = async (req, res, next) => {
     const approvedProductIds = [];
     const lineItems = consolidatedItems.map((item) => {
       const product = products.find((p) => p._id.toString() === item.productId);
-      if (!product) throw new Error('Product not found');
+      if (!product) throw httpError('Product not found', 404);
 
       let variant = null;
       if (item.variantSku && product.variants && product.variants.length) {
@@ -118,10 +142,10 @@ exports.createOrder = async (req, res, next) => {
       }
 
       if (variant && item.quantity > (variant.stock || 0)) {
-        throw new Error(`Insufficient stock for variant ${variant.title || variant.sku}`);
+        throw httpError(`Insufficient stock for variant ${variant.title || variant.sku}`, 409);
       }
       if (!variant && item.quantity > (product.stock || 0)) {
-        throw new Error(`Insufficient stock for product ${product.name}`);
+        throw httpError(`Insufficient stock for product ${product.name}`, 409);
       }
 
       let finalPrice;
@@ -129,16 +153,34 @@ exports.createOrder = async (req, res, next) => {
       if (item.dealPrice != null && item.dealPrice !== '') {
         const approvedDeal = approvedMap.get(item.productId.toString());
         if (approvedDeal == null) {
-          throw new Error('Deal price not authorized');
+          throw httpError('Deal price not authorized', 403);
         }
         finalPrice = Number(approvedDeal);
         isDeal = true;
       } else {
-        finalPrice = variant?.price ?? product.price;
+        // Resolve a chargeable price. The selected variant's price wins,
+        // then the base product price. Products that only store
+        // per-variant prices (base price left empty) and were added
+        // without a variant selection fall back to the lowest priced
+        // variant so they remain purchasable.
+        const variantPrice = variant?.price;
+        const basePrice = product.price;
+        const pricedVariants = (product.variants || []).filter(
+          (v) => v.price != null && Number(v.price) > 0
+        );
+        if (variantPrice != null && Number(variantPrice) > 0) {
+          finalPrice = Number(variantPrice);
+        } else if (basePrice != null && Number(basePrice) > 0) {
+          finalPrice = Number(basePrice);
+        } else if (pricedVariants.length) {
+          finalPrice = Math.min(...pricedVariants.map((v) => Number(v.price)));
+        } else {
+          finalPrice = 0;
+        }
       }
 
-      if (finalPrice <= 0) {
-        throw new Error(`Invalid price for product ${product.name}`);
+      if (!Number.isFinite(finalPrice) || finalPrice <= 0) {
+        throw httpError(`Invalid price for product ${product.name}`, 400);
       }
 
       const image = variant?.images?.[0]?.url || product.images?.[0]?.url || '';
@@ -284,9 +326,31 @@ exports.createOrder = async (req, res, next) => {
         quantity: li.quantity,
         variantSku: li.variantSku,
       }));
-      await decrementStock(stockItems);
-      order.stockDeducted = true;
-      await order.save({ validateBeforeSave: false });
+      try {
+        await decrementStock(stockItems);
+        order.stockDeducted = true;
+        await order.save({ validateBeforeSave: false });
+      } catch (stockErr) {
+        // The order was already created above, so a stock failure would
+        // otherwise leave a phantom "pending" order behind while the
+        // client sees an error. Cancel it so it never counts as a real
+        // order, then surface a client-facing conflict instead of a 500.
+        console.error('Stock reservation failed:', stockErr.message);
+        try {
+          order.orderStatus = 'cancelled';
+          order.cancellationReason = stockErr.message;
+          order.cancelledAt = new Date();
+          order.statusHistory.push({
+            status: 'cancelled',
+            note: `Stock reservation failed: ${stockErr.message}`,
+            updatedBy: req.user.id,
+          });
+          await order.save({ validateBeforeSave: false });
+        } catch (cancelErr) {
+          console.error('Failed to cancel order after stock failure:', cancelErr.message);
+        }
+        throw httpError(stockErr.message || 'Insufficient stock to complete this order', 409);
+      }
     }
 
     // Send order confirmation email + award loyalty points (non-blocking).
@@ -736,7 +800,7 @@ exports.cancelOrder = async (req, res, next) => {
 // @access  Private/Admin
 exports.getOrderMetrics = async (req, res, next) => {
   try {
-    const [orderStats, customerCount, productCount, lowStockProducts, recentOrders] = await Promise.all([
+    const [orderStats, customerCount, productCount, lowStockProducts, recentOrders, pendingCount] = await Promise.all([
       Order.aggregate([
         { $match: { orderStatus: { $ne: 'cancelled' } } },
         { $group: { _id: null, revenue: { $sum: '$totalAmount' }, orders: { $sum: 1 } } },
@@ -745,6 +809,7 @@ exports.getOrderMetrics = async (req, res, next) => {
       Product.countDocuments(),
       Product.find({ $expr: { $lte: ['$stock', '$lowStockThreshold'] } }).select('name stock lowStockThreshold'),
       Order.find().populate('user', 'name').sort({ createdAt: -1 }).limit(5),
+      Order.countDocuments({ orderStatus: 'pending' }),
     ]);
 
     res.status(200).json({
@@ -752,6 +817,7 @@ exports.getOrderMetrics = async (req, res, next) => {
       metrics: {
         revenue: orderStats[0]?.revenue || 0,
         orders: orderStats[0]?.orders || 0,
+        pendingOrders: pendingCount,
         customers: customerCount,
         products: productCount,
         lowStock: lowStockProducts,

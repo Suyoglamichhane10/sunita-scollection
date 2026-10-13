@@ -75,9 +75,9 @@ const orderSchema = new mongoose.Schema(
       },
       additionalInfo: String,
     },
-    paymentMethod: {
+paymentMethod: {
       type: String,
-       enum: ['cod', 'esewa', 'fonepay'],
+      enum: ['cod', 'esewa', 'fonepay', 'stripe'],
       required: true,
     },
     paymentStatus: {

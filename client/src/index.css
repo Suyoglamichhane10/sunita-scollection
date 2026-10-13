@@ -419,7 +419,7 @@ h1, h2, h3, h4, p, span, a, td, th, label, li, button {
 .moving-rect-border-inner {
   position: relative;
   z-index: 1;
-  background: #fff;
+  background: transparent;
   border-radius: calc(1.5rem - 3px);
 }
 
