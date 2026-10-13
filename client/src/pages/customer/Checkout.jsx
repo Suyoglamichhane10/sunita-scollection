@@ -37,6 +37,13 @@ const Checkout = () => {
   const tax = Math.round(totalPrice * 0.05);
   const totalAmount = totalPrice + tax + shippingCost;
 
+  // Check if any cart item lacks a valid price
+  const invalidItems = cartItems.filter((item) => {
+    const hasDealPrice = item.dealPrice != null && Number(item.dealPrice) > 0;
+    const hasPrice = item.price != null && Number(item.price) > 0;
+    return !hasDealPrice && !hasPrice;
+  });
+
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       navigate('/login');
@@ -58,6 +65,14 @@ const Checkout = () => {
     e.preventDefault();
     if (!cartItems.length) {
       toast.error('Your cart is empty');
+      navigate('/cart');
+      return;
+    }
+
+    // Prevent checkout if any item lacks a valid price
+    if (invalidItems.length > 0) {
+      const names = invalidItems.map((item) => item.name).join(', ');
+      toast.error(`Cannot checkout: ${names} ${invalidItems.length === 1 ? 'has' : 'have'} no price. Please enquire first.`);
       navigate('/cart');
       return;
     }

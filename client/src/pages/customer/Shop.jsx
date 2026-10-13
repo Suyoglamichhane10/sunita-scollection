@@ -25,13 +25,15 @@ const variantLabel = (variant) => {
 const ShopProductCard = React.memo(({ product, addToCart, isAuthenticated, navigate }) => {
   const [selectedVariant, setSelectedVariant] = useState(product.variants?.[0] || null);
   const [inWishlist, setInWishlist] = useState(false);
-  const { isApproved, loading: approvedLoading } = useApprovedProducts();
+  const { isApproved, loading: approvedLoading, getEnquiryForProduct } = useApprovedProducts();
   const hasApproved = !approvedLoading && isApproved(product._id);
   const { openEnquiry } = useEnquiry();
+  
+  const dealPrice = hasApproved ? getEnquiryForProduct(product._id)?.dealPrice || getEnquiryForProduct(product._id)?.quotedPrice : null;
 
   const handleAdd = () => {
     if (!isAuthenticated) return navigate('/login');
-    addToCart(product, 1, selectedVariant);
+    addToCart(product, 1, selectedVariant, dealPrice);
   };
 
   const handleEnquire = (e) => {
