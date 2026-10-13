@@ -1,15 +1,20 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../Context/CartContext';
 import { handleImageError } from '../../utils/imageOptimizer';
 import toast from 'react-hot-toast';
 
 const Cart = () => {
-  const { cartItems, totalItems, totalPrice, updateQuantity, removeFromCart, clearCart } = useCart();
+  const { cartItems, totalItems, totalPrice, updateQuantity, removeFromCart, clearCart, refreshCart } = useCart();
   const navigate = useNavigate();
   const shippingCost = totalPrice >= 1000 ? 0 : 100;
   const tax = Math.round(totalPrice * 0.05);
   const totalAmount = totalPrice + tax + shippingCost;
+
+  // Refresh cart on mount to pick up any new deal prices
+  useEffect(() => {
+    refreshCart();
+  }, [refreshCart]);
 
   // Check if any cart item lacks a valid price
   const invalidItems = cartItems.filter((item) => !item.hasValidPrice);

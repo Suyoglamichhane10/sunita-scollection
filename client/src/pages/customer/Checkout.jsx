@@ -16,7 +16,7 @@ import {
 } from '../../utils/validatePhone';
 
 const Checkout = () => {
-  const { cartItems, totalPrice, clearCart } = useCart();
+  const { cartItems, totalPrice, clearCart, refreshCart } = useCart();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const [shipping, setShipping] = useState({
     fullName: '',
@@ -36,6 +36,11 @@ const Checkout = () => {
   const shippingCost = totalPrice >= 1000 ? 0 : 100;
   const tax = Math.round(totalPrice * 0.05);
   const totalAmount = totalPrice + tax + shippingCost;
+
+  // Refresh cart on mount to pick up any new deal prices
+  useEffect(() => {
+    refreshCart();
+  }, [refreshCart]);
 
   // Check if any cart item lacks a valid price
   const invalidItems = cartItems.filter((item) => !item.hasValidPrice);

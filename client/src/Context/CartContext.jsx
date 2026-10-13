@@ -173,7 +173,13 @@ const { data } = await api.get('/users/profile/cart');
       if (savedCart) {
         try {
           const parsed = JSON.parse(savedCart);
-          setCartItems(Array.isArray(parsed) ? parsed : []);
+          const items = Array.isArray(parsed) ? parsed : [];
+          // Compute hasValidPrice for legacy cart items
+          const itemsWithPriceFlag = items.map((item) => ({
+            ...item,
+            hasValidPrice: item.hasValidPrice ?? ((item.price != null && Number(item.price) > 0) || (item.dealPrice != null && Number(item.dealPrice) > 0)),
+          }));
+          setCartItems(itemsWithPriceFlag);
         } catch {
           setCartItems([]);
         }
@@ -338,6 +344,20 @@ const addToCart = useCallback(
     toast.success('Cart cleared');
   }, [isAuthenticated]);
 
+  const refreshCart = useCallback(async () => {
+    if (!isAuthenticated) return;
+    try {
+      const { data } = await api.get('/users/profile/cart');
+      const serverItems = consolidateCartItems(
+        (data.cart || []).map(normalizeServerItem).filter(Boolean)
+      );
+      setCartItems(serverItems);
+      toast.success('Cart refreshed with latest prices');
+    } catch (error) {
+      toast.error('Failed to refresh cart');
+    }
+  }, [isAuthenticated]);
+
   const value = {
     cartItems,
     loading,
@@ -347,6 +367,7 @@ const addToCart = useCallback(
     removeFromCart,
     updateQuantity,
     clearCart,
+    refreshCart,
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
