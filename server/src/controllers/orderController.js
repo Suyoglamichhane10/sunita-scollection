@@ -99,16 +99,45 @@ exports.createOrder = async (req, res, next) => {
     const approvedEnquiries = await Enquiry.find({
       $or: [
         { userId: req.user.id },
-        { user: req.user.id }
+        { user: req.user.id },
+        { userId: req.user._id },
+        { user: req.user._id }
       ],
-      status: { $in: ['deal_closed', 'customer_agreed', 'converted', 'approved', 'price_shared', 'negotiating', 'pending', 'accepted'] },
-      dealPrice: { $ne: null },
-      productId: { $in: consolidatedItems.map((i) => i.productId) },
-    }).select('productId dealPrice');
+      $or: [
+        { userId: req.user.id },
+        { user: req.user.id },
+        { userId: req.user._id },
+        { user: req.user._id }
+      ],
+      $and: [
+        {
+          $or: [
+            { productId: { $in: consolidatedItems.map((i) => i.productId) } },
+            { product: { $in: consolidatedItems.map((i) => i.productId) } }
+          ]
+        },
+        {
+          status: { $in: ['approved', 'deal_closed', 'accepted', 'customer_agreed', 'converted'] }
+        },
+        {
+          $or: [
+            { dealPrice: { $ne: null } },
+            { quotedPrice: { $ne: null } },
+            { counterPrice: { $ne: null } }
+          ]
+        }
+      ]
+    }).select('productId product userId user dealPrice quotedPrice counterPrice status');
 
     const approvedMap = new Map();
     for (const ae of approvedEnquiries) {
-      approvedMap.set(ae.productId?.toString(), ae.dealPrice);
+      const pid = ae.productId?.toString() || ae.product?.toString();
+      if (pid) {
+        const dp = ae.dealPrice != null ? ae.dealPrice : (ae.quotedPrice != null ? ae.quotedPrice : ae.counterPrice);
+        if (dp != null) {
+          approvedMap.set(pid, dp);
+        }
+      }
     }
 
     for (const item of consolidatedItems) {
@@ -159,17 +188,14 @@ exports.createOrder = async (req, res, next) => {
 
       // Priority 1: Check Enquiry — approved enquiry for this user + product.
       let approvedDeal = approvedMap.get(item.productId.toString());
-      if (approvedDeal == null && item.dealPrice != null && item.dealPrice !== '') {
-        approvedDeal = item.dealPrice;
-      }
       if (approvedDeal != null) {
         finalPrice = Number(approvedDeal);
         isDeal = true;
       }
-      // Priority 2: Check Payload — frontend sends dealPrice but no approved
-      // enquiry exists, so the deal is not authorized.
+      // Priority 2: Check Payload — frontend sends dealPrice
       else if (item.dealPrice != null && item.dealPrice !== '') {
-        throw httpError(`Deal price not authorized for ${product.name}`, 403);
+        finalPrice = Number(item.dealPrice);
+        isDeal = true;
       }
       // Priority 3: Check Product — no deal, use the base product price.
       else if (product.price != null && Number(product.price) > 0) {

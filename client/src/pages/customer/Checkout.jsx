@@ -27,7 +27,7 @@ const Checkout = () => {
     country: 'Nepal',
   });
   const [paymentMethod, setPaymentMethod] = useState('cod');
-  const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [phoneTouched, setPhoneTouched] = useState(false);
   const [phoneError, setPhoneError] = useState(false);
   const navigate = useNavigate();
@@ -84,85 +84,91 @@ const Checkout = () => {
       return;
     }
 
-    setLoading(true);
+     setIsSubmitting(true);
+
+    const payload = {
+      items: cartItems.map((item) => ({
+        productId: item.productId,
+        quantity: Number(item.quantity),
+        dealPrice: item.dealPrice != null && item.dealPrice !== '' ? Number(item.dealPrice) : null,
+        price: Number(item.price || item.dealPrice || 0),
+        variantSku: item.variant?.sku || null,
+      })),
+      shippingAddress: shipping,
+      paymentMethod,
+      ...(referralCode && { referralCode }),
+    };
+    console.log('Order Payload:', JSON.stringify(payload, null, 2));
 
     try {
-      const response = await api.post('/orders', {
-        items: cartItems.map((item) => ({
-          productId: item.productId,
-          quantity: item.quantity,
-          variantSku: item.variant?.sku || null,
-          dealPrice: item.dealPrice || null,
-        })),
-        shippingAddress: shipping,
-        paymentMethod,
-        ...(referralCode && { referralCode }),
-      });
-
+      const response = await api.post('/orders', payload);
       const orderId = response.data.order?._id;
 
-      if (response.data.checkoutUrl) {
-        window.location.href = response.data.checkoutUrl;
-        return;
-      }
-
-      if (paymentMethod === 'esewa' && orderId) {
-        try {
-          const esewaRes = await api.post('/payments/esewa/initiate', { orderId });
-          const { paymentUrl, params } = esewaRes.data.data;
-          const form = document.createElement('form');
-          form.method = 'POST';
-          form.action = paymentUrl;
-          form.id = 'esewa-form';
-          Object.entries(params).forEach(([key, value]) => {
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = key;
-            input.value = value;
-            form.appendChild(input);
-          });
-          document.body.appendChild(form);
-          form.submit();
+      // Online payment methods: redirect to payment gateway
+      if (paymentMethod === 'esewa' || paymentMethod === 'fonepay') {
+        if (response.data.checkoutUrl) {
+          window.location.href = response.data.checkoutUrl;
           return;
-        } catch (error) {
-          if (error.response?.status === 503 && import.meta.env.MODE === 'development') {
-            toast.success('Order placed successfully! (Development mode - eSewa bypassed)');
-            clearCart();
-            navigate(`/order-success/${orderId}`);
+        }
+
+        if (paymentMethod === 'esewa' && orderId) {
+          try {
+            const esewaRes = await api.post('/payments/esewa/initiate', { orderId });
+            const { paymentUrl, params } = esewaRes.data.data;
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = paymentUrl;
+            form.id = 'esewa-form';
+            Object.entries(params).forEach(([key, value]) => {
+              const input = document.createElement('input');
+              input.type = 'hidden';
+              input.name = key;
+              input.value = value;
+              form.appendChild(input);
+            });
+            document.body.appendChild(form);
+            form.submit();
+            return;
+          } catch (error) {
+            if (error.response?.status === 503 && import.meta.env.MODE === 'development') {
+              toast.success('Order placed successfully! (Development mode - eSewa bypassed)');
+              clearCart();
+              navigate(`/order-success/${orderId}`);
+              return;
+            }
+            toast.error(error.response?.data?.message || 'eSewa payment is not configured. Please use COD.');
+            setIsSubmitting(false);
             return;
           }
-          toast.error(error.response?.data?.message || 'eSewa payment is not configured. Please use COD.');
-          setLoading(false);
-          return;
+        }
+
+        if (paymentMethod === 'fonepay' && orderId) {
+          try {
+            const fonepayRes = await api.post('/payments/fonepay/initiate', { orderId });
+            window.location.href = fonepayRes.data.data.paymentUrl;
+            return;
+          } catch (error) {
+            if (error.response?.status === 503 && import.meta.env.MODE === 'development') {
+              toast.success('Order placed successfully! (Development mode - FonePay bypassed)');
+              clearCart();
+              navigate(`/order-success/${orderId}`);
+              return;
+            }
+            toast.error(error.response?.data?.message || 'FonePay payment is not configured. Please use COD.');
+            setIsSubmitting(false);
+            return;
+          }
         }
       }
 
-      if (paymentMethod === 'fonepay' && orderId) {
-        try {
-          const fonepayRes = await api.post('/payments/fonepay/initiate', { orderId });
-          window.location.href = fonepayRes.data.data.paymentUrl;
-          return;
-        } catch (error) {
-          if (error.response?.status === 503 && import.meta.env.MODE === 'development') {
-            toast.success('Order placed successfully! (Development mode - FonePay bypassed)');
-            clearCart();
-            navigate(`/order-success/${orderId}`);
-            return;
-          }
-          toast.error(error.response?.data?.message || 'FonePay payment is not configured. Please use COD.');
-          setLoading(false);
-          return;
-        }
-      }
-
+      // COD flow: order placed successfully, clear cart and redirect
       toast.success('Order placed successfully!');
       clearCart();
       navigate(`/order-success/${orderId}`);
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Checkout failed');
+      toast.error(error.response?.data?.message || error.message || 'Failed to place order');
       console.error(error);
-    } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -305,10 +311,20 @@ const Checkout = () => {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={isSubmitting}
               className="w-full rounded-full bg-pink-600 px-6 py-4 text-sm font-semibold text-white transition hover:bg-pink-700 disabled:cursor-not-allowed disabled:bg-gray-300"
             >
-              {loading ? 'Processing...' : 'Place Order'}
+              {isSubmitting ? (
+                <span className="inline-flex items-center gap-2">
+                  <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Processing...
+                </span>
+              ) : (
+                'Place Order'
+              )}
             </button>
           </form>
         </div>
