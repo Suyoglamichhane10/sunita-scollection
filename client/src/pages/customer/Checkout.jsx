@@ -104,31 +104,49 @@ const Checkout = () => {
       const response = await api.post('/orders', payload);
       const orderId = response.data.order?._id;
 
-      // Online payment methods: redirect to payment gateway
-      if (paymentMethod === 'esewa' || paymentMethod === 'fonepay') {
-        if (response.data.checkoutUrl) {
-          window.location.href = response.data.checkoutUrl;
+      if (paymentMethod === 'cod') {
+        toast.success('Order placed successfully!');
+        clearCart();
+        navigate(`/order-success/${orderId}`);
+        return;
+      }
+
+      if (paymentMethod === 'esewa') {
+        const paymentUrl =
+          response.data.paymentUrl ||
+          response.data.url ||
+          response.data.checkoutUrl ||
+          response.data.data?.paymentUrl ||
+          response.data.data?.url;
+        if (paymentUrl) {
+          window.location.href = paymentUrl;
           return;
         }
-
-        if (paymentMethod === 'esewa' && orderId) {
+        if (orderId) {
           try {
             const esewaRes = await api.post('/payments/esewa/initiate', { orderId });
-            const { paymentUrl, params } = esewaRes.data.data;
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = paymentUrl;
-            form.id = 'esewa-form';
-            Object.entries(params).forEach(([key, value]) => {
-              const input = document.createElement('input');
-              input.type = 'hidden';
-              input.name = key;
-              input.value = value;
-              form.appendChild(input);
-            });
-            document.body.appendChild(form);
-            form.submit();
-            return;
+            const esewaPaymentUrl = esewaRes.data?.paymentUrl || esewaRes.data?.data?.paymentUrl;
+            const params = esewaRes.data?.params || esewaRes.data?.data?.params;
+            if (esewaPaymentUrl && params) {
+              const form = document.createElement('form');
+              form.method = 'POST';
+              form.action = esewaPaymentUrl;
+              form.id = 'esewa-form';
+              Object.entries(params).forEach(([key, value]) => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = value;
+                form.appendChild(input);
+              });
+              document.body.appendChild(form);
+              form.submit();
+              return;
+            }
+            if (esewaPaymentUrl) {
+              window.location.href = esewaPaymentUrl;
+              return;
+            }
           } catch (error) {
             if (error.response?.status === 503 && import.meta.env.MODE === 'development') {
               toast.success('Order placed successfully! (Development mode - eSewa bypassed)');
@@ -136,17 +154,32 @@ const Checkout = () => {
               navigate(`/order-success/${orderId}`);
               return;
             }
-            toast.error(error.response?.data?.message || 'eSewa payment is not configured. Please use COD.');
-            setIsSubmitting(false);
-            return;
           }
         }
+        toast.error(response.data?.message || 'Unable to initiate eSewa payment');
+        setIsSubmitting(false);
+        return;
+      }
 
-        if (paymentMethod === 'fonepay' && orderId) {
+      if (paymentMethod === 'fonepay') {
+        const fonepayUrl =
+          response.data.paymentUrl ||
+          response.data.url ||
+          response.data.checkoutUrl ||
+          response.data.data?.paymentUrl ||
+          response.data.data?.url;
+        if (fonepayUrl) {
+          window.location.href = fonepayUrl;
+          return;
+        }
+        if (orderId) {
           try {
             const fonepayRes = await api.post('/payments/fonepay/initiate', { orderId });
-            window.location.href = fonepayRes.data.data.paymentUrl;
-            return;
+            const fonepayPaymentUrl = fonepayRes.data?.paymentUrl || fonepayRes.data?.data?.paymentUrl || fonepayRes.data?.data?.checkoutUrl;
+            if (fonepayPaymentUrl) {
+              window.location.href = fonepayPaymentUrl;
+              return;
+            }
           } catch (error) {
             if (error.response?.status === 503 && import.meta.env.MODE === 'development') {
               toast.success('Order placed successfully! (Development mode - FonePay bypassed)');
@@ -154,14 +187,14 @@ const Checkout = () => {
               navigate(`/order-success/${orderId}`);
               return;
             }
-            toast.error(error.response?.data?.message || 'FonePay payment is not configured. Please use COD.');
-            setIsSubmitting(false);
-            return;
           }
         }
+        toast.error(response.data?.message || 'Unable to initiate FonePay payment');
+        setIsSubmitting(false);
+        return;
       }
 
-      // COD flow: order placed successfully, clear cart and redirect
+      // Fallback
       toast.success('Order placed successfully!');
       clearCart();
       navigate(`/order-success/${orderId}`);
