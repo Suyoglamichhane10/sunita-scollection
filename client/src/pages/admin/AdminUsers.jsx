@@ -5,6 +5,7 @@ import api from '../../Services/api';
 import { useAuth } from '../../Context/Authcontext';
 import { uploadUserAvatar, deleteUserAvatar } from '../../Services/api';
 import Avatar from '../../components/common/Avatar';
+import DeleteModal from '../../components/admin/DeleteModal';
 
 const AdminUsers = () => {
   const { user: currentUser } = useAuth();
@@ -18,6 +19,9 @@ const AdminUsers = () => {
   const [adminAvatarFile, setAdminAvatarFile] = useState(null);
   const [adminAvatarDirty, setAdminAvatarDirty] = useState(false);
   const adminFileInputRef = useRef(null);
+  const [selectedUsers, setSelectedUsers] = useState([]);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -63,17 +67,19 @@ const AdminUsers = () => {
     }
   };
 
-  const handleDelete = async (user) => {
-    if (!window.confirm(`Delete user "${user.name}"? This will also remove their orders, reviews, conversations, and messages.`)) return;
-    setUpdatingId(user._id);
+  const handleBulkDelete = async () => {
+    if (selectedUsers.length === 0) return;
+    setBulkDeleting(true);
     try {
-      await api.delete(`/users/${user._id}`);
-      setUsers((prev) => prev.filter((u) => u._id !== user._id));
-      toast.success('User deleted');
+      await Promise.all(selectedUsers.map((id) => api.delete(`/users/${id}`)));
+      setUsers((prev) => prev.filter((u) => !selectedUsers.includes(u._id)));
+      setSelectedUsers([]);
+      setBulkDeleteOpen(false);
+      toast.success(`Deleted ${selectedUsers.length} user(s)`);
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Unable to delete user');
+      toast.error(error.response?.data?.message || 'Unable to delete selected users');
     } finally {
-      setUpdatingId(null);
+      setBulkDeleting(false);
     }
   };
 
@@ -142,10 +148,36 @@ const AdminUsers = () => {
           <h1 className="text-3xl font-bold text-gray-900">Admin Users</h1>
           <p className="mt-2 text-gray-600">View registered customers and admin accounts.</p>
 
-          <div className="mt-10 overflow-x-auto">
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => setBulkDeleteOpen(true)}
+              disabled={selectedUsers.length === 0 || bulkDeleting}
+              className="flex items-center gap-2 rounded-full bg-red-600 px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <FaTrash className="text-white" /> Delete Selected ({selectedUsers.length})
+            </button>
+          </div>
+
+          <div className="mt-4 overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200 text-left text-sm">
               <thead className="bg-gray-50">
                 <tr>
+                  <th className="w-12 px-3 py-3 sm:px-6">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 cursor-pointer"
+                      checked={users.length > 0 && users.every((u) => selectedUsers.includes(u._id))}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedUsers(Array.from(new Set([...selectedUsers, ...users.map((u) => u._id)])));
+                        } else {
+                          setSelectedUsers(selectedUsers.filter((id) => !users.some((u) => u._id === id)));
+                        }
+                      }}
+                      aria-label="Select all users"
+                    />
+                  </th>
                   <th className="px-3 py-3 font-semibold text-gray-900 sm:px-6">Name</th>
                   <th className="hidden px-3 py-3 font-semibold text-gray-900 sm:table-cell sm:px-6">Email</th>
                   <th className="px-3 py-3 font-semibold text-gray-900 sm:px-6">Role</th>
@@ -156,7 +188,7 @@ const AdminUsers = () => {
               <tbody className="divide-y divide-gray-200 bg-white">
                 {loading ? (
                   <tr>
-                    <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
                       Loading users...
                     </td>
                   </tr>
@@ -165,14 +197,38 @@ const AdminUsers = () => {
                     const isSelf = currentUser?._id === user._id;
                     return (
                        <tr key={user._id}>
+                         <td className="w-12 px-3 py-4 sm:px-6">
+                           <input
+                             type="checkbox"
+                             className="h-4 w-4 cursor-pointer"
+                             checked={selectedUsers.includes(user._id)}
+                             onChange={(e) => {
+                               if (e.target.checked) {
+                                 setSelectedUsers([...selectedUsers, user._id]);
+                               } else {
+                                 setSelectedUsers(selectedUsers.filter((id) => id !== user._id));
+                               }
+                             }}
+                             aria-label={`Select user ${user.name}`}
+                           />
+                         </td>
                          <td className="px-3 py-4 sm:px-6">
                            <div className="flex items-center gap-3">
                              <Avatar src={user.avatar} name={user.name} size="sm" showBorder={true} borderColor="border-gray-200" />
                              <div className="min-w-0">
                                <span className="font-medium text-gray-900">{user.name}</span>
                                {isSelf && <span className="ml-2 rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-semibold text-blue-700">You</span>}
-                             </div>
-                           </div>
+      </div>
+
+      <DeleteModal
+        isOpen={bulkDeleteOpen}
+        onClose={() => !bulkDeleting && setBulkDeleteOpen(false)}
+        onConfirm={handleBulkDelete}
+        loading={bulkDeleting}
+        title="Delete Selected Users"
+        message={`Delete ${selectedUsers.length} selected user(s)? This will also remove their orders, reviews, conversations, and messages.`}
+      />
+    </div>
                          </td>
                          <td className="hidden px-3 py-4 text-gray-600 sm:table-cell sm:px-6">{user.email}</td>
                         <td className="px-3 py-4 sm:px-6">
@@ -216,7 +272,7 @@ const AdminUsers = () => {
                   })
                 ) : (
                   <tr>
-                    <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
                       No users found.
                     </td>
                   </tr>

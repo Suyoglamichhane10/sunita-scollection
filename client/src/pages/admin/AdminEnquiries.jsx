@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { FaSearch, FaRedo, FaClock, FaExchangeAlt, FaReply, FaTag, FaPhoneAlt, FaTrashAlt, FaCheckCircle, FaEnvelope } from 'react-icons/fa';
+import { FaSearch, FaRedo, FaClock, FaExchangeAlt, FaReply, FaTag, FaPhoneAlt, FaTrashAlt, FaCheckCircle, FaEnvelope, FaTrash } from 'react-icons/fa';
 import api from '../../Services/api';
 import { useAuth } from '../../Context/Authcontext';
 import DeleteModal from '../../components/admin/DeleteModal';
@@ -36,6 +36,9 @@ const AdminEnquiries = () => {
   const [deletingId, setDeletingId] = useState(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [selectedEnquiries, setSelectedEnquiries] = useState([]);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated || !isAdmin) {
@@ -120,15 +123,18 @@ const AdminEnquiries = () => {
     setDeleteModalOpen(true);
   };
 
-  const handleDeleteConfirm = async () => {
-    if (!deletingId) return;
+  const handleBulkDelete = async () => {
+    if (selectedEnquiries.length === 0) return;
+    setBulkDeleting(true);
     try {
-      await api.delete(`/enquiries/${deletingId}`);
-      setDeleteModalOpen(false);
-      setDeletingId(null);
-      fetchEnquiries();
+      await Promise.all(selectedEnquiries.map((id) => api.delete(`/enquiries/${id}`)));
+      setEnquiries((prev) => prev.filter((e) => !selectedEnquiries.includes(e._id)));
+      setSelectedEnquiries([]);
+      setBulkDeleteOpen(false);
     } catch (err) {
-      console.error('Failed to delete enquiry', err);
+      console.error('Failed to bulk delete enquiries', err);
+    } finally {
+      setBulkDeleting(false);
     }
   };
 
@@ -203,6 +209,14 @@ const AdminEnquiries = () => {
           >
             <FaRedo className="mr-1 inline" /> Refresh
           </button>
+          <button
+            type="button"
+            onClick={() => setBulkDeleteOpen(true)}
+            disabled={selectedEnquiries.length === 0 || bulkDeleting}
+            className="rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <FaTrash className="mr-1 inline" /> Delete Selected ({selectedEnquiries.length})
+          </button>
         </div>
       </div>
 
@@ -214,7 +228,22 @@ const AdminEnquiries = () => {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gold/20 bg-gray-50 text-left text-ink-light">
-                  <th className="pb-3 pl-4 pr-4 sm:pl-6">Date</th>
+                  <th className="w-12 pb-3 pl-4 pr-2 sm:pl-6">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 cursor-pointer"
+                      checked={enquiries.length > 0 && enquiries.every((e) => selectedEnquiries.includes(e._id))}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedEnquiries(Array.from(new Set([...selectedEnquiries, ...enquiries.map((e) => e._id)])));
+                        } else {
+                          setSelectedEnquiries(selectedEnquiries.filter((id) => !enquiries.some((e) => e._id === id)));
+                        }
+                      }}
+                      aria-label="Select all enquiries"
+                    />
+                  </th>
+                  <th className="pb-3 pr-4">Date</th>
                   <th className="pb-3 pr-4">Customer</th>
                   <th className="pb-3 pr-4">Product</th>
                   <th className="hidden pb-3 pr-4 md:table-cell">Phone</th>
@@ -226,7 +255,7 @@ const AdminEnquiries = () => {
               <tbody>
                 {enquiries.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-10 text-center text-ink-light">No enquiries found.</td>
+                    <td colSpan={8} className="py-10 text-center text-ink-light">No enquiries found.</td>
                   </tr>
                 ) : (
                   enquiries.map((enquiry) => {
@@ -243,7 +272,22 @@ const AdminEnquiries = () => {
                               : 'hover:bg-cream/50'
                           }`}
                         >
-                          <td className="py-3 pr-4 pl-4 text-xs text-gray-500 sm:pl-6">
+                          <td className="py-3 pl-4 pr-2 sm:pl-6">
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 cursor-pointer"
+                              checked={selectedEnquiries.includes(enquiry._id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedEnquiries([...selectedEnquiries, enquiry._id]);
+                                } else {
+                                  setSelectedEnquiries(selectedEnquiries.filter((id) => id !== enquiry._id));
+                                }
+                              }}
+                              aria-label={`Select enquiry ${enquiry.name}`}
+                            />
+                          </td>
+                          <td className="py-3 pr-4 text-xs text-gray-500">
                             {new Date(enquiry.createdAt).toLocaleDateString()} {new Date(enquiry.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </td>
                           <td className="py-3 pr-4">
@@ -365,6 +409,14 @@ const AdminEnquiries = () => {
         title="Delete Enquiry"
         message="Are you sure you want to delete this enquiry? This action cannot be undone."
         loading={false}
+      />
+      <DeleteModal
+        isOpen={bulkDeleteOpen}
+        onClose={() => !bulkDeleting && setBulkDeleteOpen(false)}
+        onConfirm={handleBulkDelete}
+        loading={bulkDeleting}
+        title="Delete Selected Enquiries"
+        message={`Delete ${selectedEnquiries.length} selected enquiry(ies)? This action cannot be undone.`}
       />
     </div>
   );
