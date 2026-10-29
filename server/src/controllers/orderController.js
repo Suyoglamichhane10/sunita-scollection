@@ -301,21 +301,33 @@ exports.createOrder = async (req, res, next) => {
       }
     };
 
-    if (io) {
-      io.to('admins').emit('notification:new', {
-        id: `order-placed-${order._id}`,
-        message,
-        type: 'order',
-        action: 'order_placed',
-        orderId: order._id.toString(),
-        link: `/admin/orders?order=${order._id}`,
-        createdAt: Date.now(),
-      });
+    try {
+      if (io) {
+        io.to('admins').emit('notification:new', {
+          id: `order-placed-${order._id}`,
+          message: `New order #${order.orderNumber} from ${customerName} — Rs. ${totals.totalAmount}`,
+          type: 'order',
+          action: 'order_placed',
+          orderId: order._id.toString(),
+          link: `/admin/orders?order=${order._id}`,
+          createdAt: Date.now(),
+        });
+      }
+    } catch (socketErr) {
+      console.error('Order socket emit failed:', socketErr.message);
     }
 
-    await notifyAdmins();
+    try {
+      await notifyAdmins();
+    } catch (notifyErr) {
+      console.error('notifyAdmins failed:', notifyErr.message);
+    }
 
-    await User.findByIdAndUpdate(req.user.id, { $push: { orderHistory: order._id } });
+    try {
+      await User.findByIdAndUpdate(req.user.id, { $push: { orderHistory: order._id } });
+    } catch (updateErr) {
+      console.error('Failed to update user orderHistory:', updateErr.message);
+    }
 
     try {
       const Delivery = require('../Models/Delivery');

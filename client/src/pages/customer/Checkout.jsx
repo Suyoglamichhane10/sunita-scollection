@@ -199,8 +199,8 @@ const Checkout = () => {
       clearCart();
       navigate(`/order-success/${orderId}`);
     } catch (error) {
-      toast.error(error.response?.data?.message || error.message || 'Failed to place order');
       console.error(error);
+      toast.error(error.response?.data?.message || error.message || 'Server error placing order');
       setIsSubmitting(false);
     }
   };
