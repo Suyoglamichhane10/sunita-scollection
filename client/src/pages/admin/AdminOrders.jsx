@@ -27,6 +27,9 @@ const AdminOrders = () => {
   const [highlightId, setHighlightId] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const rowRefs = useRef({});
+  const [selectedOrders, setSelectedOrders] = useState([]);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   // Deep-link focus should happen once per id. Without this guard, a background
   // refetch would re-apply the row snapshot over edits made in the open modal.
   const focusedRef = useRef(null);
@@ -114,22 +117,23 @@ const AdminOrders = () => {
     }
   };
 
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    setDeleting(true);
+  const handleBulkDelete = async () => {
+    if (selectedOrders.length === 0) return;
+    setBulkDeleting(true);
     try {
-      await api.delete(`/orders/${deleteTarget._id}`);
-      setOrders((prev) => prev.filter((o) => o._id !== deleteTarget._id));
-      if (selectedOrder?._id === deleteTarget._id) {
+      await Promise.all(selectedOrders.map((id) => api.delete(`/orders/${id}`)));
+      setOrders((prev) => prev.filter((o) => !selectedOrders.includes(o._id)));
+      if (selectedOrder && selectedOrders.includes(selectedOrder._id)) {
         setSelectedOrder(null);
         clearFocusParam();
       }
-      setDeleteTarget(null);
-      toast.success('Order deleted');
+      setSelectedOrders([]);
+      setBulkDeleteOpen(false);
+      toast.success(`Deleted ${selectedOrders.length} order(s)`);
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Unable to delete order');
+      toast.error(error.response?.data?.message || 'Unable to delete selected orders');
     } finally {
-      setDeleting(false);
+      setBulkDeleting(false);
     }
   };
 
@@ -193,12 +197,35 @@ const AdminOrders = () => {
                 ))}
               </select>
             </div>
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => setBulkDeleteOpen(true)}
+              disabled={selectedOrders.length === 0 || bulkDeleting}
+              className="flex items-center gap-2 rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <FaTrash /> Delete Selected ({selectedOrders.length})
+            </button>
           </div>
 
-          <div className="mt-6 overflow-x-auto">
+          <div className="mt-4 overflow-x-auto">
             <table className="min-w-full text-left text-sm">
               <thead className="border-b border-gray-200 text-gray-500">
                 <tr>
+                  <th className="px-3 py-3">
+                    <input
+                      type="checkbox"
+                      checked={filtered.length > 0 && filtered.every((o) => selectedOrders.includes(o._id))}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedOrders(Array.from(new Set([...selectedOrders, ...filtered.map((o) => o._id)])));
+                        } else {
+                          setSelectedOrders(selectedOrders.filter((id) => !filtered.some((o) => o._id === id)));
+                        }
+                      }}
+                      aria-label="Select all orders"
+                    />
+                  </th>
                   <th className="px-3 py-3">Order #</th>
                   <th className="hidden px-3 py-3 sm:table-cell">Customer</th>
                   <th className="px-3 py-3">Total</th>
@@ -209,7 +236,7 @@ const AdminOrders = () => {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan="6" className="p-8 text-center text-gray-500">Loading orders...</td></tr>
+                  <tr><td colSpan="7" className="p-8 text-center text-gray-500">Loading orders...</td></tr>
                 ) : filtered.length ? (
                   filtered.map((order) => (
                     <tr
@@ -221,6 +248,20 @@ const AdminOrders = () => {
                           : ''
                       }`}
                     >
+                      <td className="px-3 py-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedOrders.includes(order._id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedOrders([...selectedOrders, order._id]);
+                            } else {
+                              setSelectedOrders(selectedOrders.filter((id) => id !== order._id));
+                            }
+                          }}
+                          aria-label={`Select order ${order.orderNumber}`}
+                        />
+                      </td>
                       <td className="px-3 py-3 font-medium text-gray-900">{order.orderNumber}</td>
                       <td className="hidden px-3 py-3 text-gray-600 sm:table-cell">{order.user?.name || 'Guest'}</td>
                       <td className="px-3 py-3 text-gray-600">Rs. {order.totalAmount}</td>
@@ -287,7 +328,7 @@ const AdminOrders = () => {
                     </tr>
                   ))
                 ) : (
-                  <tr><td colSpan="6" className="p-8 text-center text-gray-500">No orders found.</td></tr>
+                  <tr><td colSpan="7" className="p-8 text-center text-gray-500">No orders found.</td></tr>
                 )}
               </tbody>
             </table>
@@ -422,6 +463,15 @@ const AdminOrders = () => {
             ? `Delete order ${deleteTarget.orderNumber}? This permanently removes the order, its payment record and its delivery tracking.`
             : ''
         }
+      />
+
+      <DeleteModal
+        isOpen={bulkDeleteOpen}
+        onClose={() => !bulkDeleting && setBulkDeleteOpen(false)}
+        onConfirm={handleBulkDelete}
+        loading={bulkDeleting}
+        title="Delete Selected Orders"
+        message={`Delete ${selectedOrders.length} selected order(s)? This permanently removes them, their payment records and delivery tracking.`}
       />
     </div>
   );
