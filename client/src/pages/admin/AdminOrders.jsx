@@ -202,9 +202,9 @@ const AdminOrders = () => {
               type="button"
               onClick={() => setBulkDeleteOpen(true)}
               disabled={selectedOrders.length === 0 || bulkDeleting}
-              className="flex items-center gap-2 rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex items-center gap-2 rounded-full bg-red-600 px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              <FaTrash /> Delete Selected ({selectedOrders.length})
+              <FaTrash className="text-white" /> Delete Selected ({selectedOrders.length})
             </button>
           </div>
 
@@ -212,9 +212,10 @@ const AdminOrders = () => {
             <table className="min-w-full text-left text-sm">
               <thead className="border-b border-gray-200 text-gray-500">
                 <tr>
-                  <th className="px-3 py-3">
+                  <th className="w-12 px-3 py-3">
                     <input
                       type="checkbox"
+                      className="h-4 w-4 cursor-pointer"
                       checked={filtered.length > 0 && filtered.every((o) => selectedOrders.includes(o._id))}
                       onChange={(e) => {
                         if (e.target.checked) {
@@ -248,9 +249,10 @@ const AdminOrders = () => {
                           : ''
                       }`}
                     >
-                      <td className="px-3 py-3">
+                      <td className="w-12 px-3 py-3">
                         <input
                           type="checkbox"
+                          className="h-4 w-4 cursor-pointer"
                           checked={selectedOrders.includes(order._id)}
                           onChange={(e) => {
                             if (e.target.checked) {
