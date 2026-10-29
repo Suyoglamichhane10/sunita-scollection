@@ -50,6 +50,9 @@ const calculateTotals = (items, shippingAddress) => {
 };
 
 exports.createOrder = async (req, res, next) => {
+  console.log('--- INCOMING ORDER PAYLOAD ---');
+  console.log(JSON.stringify(req.body, null, 2));
+  console.log('-------------------------------');
   try {
     const { items, shippingAddress, paymentMethod, referralCode } = req.body;
 
@@ -75,7 +78,7 @@ exports.createOrder = async (req, res, next) => {
       if (existing) {
         existing.quantity += qty;
       } else {
-        consolidatedMap.set(key, { productId: item.productId, quantity: qty, variantSku });
+        consolidatedMap.set(key, { productId: item.productId, quantity: qty, variantSku, dealPrice: item.dealPrice ?? null, name: item.name ?? null });
       }
     }
     const consolidatedItems = Array.from(consolidatedMap.values());
@@ -150,37 +153,31 @@ exports.createOrder = async (req, res, next) => {
 
       let finalPrice;
       let isDeal = false;
-      if (item.dealPrice != null && item.dealPrice !== '') {
-        const approvedDeal = approvedMap.get(item.productId.toString());
-        if (approvedDeal == null) {
-          throw httpError('Deal price not authorized', 403);
-        }
+
+      // Priority 1: Check Enquiry — approved enquiry for this user + product.
+      const approvedDeal = approvedMap.get(item.productId.toString());
+      if (approvedDeal != null) {
         finalPrice = Number(approvedDeal);
         isDeal = true;
-      } else {
-        // Resolve a chargeable price. The selected variant's price wins,
-        // then the base product price. Products that only store
-        // per-variant prices (base price left empty) and were added
-        // without a variant selection fall back to the lowest priced
-        // variant so they remain purchasable.
-        const variantPrice = variant?.price;
-        const basePrice = product.price;
-        const pricedVariants = (product.variants || []).filter(
-          (v) => v.price != null && Number(v.price) > 0
-        );
-        if (variantPrice != null && Number(variantPrice) > 0) {
-          finalPrice = Number(variantPrice);
-        } else if (basePrice != null && Number(basePrice) > 0) {
-          finalPrice = Number(basePrice);
-        } else if (pricedVariants.length) {
-          finalPrice = Math.min(...pricedVariants.map((v) => Number(v.price)));
-        } else {
-          finalPrice = 0;
-        }
+      }
+      // Priority 2: Check Payload — frontend sends dealPrice but no approved
+      // enquiry exists, so the deal is not authorized.
+      else if (item.dealPrice != null && item.dealPrice !== '') {
+        throw httpError(`Deal price not authorized for ${product.name}`, 403);
+      }
+      // Priority 3: Check Product — no deal, use the base product price.
+      else if (product.price != null && Number(product.price) > 0) {
+        finalPrice = Number(product.price);
+      }
+      // Priority 4: Reject — no price found anywhere.
+      else {
+        finalPrice = 0;
       }
 
+      console.log('DEBUG PRICE:', { productId: product._id, basePrice: product.price, itemDealPrice: item.dealPrice, finalPrice });
+
       if (!Number.isFinite(finalPrice) || finalPrice <= 0) {
-        throw httpError(`Invalid price for product ${product.name}`, 400);
+        throw httpError(`Product ${product.name} requires an approved enquiry before purchase.`, 400);
       }
 
       const image = variant?.images?.[0]?.url || product.images?.[0]?.url || '';
