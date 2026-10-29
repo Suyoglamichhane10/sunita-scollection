@@ -1,12 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import api from '../../Services/api';
 import toast from 'react-hot-toast';
+import { FaTrash } from 'react-icons/fa';
+import DeleteModal from '../../components/admin/DeleteModal';
 
 const AdminCategories = () => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({ name: '', description: '', imageUrl: '', order: 0, isActive: true });
   const [editingCategory, setEditingCategory] = useState(null);
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const fetchCategories = async () => {
     try {
@@ -67,15 +72,20 @@ const AdminCategories = () => {
     });
   };
 
-  const handleDelete = async (categoryId) => {
-    if (!window.confirm('Delete this category?')) return;
+  const handleBulkDelete = async () => {
+    if (selectedCategories.length === 0) return;
+    setBulkDeleting(true);
     try {
-      await api.delete(`/categories/${categoryId}`);
-      setCategories((prev) => prev.filter((cat) => cat._id !== categoryId));
-      toast.success('Category deleted');
+      await Promise.all(selectedCategories.map((id) => api.delete(`/categories/${id}`)));
+      setCategories((prev) => prev.filter((cat) => !selectedCategories.includes(cat._id)));
+      setSelectedCategories([]);
+      setBulkDeleteOpen(false);
+      toast.success(`Deleted ${selectedCategories.length} category(ies)`);
     } catch (error) {
       console.error(error);
-      toast.error('Unable to delete category');
+      toast.error(error.response?.data?.message || 'Unable to delete selected categories');
+    } finally {
+      setBulkDeleting(false);
     }
   };
 
@@ -167,11 +177,36 @@ const AdminCategories = () => {
             </div>
 
             <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-              <h2 className="text-xl font-semibold text-gray-900">Category list</h2>
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-gray-900">Category list</h2>
+                <button
+                  type="button"
+                  onClick={() => setBulkDeleteOpen(true)}
+                  disabled={selectedCategories.length === 0 || bulkDeleting}
+                  className="flex items-center gap-2 rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <FaTrash /> Delete Selected ({selectedCategories.length})
+                </button>
+              </div>
               <div className="mt-6 overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200 text-left text-sm">
                   <thead className="bg-gray-50">
                     <tr>
+                      <th className="w-12 px-3 py-3 sm:px-6">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 cursor-pointer"
+                          checked={categories.length > 0 && categories.every((cat) => selectedCategories.includes(cat._id))}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedCategories(Array.from(new Set([...selectedCategories, ...categories.map((cat) => cat._id)])));
+                            } else {
+                              setSelectedCategories(selectedCategories.filter((id) => !categories.some((cat) => cat._id === id)));
+                            }
+                          }}
+                          aria-label="Select all categories"
+                        />
+                      </th>
                       <th className="px-3 py-3 font-semibold text-gray-900 sm:px-6">Name</th>
                       <th className="px-3 py-3 font-semibold text-gray-900 sm:px-6">Status</th>
                       <th className="hidden px-3 py-3 font-semibold text-gray-900 sm:table-cell sm:px-6">Order</th>
@@ -181,11 +216,26 @@ const AdminCategories = () => {
                   <tbody className="divide-y divide-gray-200 bg-white">
                     {loading ? (
                       <tr>
-                        <td colSpan="4" className="px-6 py-8 text-center text-gray-500">Loading categories...</td>
+                        <td colSpan="5" className="px-6 py-8 text-center text-gray-500">Loading categories...</td>
                       </tr>
                     ) : categories.length ? (
                       categories.map((category) => (
                         <tr key={category._id}>
+                          <td className="w-12 px-3 py-4 sm:px-6">
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 cursor-pointer"
+                              checked={selectedCategories.includes(category._id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedCategories([...selectedCategories, category._id]);
+                                } else {
+                                  setSelectedCategories(selectedCategories.filter((id) => id !== category._id));
+                                }
+                              }}
+                              aria-label={`Select ${category.name}`}
+                            />
+                          </td>
                           <td className="px-3 py-4 text-gray-900 sm:px-6">{category.name}</td>
                           <td className="px-3 py-4 text-gray-600 sm:px-6">{category.isActive ? 'Active' : 'Inactive'}</td>
                           <td className="hidden px-3 py-4 text-gray-600 sm:table-cell sm:px-6">{category.order}</td>
@@ -211,9 +261,9 @@ const AdminCategories = () => {
                           </td>
                         </tr>
                       ))
-                    ) : (
+                        ) : (
                       <tr>
-                        <td colSpan="4" className="px-6 py-8 text-center text-gray-500">No categories found.</td>
+                        <td colSpan="5" className="px-6 py-8 text-center text-gray-500">No categories found.</td>
                       </tr>
                     )}
                   </tbody>
@@ -223,6 +273,15 @@ const AdminCategories = () => {
           </div>
         </div>
       </div>
+
+      <DeleteModal
+        isOpen={bulkDeleteOpen}
+        onClose={() => !bulkDeleting && setBulkDeleteOpen(false)}
+        onConfirm={handleBulkDelete}
+        loading={bulkDeleting}
+        title="Delete Selected Categories"
+        message={`Delete ${selectedCategories.length} selected category(ies)? This action cannot be undone.`}
+      />
     </div>
   );
 };
