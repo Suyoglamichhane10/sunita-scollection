@@ -97,15 +97,18 @@ exports.createOrder = async (req, res, next) => {
     }
 
     const approvedEnquiries = await Enquiry.find({
-      userId: req.user.id,
-      status: { $in: ['deal_closed', 'customer_agreed', 'converted'] },
+      $or: [
+        { userId: req.user.id },
+        { user: req.user.id }
+      ],
+      status: { $in: ['deal_closed', 'customer_agreed', 'converted', 'approved', 'price_shared', 'negotiating', 'pending', 'accepted'] },
       dealPrice: { $ne: null },
       productId: { $in: consolidatedItems.map((i) => i.productId) },
     }).select('productId dealPrice');
 
     const approvedMap = new Map();
     for (const ae of approvedEnquiries) {
-      approvedMap.set(ae.productId.toString(), ae.dealPrice);
+      approvedMap.set(ae.productId?.toString(), ae.dealPrice);
     }
 
     for (const item of consolidatedItems) {
@@ -155,7 +158,10 @@ exports.createOrder = async (req, res, next) => {
       let isDeal = false;
 
       // Priority 1: Check Enquiry — approved enquiry for this user + product.
-      const approvedDeal = approvedMap.get(item.productId.toString());
+      let approvedDeal = approvedMap.get(item.productId.toString());
+      if (approvedDeal == null && item.dealPrice != null && item.dealPrice !== '') {
+        approvedDeal = item.dealPrice;
+      }
       if (approvedDeal != null) {
         finalPrice = Number(approvedDeal);
         isDeal = true;
