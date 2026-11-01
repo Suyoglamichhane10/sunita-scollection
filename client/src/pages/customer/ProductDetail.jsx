@@ -390,7 +390,15 @@ const ProductDetail = () => {
 
   const handleAddToCart = (dealPrice = null) => {
     if (stock < 1) return;
-    addToCart(product, quantity, selectedVariant, dealPrice);
+    let dp = dealPrice;
+    if (typeof dp === 'object' && dp !== null) {
+      dp = dp.price ?? dp.dealPrice ?? dp.value ?? null;
+    }
+    if (dp !== null && dp !== undefined && dp !== '') {
+      dp = Number(dp);
+      if (!Number.isFinite(dp) || dp <= 0) dp = null;
+    }
+    addToCart(product, quantity, selectedVariant, dp);
     setAddToCartBounce(true);
   };
 
