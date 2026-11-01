@@ -225,7 +225,17 @@ const { data } = await api.get('/users/profile/cart');
 
       let dp = dealPrice;
       if (typeof dp === 'object' && dp !== null) {
-        dp = dp.price ?? dp.dealPrice ?? null;
+        dp = dp.price ?? dp.dealPrice ?? dp.amount ?? null;
+      }
+      if (dp !== null && dp !== undefined && dp !== '') {
+        const numDp = Number(dp);
+        if (Number.isNaN(numDp)) {
+          dp = null;
+        } else {
+          dp = numDp;
+        }
+      } else {
+        dp = null;
       }
 
       const variantSku = variant?.sku || variant?._id || null;
@@ -241,8 +251,8 @@ const { data } = await api.get('/users/profile/cart');
         key,
         productId: product._id,
         name: product.name,
-        price,
-        dealPrice: dp || null,
+        price: Number(price) || 0,
+        dealPrice: dp,
         image,
         quantity: Math.min(sanitizedQty, stock || sanitizedQty),
         stock,
@@ -261,14 +271,16 @@ const { data } = await api.get('/users/profile/cart');
         return consolidateCartItems([...prev, newItem]);
       });
 
-  const attemptAddToCart = async (retryCount = 0) => {
+      const attemptAddToCart = async (retryCount = 0) => {
         try {
-          const payload = { productId: product._id, quantity: sanitizedQty, variantSku };
-          if (dealPrice != null && dealPrice !== '') {
-            const dp = typeof dealPrice === 'object' ? dealPrice?.price || dealPrice?.dealPrice : dealPrice;
+          const payload = { productId: product._id, quantity: sanitizedQty };
+          if (variantSku) payload.variantSku = variantSku;
+          if (dp != null && dp !== '') {
             payload.dealPrice = dp;
           }
-          const { data } = await api.post('/users/profile/cart', payload);
+          // Ensure payload has only serializable primitives
+          const safePayload = JSON.parse(JSON.stringify(payload));
+          const { data } = await api.post('/users/profile/cart', safePayload);
           setCartItems(
             consolidateCartItems(
               (data.cart || []).map(normalizeServerItem).filter(Boolean)

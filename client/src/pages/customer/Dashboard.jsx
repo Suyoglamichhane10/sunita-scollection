@@ -524,9 +524,20 @@ const loadDashboard = useCallback(async (signal) => {
 
   const handleAddToCartDeal = async (enq) => {
     try {
+      const product = enq.productId || {};
+      const productForCart = {
+        _id: product._id || enq.product,
+        name: product.name || 'Product',
+        price: enq.dealPrice || enq.quotedPrice || product.price,
+        image: product.images?.[0]?.url || product.image || '',
+        stock: product.stock || 999,
+        variants: product.variants || [],
+      };
       await addToCart(
-        { _id: enq.productId?._id, name: enq.productId?.name || 'Product', price: enq.dealPrice || enq.quotedPrice, image: '', stock: 999, variants: [] },
-        1, null, enq.dealPrice || enq.quotedPrice
+        productForCart,
+        1,
+        null,
+        enq.dealPrice || enq.quotedPrice
       );
       navigate('/checkout');
     } catch { toast.error('Failed to add to cart'); }

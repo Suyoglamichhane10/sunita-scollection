@@ -129,6 +129,7 @@ const AboutUs = () => {
                 >
                   Follow on TikTok
                 </a>
+        
                 <Link
                   to="/shop"
                   className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border-2 border-primary-600 px-5 py-2.5 text-sm font-semibold text-primary-700 transition hover:bg-primary-50"
