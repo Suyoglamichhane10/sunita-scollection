@@ -122,6 +122,13 @@ const ProductCard = ({ product, onQuickView, compact = false }) => {
   const handleAdd = (dealPrice) => {
     if (!isAuthenticated) { navigate('/login'); return; }
     if (cardOutOfStock) return;
+    if (typeof dealPrice === 'object' && dealPrice !== null && !(dealPrice instanceof Number)) {
+      if (dealPrice?.price !== undefined || dealPrice?.dealPrice !== undefined || dealPrice?.value !== undefined) {
+        dealPrice = dealPrice.price ?? dealPrice.dealPrice ?? dealPrice.value ?? null;
+      } else {
+        dealPrice = null;
+      }
+    }
     addToCart(product, 1, selectedVariant, dealPrice || null);
   };
 
@@ -171,7 +178,7 @@ const ProductCard = ({ product, onQuickView, compact = false }) => {
     }
     if (hasApproved) {
       return (
-        <button disabled={cardOutOfStock} onClick={handleAdd} className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition ${cardOutOfStock ? 'cursor-not-allowed bg-gray-200 text-gray-500' : 'bg-primary-600 text-white hover:bg-primary-700'}`}>
+        <button disabled={cardOutOfStock} onClick={() => handleAdd()} className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition ${cardOutOfStock ? 'cursor-not-allowed bg-gray-200 text-gray-500' : 'bg-primary-600 text-white hover:bg-primary-700'}`}>
           Add to Cart
         </button>
       );

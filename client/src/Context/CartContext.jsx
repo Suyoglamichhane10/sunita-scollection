@@ -351,15 +351,12 @@ const { data } = await api.get('/users/profile/cart');
           );
           toast.success('Added to cart!');
         } catch (error) {
-          console.error("Cart network error:", error);
-          const isNetworkError = !error?.response || error?.code === 'ECONNABORTED' || error?.code === 'ENOTFOUND' || error?.code === 'ECONNREFUSED';
-          if (isNetworkError && retryCount < MAX_RETRIES) {
-            await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY * (retryCount + 1)));
-            return attemptAddToCart(retryCount + 1);
+          console.error("Cart error:", error);
+          if (!error.response) {
+            toast.error("Cannot reach the server. Please check your internet connection.");
+          } else {
+            toast.error(error.response?.data?.message || "Failed to add to cart");
           }
-          const msg = describeCartError(error, error?.message || 'Unable to add to cart');
-          toast.error(msg);
-          fetchServerCart();
         }
       };
 
