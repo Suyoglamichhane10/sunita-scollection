@@ -71,7 +71,7 @@ const consolidateCartItems = (items) => {
       if (error instanceof TypeError || /circular|HTML|element|JSON/i.test(error?.message || '')) {
         return error?.message || 'Failed to add to cart';
       }
-      return 'Cannot reach the server. Please check your internet connection and try again.';
+      return error?.message || 'Cannot reach the server. Please check your internet connection and try again.';
     }
     return fallback;
   };
@@ -357,11 +357,8 @@ const { data } = await api.get('/users/profile/cart');
             await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY * (retryCount + 1)));
             return attemptAddToCart(retryCount + 1);
           }
-          if (!error?.response && !(error instanceof TypeError) && !/circular|HTMLButtonElement|HTML|element|JSON/i.test(error?.message || '')) {
-            toast.error(describeCartError(error, 'Unable to add to cart'));
-          } else {
-            toast.error(describeCartError(error, error?.message || 'Unable to add to cart'));
-          }
+          const msg = describeCartError(error, error?.message || 'Unable to add to cart');
+          toast.error(msg);
           fetchServerCart();
         }
       };
