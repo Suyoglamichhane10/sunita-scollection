@@ -123,6 +123,23 @@ const AdminEnquiries = () => {
     setDeleteModalOpen(true);
   };
 
+  const handleDeleteConfirm = async () => {
+    if (!deletingId) {
+      setDeleteModalOpen(false);
+      return;
+    }
+    try {
+      await api.delete(`/enquiries/${deletingId}`);
+      setEnquiries((prev) => prev.filter((e) => e._id !== deletingId));
+      setExpandedId(null);
+    } catch (err) {
+      console.error('Failed to delete enquiry', err);
+    } finally {
+      setDeleteModalOpen(false);
+      setDeletingId(null);
+    }
+  };
+
   const handleBulkDelete = async () => {
     if (selectedEnquiries.length === 0) return;
     setBulkDeleting(true);
