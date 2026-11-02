@@ -22,6 +22,7 @@ const MarqueeCard = React.memo(({ product, onAddToCart, hasApproved }) => {
   const [showEnquiry, setShowEnquiry] = useState(false);
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const { getEnquiryForProduct } = useApprovedProducts();
 
   const handleEnquire = (e) => {
     e.preventDefault();
@@ -31,6 +32,18 @@ const MarqueeCard = React.memo(({ product, onAddToCart, hasApproved }) => {
   };
 
   const mainImage = product.images?.[0]?.url;
+
+  const handleAdd = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!hasApproved) {
+      handleEnquire(e);
+      return;
+    }
+    const enquiry = getEnquiryForProduct ? getEnquiryForProduct(product._id) : null;
+    const dealPrice = enquiry?.dealPrice || enquiry?.quotedPrice || product.dealPrice || product.enquiryDealPrice;
+    onAddToCart({ ...product, dealPrice: dealPrice || null });
+  };
 
   return (
     <div className="marquee-card flex shrink-0 flex-col overflow-hidden rounded-xl bg-white shadow-sm transition-shadow hover:shadow-md w-36 sm:w-44">
@@ -59,11 +72,7 @@ const MarqueeCard = React.memo(({ product, onAddToCart, hasApproved }) => {
         <div className="mt-auto flex gap-1.5">
           {hasApproved ? (
             <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onAddToCart(product);
-              }}
+              onClick={handleAdd}
               className="flex flex-1 items-center justify-center gap-1 rounded-md bg-primary-600 px-1.5 py-1 text-[10px] font-semibold text-white transition hover:bg-primary-700"
               title="Add to Cart"
             >
@@ -104,7 +113,7 @@ const ProductMarquee = ({ categories = [] }) => {
   const { addToCart } = useCart();
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const { isApproved, loading: approvedLoading } = useApprovedProducts();
+  const { isApproved, loading: approvedLoading, getEnquiryForProduct } = useApprovedProducts();
 
   const handleAddToCart = useCallback(
     (product) => {
@@ -113,10 +122,12 @@ const ProductMarquee = ({ categories = [] }) => {
         return;
       }
       if (hasAvailableStock(product)) {
-        addToCart(product, 1);
+        const enquiry = getEnquiryForProduct ? getEnquiryForProduct(product._id) : null;
+        const dealPrice = enquiry?.dealPrice || enquiry?.quotedPrice || product.dealPrice || product.enquiryDealPrice || null;
+        addToCart({ ...product, dealPrice }, 1);
       }
     },
-    [addToCart, isAuthenticated, navigate]
+    [addToCart, isAuthenticated, navigate, getEnquiryForProduct]
   );
 
   const fetchProducts = useCallback(async () => {

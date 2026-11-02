@@ -32,6 +32,7 @@ const ProductCard = ({ product, onQuickView, compact = false }) => {
   const threshold = product.lowStockThreshold || 5;
   const isLowStock = product.stock > 0 && product.stock <= threshold;
   const { isApproved, loading: approvedLoading } = useApprovedProducts();
+  const { getEnquiryForProduct } = useApprovedProducts();
   const { enquiry } = useCustomerEnquiry(product._id);
   const { isInWishlist, addToWishlist, removeFromWishlist } = useWishlist();
   const { items: compareItems, addToCompare, removeFromCompare } = useCompare();
@@ -122,14 +123,32 @@ const ProductCard = ({ product, onQuickView, compact = false }) => {
   const handleAdd = (dealPrice) => {
     if (!isAuthenticated) { navigate('/login'); return; }
     if (cardOutOfStock) return;
-    if (typeof dealPrice === 'object' && dealPrice !== null && !(dealPrice instanceof Number)) {
-      if (dealPrice?.price !== undefined || dealPrice?.dealPrice !== undefined || dealPrice?.value !== undefined) {
-        dealPrice = dealPrice.price ?? dealPrice.dealPrice ?? dealPrice.value ?? null;
-      } else {
-        dealPrice = null;
+    let dp = dealPrice;
+    if (dp === undefined || dp === null) {
+      if (enquiryButton?.price) dp = enquiryButton.price;
+      else if (enquiry?.dealPrice) dp = enquiry.dealPrice;
+      else if (enquiry?.quotedPrice) dp = enquiry.quotedPrice;
+      else {
+        const fromCtx = getEnquiryForProduct ? getEnquiryForProduct(product._id) : null;
+        dp = fromCtx?.dealPrice || fromCtx?.quotedPrice || product.dealPrice || product.enquiryDealPrice || null;
       }
     }
-    addToCart(product, 1, selectedVariant, dealPrice || null);
+    if (typeof dp === 'object' && dp !== null && !(dp instanceof Number)) {
+      if (dp?.price !== undefined || dp?.dealPrice !== undefined || dp?.value !== undefined) {
+        dp = dp.price ?? dp.dealPrice ?? dp.value ?? null;
+      } else {
+        dp = null;
+      }
+    }
+    if (dp !== null && dp !== undefined && dp !== '') {
+      const numDp = Number(dp);
+      if (Number.isFinite(numDp) && numDp > 0) {
+        dp = numDp;
+      } else {
+        dp = null;
+      }
+    }
+    addToCart(product, 1, selectedVariant, dp || null);
   };
 
   const handleEnquire = (e) => {

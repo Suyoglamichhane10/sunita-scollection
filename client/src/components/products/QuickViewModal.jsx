@@ -44,6 +44,7 @@ const QuickViewModal = ({ product, isOpen, onClose }) => {
   const [reviews, setReviews] = useState([]);
   const [relatedLoading, setRelatedLoading] = useState(false);
   const { isApproved, loading: approvedLoading } = useApprovedProducts();
+  const { getEnquiryForProduct } = useApprovedProducts();
   const [showEnquiry, setShowEnquiry] = useState(false);
   const { addToCart } = useCart();
   const { isAuthenticated } = useAuth();
@@ -143,7 +144,17 @@ const QuickViewModal = ({ product, isOpen, onClose }) => {
       onClose();
       return;
     }
-    addToCart(product, quantity, selectedVariant);
+    if (stock < 1) return;
+    let dp = null;
+    const enquiry = getEnquiryForProduct ? getEnquiryForProduct(product._id) : null;
+    dp = enquiry?.dealPrice || enquiry?.quotedPrice || product.dealPrice || product.enquiryDealPrice || null;
+    if (dp !== null && dp !== undefined && dp !== '') {
+      const numDp = Number(dp);
+      dp = Number.isFinite(numDp) && numDp > 0 ? numDp : null;
+    } else {
+      dp = null;
+    }
+    addToCart(product, quantity, selectedVariant, dp);
     onClose();
   };
 

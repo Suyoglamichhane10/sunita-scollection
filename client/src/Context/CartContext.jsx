@@ -227,8 +227,12 @@ const { data } = await api.get('/users/profile/cart');
       }
 
       let dp = dealPrice;
+      // Also check if dealPrice is passed on the product object
+      if ((dp === null || dp === undefined) && product) {
+        dp = product.dealPrice ?? product.enquiryDealPrice ?? product.quotedPrice ?? null;
+      }
       if (typeof dp === 'object' && dp !== null) {
-        dp = dp.price ?? dp.dealPrice ?? dp.amount ?? null;
+        dp = dp.price ?? dp.dealPrice ?? dp.amount ?? dp.quotedPrice ?? null;
       }
       if (dp !== null && dp !== undefined && dp !== '') {
         const numDp = Number(dp);
@@ -243,7 +247,8 @@ const { data } = await api.get('/users/profile/cart');
 
       const variantSku = variant?.sku || variant?._id || null;
       const key = variantSku ? `${product._id}:${variantSku}` : `${product._id}`;
-      const price = dp ?? (variant?.price ?? product.price);
+      const finalPrice = dp > 0 ? dp : (variant?.price ?? product.price);
+      const price = finalPrice;
       const image = variant?.images?.[0]?.url || product.images?.[0]?.url || getFallbackImage();
       const stock = variant?.stock ?? product.stock;
 
