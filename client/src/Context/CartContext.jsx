@@ -57,21 +57,24 @@ const consolidateCartItems = (items) => {
   return Array.from(map.values());
 };
 
-const describeCartError = (error, fallback) => {
-  const status = error?.response?.status;
-  const serverMessage = error?.response?.data?.message;
-  if (typeof serverMessage === 'string' && serverMessage.trim()) return serverMessage;
-  if (status === 401) return 'Your session expired. Please log in again.';
-  if (status === 403) return 'This deal price is not authorized. Please confirm the enquiry deal first.';
-  if (status === 429) return 'Too many requests. Please wait a moment and try again.';
-  if (status >= 500) return 'The server is temporarily unavailable. Please try again.';
-  if (error?.code === 'ECONNABORTED') return 'The server took too long to respond. Please try again.';
-  if (!error?.response) {
-    console.error('Cart network error:', error);
-    return 'Cannot reach the server. Please check your internet connection and try again.';
-  }
-  return fallback;
-};
+  const describeCartError = (error, fallback) => {
+    const status = error?.response?.status;
+    const serverMessage = error?.response?.data?.message;
+    if (typeof serverMessage === 'string' && serverMessage.trim()) return serverMessage;
+    if (status === 401) return 'Your session expired. Please log in again.';
+    if (status === 403) return 'This deal price is not authorized. Please confirm the enquiry deal first.';
+    if (status === 429) return 'Too many requests. Please wait a moment and try again.';
+    if (status >= 500) return 'The server is temporarily unavailable. Please try again.';
+    if (error?.code === 'ECONNABORTED') return 'The server took too long to respond. Please try again.';
+    if (!error?.response) {
+      console.error('Cart network error:', error);
+      if (error instanceof TypeError || /circular|HTML|element|JSON/i.test(error?.message || '')) {
+        return error?.message || 'Failed to add to cart';
+      }
+      return 'Cannot reach the server. Please check your internet connection and try again.';
+    }
+    return fallback;
+  };
 
 const GUEST_CART_KEY = 'guest_cart';
 const MAX_RETRIES = 2;
@@ -348,12 +351,17 @@ const { data } = await api.get('/users/profile/cart');
           );
           toast.success('Added to cart!');
         } catch (error) {
+          console.error("Cart network error:", error);
           const isNetworkError = !error?.response || error?.code === 'ECONNABORTED' || error?.code === 'ENOTFOUND' || error?.code === 'ECONNREFUSED';
           if (isNetworkError && retryCount < MAX_RETRIES) {
             await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY * (retryCount + 1)));
             return attemptAddToCart(retryCount + 1);
           }
-          toast.error(describeCartError(error, 'Unable to add to cart'));
+          if (!error?.response && !(error instanceof TypeError) && !/circular|HTMLButtonElement|HTML|element|JSON/i.test(error?.message || '')) {
+            toast.error(describeCartError(error, 'Unable to add to cart'));
+          } else {
+            toast.error(describeCartError(error, error?.message || 'Unable to add to cart'));
+          }
           fetchServerCart();
         }
       };
