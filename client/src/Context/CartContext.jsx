@@ -271,6 +271,61 @@ const { data } = await api.get('/users/profile/cart');
         return consolidateCartItems([...prev, newItem]);
       });
 
+  const addToCart = useCallback(
+    (product, quantity = 1, variant = null, dealPrice = null) => {
+      if (!isAuthenticated) {
+        toast.error('Please login to add items to your cart');
+        return false;
+      }
+
+      let dp = dealPrice;
+      if (typeof dp === 'object' && dp !== null) {
+        dp = dp.price ?? dp.dealPrice ?? dp.amount ?? null;
+      }
+      if (dp !== null && dp !== undefined && dp !== '') {
+        const numDp = Number(dp);
+        if (Number.isNaN(numDp)) {
+          dp = null;
+        } else {
+          dp = numDp;
+        }
+      } else {
+        dp = null;
+      }
+
+      const variantSku = variant?.sku || variant?._id || null;
+      const key = variantSku ? `${product._id}:${variantSku}` : `${product._id}`;
+      const price = dp ?? (variant?.price ?? product.price);
+      const image = variant?.images?.[0]?.url || product.images?.[0]?.url || getFallbackImage();
+      const stock = variant?.stock ?? product.stock;
+
+      const hasValidPrice = (price != null && Number(price) > 0) || (dp != null && Number(dp) > 0);
+
+      const sanitizedQty = Math.max(1, Math.floor(Number(quantity) || 1));
+      const newItem = {
+        key,
+        productId: product._id,
+        name: product.name,
+        price: Number(price) || 0,
+        dealPrice: dp,
+        image,
+        quantity: Math.min(sanitizedQty, stock || sanitizedQty),
+        stock,
+        variant: variant ? { sku: variant.sku || variant._id, attributes: variant.attributes } : null,
+        hasValidPrice,
+      };
+
+      setCartItems((prev) => {
+        const existing = prev.find((item) => item.key === key);
+        if (existing) {
+          const mergedQty = Math.min(existing.quantity + sanitizedQty, existing.stock || sanitizedQty);
+          return prev.map((item) =>
+            item.key === key ? { ...item, quantity: mergedQty } : item
+          );
+        }
+        return consolidateCartItems([...prev, newItem]);
+      });
+
       const attemptAddToCart = async (retryCount = 0) => {
         try {
           const payload = { productId: product._id, quantity: sanitizedQty };
@@ -279,7 +334,12 @@ const { data } = await api.get('/users/profile/cart');
             payload.dealPrice = dp;
           }
           // Ensure payload has only serializable primitives
-          const safePayload = JSON.parse(JSON.stringify(payload));
+          const safePayload = {
+            productId: payload.productId,
+            quantity: payload.quantity,
+            ...(payload.variantSku ? { variantSku: payload.variantSku } : {}),
+            ...(payload.dealPrice != null ? { dealPrice: payload.dealPrice } : {}),
+          };
           const { data } = await api.post('/users/profile/cart', safePayload);
           setCartItems(
             consolidateCartItems(

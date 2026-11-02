@@ -5,8 +5,13 @@ const API_URL = import.meta.env.DEV
   : (import.meta.env.VITE_API_URL || import.meta.env.API_URL || '/api');
 
 const safeStringify = (data) => {
+  if (data === undefined || data === null) return data;
   const seen = new WeakSet();
   return JSON.stringify(data, (key, value) => {
+    if (key === 'config' || key === 'request' || key === 'response' || key === 'socket') return undefined;
+    if (value instanceof Error) {
+      return { name: value.name, message: value.message, stack: value.stack };
+    }
     if (typeof value === 'object' && value !== null) {
       if (seen.has(value)) {
         return '[Circular]';
@@ -25,13 +30,21 @@ const api = axios.create({
   timeout: 15000,
   transformRequest: [(data, headers) => {
     if (data === undefined || data === null) return data;
-    if (headers && headers['Content-Type'] && headers['Content-Type'].includes('multipart/form-data')) {
-      return data;
+    if (headers && typeof headers === 'object') {
+      const ct = headers['Content-Type'] || headers['content-type'];
+      if (ct && String(ct).includes('multipart/form-data')) {
+        return data;
+      }
     }
     try {
-      return safeStringify(data);
+      const s = safeStringify(data);
+      return s;
     } catch (e) {
-      return JSON.stringify({});
+      try {
+        return JSON.stringify({});
+      } catch {
+        return '{}';
+      }
     }
   }],
 });
