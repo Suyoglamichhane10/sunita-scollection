@@ -164,6 +164,9 @@ const QuickViewModal = ({ product, isOpen, onClose }) => {
   };
 
   const hasApproved = !approvedLoading && isApproved(product._id);
+  const enquiry = getEnquiryForProduct ? getEnquiryForProduct(product._id) : null;
+  const hasNormalPrice = product.price && Number(product.price) > 0;
+  const canAddToCart = hasNormalPrice || hasApproved;
 
   const toggleWishlist = async () => {
     if (!isAuthenticated) {
@@ -354,7 +357,7 @@ const QuickViewModal = ({ product, isOpen, onClose }) => {
             </div>
 
             <div className="mt-6 flex gap-3">
-              {hasApproved ? (
+              {canAddToCart ? (
                 <button
                   disabled={stock < 1}
                   onClick={handleAddToCart}

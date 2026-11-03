@@ -32,11 +32,13 @@ const MarqueeCard = React.memo(({ product, onAddToCart, hasApproved }) => {
   };
 
   const mainImage = product.images?.[0]?.url;
+  const hasNormalPrice = product.price && Number(product.price) > 0;
+  const canAddToCart = hasNormalPrice || hasApproved;
 
   const handleAdd = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!hasApproved) {
+    if (!canAddToCart) {
       handleEnquire(e);
       return;
     }
@@ -70,7 +72,7 @@ const MarqueeCard = React.memo(({ product, onAddToCart, hasApproved }) => {
         </Link>
         <p className="mt-1 text-base font-bold text-gold-600">Contact for price</p>
         <div className="mt-auto flex gap-1.5">
-          {hasApproved ? (
+          {canAddToCart ? (
             <button
               onClick={handleAdd}
               className="flex flex-1 items-center justify-center gap-1 rounded-md bg-primary-600 px-1.5 py-1 text-[10px] font-semibold text-white transition hover:bg-primary-700"

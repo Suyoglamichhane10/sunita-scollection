@@ -409,14 +409,19 @@ const ProductDetail = () => {
   const renderActionButtons = () => {
     if (stock < 1) return null;
 
-    if (enquiryButton.type === 'add-cart') {
+    const hasNormalPrice = product.price && Number(product.price) > 0;
+    const hasApprovedDeal = enquiry?.status === 'customer_agreed' || enquiry?.status === 'deal_closed';
+    const canAddToCart = hasNormalPrice || hasApprovedDeal;
+
+    if (canAddToCart) {
+      const dealPrice = enquiryButton?.price || enquiry?.dealPrice || enquiry?.quotedPrice || null;
       return (
         <div className={`flex gap-3 transition-transform duration-300 ${addToCartBounce ? 'scale-105' : 'scale-100'}`}>
           <button
-            onClick={() => handleAddToCart(enquiryButton.price)}
+            onClick={() => handleAddToCart(dealPrice)}
             className="flex-1 rounded-full bg-pink-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-pink-700"
           >
-            {enquiryButton.label}
+            {hasApprovedDeal ? `Add to Cart at Rs. ${dealPrice}` : 'Add to Cart'}
           </button>
           <button
             type="button"

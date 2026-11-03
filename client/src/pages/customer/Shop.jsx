@@ -29,7 +29,10 @@ const ShopProductCard = React.memo(({ product, addToCart, isAuthenticated, navig
   const hasApproved = !approvedLoading && isApproved(product._id);
   const { openEnquiry } = useEnquiry();
   
-  const dealPrice = hasApproved ? getEnquiryForProduct(product._id)?.dealPrice || getEnquiryForProduct(product._id)?.quotedPrice : null;
+  const enquiry = getEnquiryForProduct ? getEnquiryForProduct(product._id) : null;
+  const dealPrice = hasApproved ? (enquiry?.dealPrice || enquiry?.quotedPrice) : null;
+  const hasNormalPrice = product.price && Number(product.price) > 0;
+  const canAddToCart = hasNormalPrice || hasApproved;
 
   const handleAdd = () => {
     if (!isAuthenticated) return navigate('/login');
@@ -126,7 +129,7 @@ const ShopProductCard = React.memo(({ product, addToCart, isAuthenticated, navig
             >
               View
             </Link>
-            {hasApproved ? (
+            {canAddToCart ? (
               <button
                 type="button"
                 disabled={stock < 1}

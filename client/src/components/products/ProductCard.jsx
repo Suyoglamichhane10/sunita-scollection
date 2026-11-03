@@ -169,24 +169,32 @@ const ProductCard = ({ product, onQuickView, compact = false }) => {
 
   const categoryBadges = getCategoryBadges();
 
-  const renderButton = () => {
+const renderButton = () => {
     if (cardOutOfStock) return null;
-    if (enquiryButton.type === 'add-cart') {
+
+    // Determine if we should show Add to Cart vs Enquire Now
+    const hasNormalPrice = product.price && Number(product.price) > 0;
+    const hasApprovedDeal = hasApproved && (enquiryButton?.type === 'add-cart' || hasApproved);
+    const canAddToCart = hasNormalPrice || hasApprovedDeal;
+
+    if (canAddToCart) {
+      const dealPrice = enquiryButton?.price || enquiry?.dealPrice || enquiry?.quotedPrice || null;
       return (
         <button
-          onClick={() => handleAdd(enquiryButton.price)}
+          onClick={() => handleAdd(dealPrice)}
           className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-white transition hover:bg-pink-700 ${hasApproved ? 'bg-pink-600' : 'bg-primary-600'}`}
         >
-          {enquiryButton.label}
+          {hasApproved ? `Add to Cart at Rs. ${dealPrice}` : 'Add to Cart'}
         </button>
       );
     }
+
     if (enquiryButton.type === 'view') {
       return (
         <button
           type="button"
           onClick={() => {
-            if (isAuthenticated) navigate(`/dashboard`);
+            if (isAuthenticated) navigate('/dashboard');
             else navigate('/login');
           }}
           className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-white transition hover:bg-primary-700 bg-primary-600"
@@ -195,13 +203,7 @@ const ProductCard = ({ product, onQuickView, compact = false }) => {
         </button>
       );
     }
-    if (hasApproved) {
-      return (
-        <button disabled={cardOutOfStock} onClick={() => handleAdd()} className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition ${cardOutOfStock ? 'cursor-not-allowed bg-gray-200 text-gray-500' : 'bg-primary-600 text-white hover:bg-primary-700'}`}>
-          Add to Cart
-        </button>
-      );
-    }
+
     return (
       <button type="button" onClick={handleEnquire} disabled={cardOutOfStock} className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-white transition hover:bg-pink-700 ${cardOutOfStock ? 'cursor-not-allowed bg-gray-400' : 'bg-pink-600'}`}>
         Enquire Now

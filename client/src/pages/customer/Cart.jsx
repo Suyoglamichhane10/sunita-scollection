@@ -17,7 +17,10 @@ const Cart = () => {
   }, [refreshCart]);
 
   // Check if any cart item lacks a valid price
-  const invalidItems = cartItems.filter((item) => !item.hasValidPrice);
+  const invalidItems = cartItems.filter((item) => {
+    const finalPrice = item.dealPrice || item.price;
+    return !(finalPrice && Number(finalPrice) > 0);
+  });
 
   if (!cartItems.length) {
     return (

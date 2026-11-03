@@ -252,7 +252,7 @@ const { data } = await api.get('/users/profile/cart');
       const image = variant?.images?.[0]?.url || product.images?.[0]?.url || getFallbackImage();
       const stock = variant?.stock ?? product.stock;
 
-      const hasValidPrice = (price != null && Number(price) > 0) || (dp != null && Number(dp) > 0);
+      const hasValidPrice = finalPrice != null && Number(finalPrice) > 0;
 
       const sanitizedQty = Math.max(1, Math.floor(Number(quantity) || 1));
       const newItem = {

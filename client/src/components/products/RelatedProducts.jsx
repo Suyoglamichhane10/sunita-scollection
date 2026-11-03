@@ -13,7 +13,7 @@ const RelatedProducts = ({ productId }) => {
   const { addToCart } = useCart();
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const { isApproved, loading: approvedLoading } = useApprovedProducts();
+  const { isApproved, loading: approvedLoading, getEnquiryForProduct } = useApprovedProducts();
   const [showEnquiry, setShowEnquiry] = useState(false);
   const [enquiryProduct, setEnquiryProduct] = useState(null);
 
@@ -39,7 +39,9 @@ const RelatedProducts = ({ productId }) => {
       return;
     }
     const variant = product.variants?.[0] || null;
-    addToCart(product, 1, variant);
+    const enquiry = isApproved(product._id) ? getEnquiryForProduct ? getEnquiryForProduct(product._id) : null : null;
+    const dealPrice = enquiry?.dealPrice || enquiry?.quotedPrice || null;
+    addToCart(product, 1, variant, dealPrice);
   };
 
   const handleEnquire = (product) => {
@@ -85,6 +87,8 @@ const RelatedProducts = ({ productId }) => {
           const stock = variant?.stock ?? product.stock;
           const isOutOfStock = stock === 0;
           const hasApproved = !approvedLoading && isApproved(product._id);
+          const hasNormalPrice = product.price && Number(product.price) > 0;
+          const canAddToCart = hasNormalPrice || hasApproved;
 
           return (
             <div key={product._id} className="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm transition hover:shadow-lg flex flex-col">
@@ -109,8 +113,8 @@ const RelatedProducts = ({ productId }) => {
                 </Link>
                 <div className="mt-auto grid grid-cols-1 gap-2 sm:grid-cols-2 pt-4">
                   <div className="flex flex-col gap-2">
-                    <span className="text-base font-bold text-gray-900 text-center">Contact for price</span>
-                    {hasApproved ? (
+                    <span className="text-base font-bold text-gray-900 text-center">{hasNormalPrice ? `Rs. ${product.price}` : (hasApproved ? `Rs. ${getEnquiryForProduct(product._id)?.dealPrice || getEnquiryForProduct(product._id)?.quotedPrice}` : 'Contact for price')}</span>
+                    {canAddToCart ? (
                       <button
                         type="button"
                         disabled={isOutOfStock}
