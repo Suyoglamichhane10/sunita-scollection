@@ -16,11 +16,6 @@ const Cart = () => {
     refreshCart();
   }, [refreshCart]);
 
-  // Check if any cart item lacks a valid price
-  const invalidItems = cartItems.filter((item) => {
-    const finalPrice = item.dealPrice || item.price;
-    return !(finalPrice && Number(finalPrice) > 0);
-  });
 
   if (!cartItems.length) {
     return (
@@ -98,15 +93,6 @@ const Cart = () => {
         </div>
 
         <div className="rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
-          {invalidItems.length > 0 && (
-            <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
-              <p className="text-sm font-semibold text-amber-800">⚠ Cannot proceed to checkout</p>
-              <p className="mt-1 text-sm text-amber-700">
-                {invalidItems.map((item) => item.name).join(', ')} {invalidItems.length === 1 ? 'has' : 'have'} no price set.
-                Please enquire about these products first to get a deal price.
-              </p>
-            </div>
-          )}
           <h2 className="text-xl font-semibold text-gray-900">Order Summary</h2>
           <div className="mt-6 space-y-4">
             <div className="flex items-center justify-between text-gray-600">
@@ -132,18 +118,10 @@ const Cart = () => {
           </div>
 
           <button
-            onClick={() => {
-              if (invalidItems.length > 0) {
-                const names = invalidItems.map((item) => item.name).join(', ');
-                toast.error(`Cannot checkout: ${names} ${invalidItems.length === 1 ? 'has' : 'have'} no price. Please enquire first.`);
-                return;
-              }
-              navigate('/checkout');
-            }}
-            disabled={invalidItems.length > 0}
-            className={`mt-8 w-full rounded-full px-6 py-3 text-white transition ${invalidItems.length > 0 ? 'bg-gray-300 cursor-not-allowed' : 'bg-pink-600 hover:bg-pink-700'}`}
+            onClick={() => navigate('/checkout')}
+            className="mt-8 w-full rounded-full bg-pink-600 px-6 py-3 text-white transition hover:bg-pink-700"
           >
-            {invalidItems.length > 0 ? 'Complete Enquiries First' : 'Proceed to Checkout'}
+            Proceed to Checkout
           </button>
           <button
             onClick={clearCart}
