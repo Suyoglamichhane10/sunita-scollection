@@ -42,9 +42,7 @@ const MarqueeCard = React.memo(({ product, onAddToCart, hasApproved }) => {
       handleEnquire(e);
       return;
     }
-    const enquiry = getEnquiryForProduct ? getEnquiryForProduct(product._id) : null;
-    const dealPrice = enquiry?.dealPrice || enquiry?.quotedPrice || product.dealPrice || product.enquiryDealPrice;
-    onAddToCart({ ...product, dealPrice: dealPrice || null });
+    onAddToCart({ ...product, price: product.dealPrice || product.price });
   };
 
   return (

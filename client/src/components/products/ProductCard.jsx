@@ -181,7 +181,7 @@ const renderButton = () => {
       const dealPrice = enquiryButton?.price || enquiry?.dealPrice || enquiry?.quotedPrice || null;
       return (
         <button
-          onClick={() => handleAdd(dealPrice)}
+          onClick={() => addToCart({ ...product, price: product.dealPrice || product.price })}
           className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-white transition hover:bg-pink-700 ${hasApproved ? 'bg-pink-600' : 'bg-primary-600'}`}
         >
           {hasApproved ? `Add to Cart at Rs. ${dealPrice}` : 'Add to Cart'}
