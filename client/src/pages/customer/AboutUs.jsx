@@ -99,8 +99,7 @@ const AboutUs = () => {
         <div className="mb-6 text-center">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-gold-600">Meet the Owner</p>
         </div>
-        <div className="moving-rect-border">
-          <div className="moving-rect-border-inner grid items-center gap-8 lg:grid-cols-2 lg:gap-12">
+        <div className="grid items-center gap-8 lg:grid-cols-2 lg:gap-12">
             <div className="order-2 flex flex-col items-center justify-center px-6 py-10 text-center lg:order-1 lg:px-10">
               <h3 className="font-serif text-2xl font-bold text-primary-800">
                 <ContinuousTypewriter words={['Sunita Lamichhane']} speed={100} deleteSpeed={50} pause={2000} />
@@ -139,8 +138,7 @@ const AboutUs = () => {
               </div>
             </div>
             <div className="order-1 flex justify-center px-6 pb-10 lg:order-2 lg:px-10 lg:pb-0">
-              <div className="moving-rect-border">
-                <div className="moving-rect-border-inner h-72 w-full overflow-hidden rounded-2xl bg-gray-100 sm:h-80 lg:h-[28rem]">
+              <div className="h-72 w-full overflow-hidden rounded-2xl bg-gray-100 sm:h-80 lg:h-[28rem]">
                   <img
                     src={OwnerImage}
                     alt="Sunita Lamichhane, founder of Sunita'z Collection"
@@ -150,8 +148,6 @@ const AboutUs = () => {
                 </div>
               </div>
             </div>
-          </div>
-        </div>
       </section>
 
       {/* How It Started + How We Work, all in one card */}
