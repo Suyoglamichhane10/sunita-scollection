@@ -214,7 +214,7 @@ const { data } = await api.get('/users/profile/cart');
   // Calculate totals
   useEffect(() => {
     const items = cartItems.reduce((acc, item) => acc + item.quantity, 0);
-    const price = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
+    const price = cartItems.reduce((acc, item) => acc + (item.dealPrice || item.price) * item.quantity, 0);
     setTotalItems(items);
     setTotalPrice(price);
   }, [cartItems]);
