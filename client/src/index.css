@@ -412,7 +412,7 @@ h1, h2, h3, h4, p, span, a, td, th, label, li, button {
     transparent 300deg,
     transparent 360deg
   );
-  animation: rotateBorder 12s linear infinite;
+  animation: rotateBorder 30s linear infinite;
   z-index: 0;
 }
 
